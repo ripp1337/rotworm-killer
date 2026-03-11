@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotworm Killer</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="layout">
+        <div id="hud">
+            <div class="hud-row player-row">
+                <span id="hud-player">—</span>
+                <button id="logoutBtn">Logout</button>
+            </div>
+            <h2>Rotworm Killer</h2>
+            <div class="hud-row"><span>Level</span><span id="hud-level">1</span></div>
+            <div class="hud-xpbar-wrap">
+                <div id="hud-xpbar"></div>
+            </div>
+            <div class="hud-row"><span>EXP</span><span id="hud-exp">0 / 100</span></div>
+            <hr>
+            <div class="hud-row"><span>Score</span><span id="hud-score">0</span></div>
+            <div class="hud-row"><span>Gold</span><span id="hud-gold">0</span></div>
+            <hr>
+            <div class="hud-section">Weapon</div>
+            <div class="hud-row weapon-row">
+                <img id="hud-weapon-img" src="Serpent_Sword.gif" class="weapon-icon">
+                <span id="hud-weapon-name">Serpent Sword</span>
+            </div>
+            <div class="hud-section">Damage</div>
+            <div class="hud-row"><span class="dmg-basic">Basic</span><span id="hud-dmg-basic">0–10</span></div>
+            <div class="cd-wrap">
+                <div class="cd-label"><span>Cooldown</span><span id="cd-basic-text">Ready</span></div>
+                <div class="cd-bar-bg"><div id="cd-basic-bar" class="cd-bar cd-bar-basic"></div></div>
+            </div>
+            <div class="hud-row"><span class="dmg-fire">Fireball</span><span id="hud-dmg-fire">10–20</span></div>
+            <div class="cd-wrap">
+                <div class="cd-label"><span>Cooldown</span><span id="cd-fire-text">Ready</span></div>
+                <div class="cd-bar-bg"><div id="cd-fire-bar" class="cd-bar cd-bar-fire"></div></div>
+            </div>
+            <hr>
+            <div class="hud-section">Debug</div>
+            <button onclick="exp+=1000;checkLevelUp();">+1,000 EXP</button>
+            <button onclick="exp+=10000;checkLevelUp();">+10,000 EXP</button>
+            <button onclick="gold+=100000;">+100,000 Gold</button>
+            <hr>
+            <button id="weaponUpgradeBtn">-</button>
+            <button id="fireballBtn"><img src="Great_Fireball_Rune.gif" class="btn-icon"> Great Fireball (need lvl 4)</button>
+            <button id="ultimateExplosionBtn"><img src="Ultimate_Explosion.gif" class="btn-icon"> Ultimate Explosion (need lvl 20)</button>
+            <div class="cd-wrap">
+                <div class="cd-label"><span>Ult. Cooldown</span><span id="cd-ue-text">Locked</span></div>
+                <div class="cd-bar-bg"><div id="cd-ue-bar" class="cd-bar cd-bar-ue"></div></div>
+            </div>
+            <hr>
+            <div class="hud-section">Upgrades</div>
+            <button id="upgradeAtkSpeedBtn">Atk Speed +10% (10K) 0/10</button>
+            <button id="upgradeGfbCdBtn">GFB CD -10% (10K) 0/10</button>
+            <button id="upgradeUeCdBtn">Ult CD -10% (100K) 0/10</button>
+            <hr>
+            <div class="hud-section">Automation</div>
+            <button id="autoAttackBtn">Auto Attack (need lvl 20)</button>
+            <button id="autoGfbBtn">Auto GFB (unlock GFB first)</button>
+            <button id="autoUeBtn">Auto UE (unlock UE first)</button>
+            <hr>
+            <div class="hud-section sb-header">
+                Top Killers
+                <button class="sb-refresh-btn" onclick="fetchScoreboard()">↻</button>
+            </div>
+            <div id="scoreboard-list"><div class="sb-loading">Loading…</div></div>
+        </div>
+        <div id="game-area">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+        </div>
+    </div>
+    <!-- Offline progress modal -->
+    <div id="offline-modal">
+        <div class="offline-box">
+            <div class="offline-title">Offline Progress</div>
+            <div id="offline-content"></div>
+            <button class="offline-continue" onclick="document.getElementById('offline-modal').style.display='none'">Continue Hunting</button>
+        </div>
+    </div>
+    <!-- Login / Register modal -->
+    <div id="login-modal">
+        <div class="auth-box">
+            <h2 class="auth-title">Rotworm Killer</h2>
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Login</button>
+                <button class="auth-tab" id="tab-reg-btn" onclick="switchAuthTab('register')">Register</button>
+            </div>
+            <form id="auth-login-form" class="auth-form">
+                <label class="auth-label">Username</label>
+                <input id="auth-login-user" type="text" class="auth-input" autocomplete="username" maxlength="20" required>
+                <label class="auth-label">Password</label>
+                <input id="auth-login-pass" type="password" class="auth-input" autocomplete="current-password" required>
+                <div id="auth-login-err" class="auth-error"></div>
+                <button type="submit" class="auth-submit">Login</button>
+            </form>
+            <form id="auth-reg-form" class="auth-form" style="display:none">
+                <label class="auth-label">Username <span class="auth-hint">(3–20 chars, A-Z 0-9 _)</span></label>
+                <input id="auth-reg-user" type="text" class="auth-input" autocomplete="username" maxlength="20" required>
+                <label class="auth-label">Password <span class="auth-hint">(min 4 chars)</span></label>
+                <input id="auth-reg-pass" type="password" class="auth-input" autocomplete="new-password" required>
+                <div id="auth-reg-err" class="auth-error"></div>
+                <button type="submit" class="auth-submit">Create Account</button>
+            </form>
+        </div>
+    </div>
+    <script src="js/main.js"></script>
+</body>
+</html>
