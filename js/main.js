@@ -8,7 +8,7 @@ rotwormImg.src = 'Rotworm.gif'; // ensure path matches filename
 const versperothImg = new Image();
 versperothImg.src = 'Versperoth.gif';
 
-const BOSS_EVERY     = 20;   // spawn a boss every N worm kills
+const BOSS_EVERY     = 50;   // spawn a boss every N worm kills
 const BOSS_HP        = 500;
 const BOSS_EXP       = 600;
 const BOSS_GOLD      = 1000;
@@ -51,10 +51,10 @@ const WORM_EXP   = 40;
 
 // weapon progression
 const WEAPONS = [
-    { name: 'Serpent Sword',   min:  1, max: 10, cost:     0, sprite: 'Serpent_Sword.gif'   },
-    { name: 'Clerical Mace',   min:  10, max: 15, cost:  1000, sprite: 'Clerical_Mace.gif'   },
-    { name: 'Fire Sword',      min: 10, max: 20, cost:  5000, sprite: 'Fire_Sword.gif'       },
-    { name: 'Warhammer',       min: 25, max: 35, cost: 10000, sprite: 'War_Hammer.gif'       },
+    { name: 'Serpent Sword',   min:  5, max: 15, cost:     0, sprite: 'Serpent_Sword.gif'   },
+    { name: 'Clerical Mace',   min:  10, max: 20, cost:  1000, sprite: 'Clerical_Mace.gif'   },
+    { name: 'Fire Sword',      min: 15, max: 30, cost:  5000, sprite: 'Fire_Sword.gif'       },
+    { name: 'Warhammer',       min: 25, max: 45, cost: 10000, sprite: 'War_Hammer.gif'       },
     { name: 'Stonecutter Axe', min: 45, max: 55, cost: 50000, sprite: 'Stonecutter_Axe.gif' },
 ];
 let weaponIndex = 0; // current weapon
@@ -179,9 +179,24 @@ function updateHUD() {
         autoUeBtn.disabled = false;
         autoUeBtn.classList.toggle('auto-on', autoUeEnabled);
     }
+    // boss focus button
+    const bossFocusBtn = document.getElementById('bossFocusBtn');
+    if (!bossFocusUnlocked) {
+        bossFocusBtn.textContent = !autoUnlocked
+            ? `Boss Focus (unlock Auto first)`
+            : level < BOSS_FOCUS_UNLOCK_LEVEL
+                ? `Boss Focus (need lvl ${BOSS_FOCUS_UNLOCK_LEVEL})`
+                : gold < BOSS_FOCUS_UNLOCK_GOLD
+                    ? `Boss Focus (need ${BOSS_FOCUS_UNLOCK_GOLD}g)`
+                    : `Boss Focus (${BOSS_FOCUS_UNLOCK_GOLD}g)`;
+        bossFocusBtn.disabled = !autoUnlocked || level < BOSS_FOCUS_UNLOCK_LEVEL || gold < BOSS_FOCUS_UNLOCK_GOLD;
+        bossFocusBtn.classList.remove('auto-on');
+    } else {
+        bossFocusBtn.textContent = 'Boss Focus: ON';
+        bossFocusBtn.disabled = true;
+        bossFocusBtn.classList.add('auto-on');
+    }
 }
-
-let fireballActive = false;
 let spawnPaused = false;
 let dmgNumbers = []; // floating damage numbers
 
@@ -208,7 +223,7 @@ let autoEnabled    = false;
 let autoTarget     = null;
 let lastAutoAttack = 0;
 
-const AUTO_GFB_UNLOCK_LEVEL = 20;
+const AUTO_GFB_UNLOCK_LEVEL = 15;
 const AUTO_GFB_UNLOCK_GOLD  = 1000;
 let autoGfbUnlocked = false;
 let autoGfbEnabled  = false;
@@ -217,6 +232,10 @@ const AUTO_UE_UNLOCK_LEVEL = 25;
 const AUTO_UE_UNLOCK_GOLD  = 10000;
 let autoUeUnlocked = false;
 let autoUeEnabled  = false;
+
+const BOSS_FOCUS_UNLOCK_LEVEL = 10;
+const BOSS_FOCUS_UNLOCK_GOLD  = 1000;
+let bossFocusUnlocked = false;
 
 // upgrades
 const MAX_UPGRADES   = 10;
@@ -250,6 +269,7 @@ function getProgress() {
         autoUnlocked, autoEnabled,
         autoGfbUnlocked, autoGfbEnabled,
         autoUeUnlocked,  autoUeEnabled,
+        bossFocusUnlocked,
         bossSpawnCounter,
         savedAt: Date.now(),
     };
@@ -275,6 +295,7 @@ function loadProgress(state) {
         if (s.autoGfbEnabled   != null) autoGfbEnabled   = s.autoGfbEnabled;
         if (s.autoUeUnlocked   != null) autoUeUnlocked   = s.autoUeUnlocked;
         if (s.autoUeEnabled    != null) autoUeEnabled    = s.autoUeEnabled;
+        if (s.bossFocusUnlocked!= null) bossFocusUnlocked= s.bossFocusUnlocked;
         if (s.bossSpawnCounter != null) bossSpawnCounter = s.bossSpawnCounter;
     } catch (_) {}
 }
@@ -837,35 +858,41 @@ canvas.addEventListener('click', e => {
 
 function update() {
     if (!spawnPaused && Math.random() < 0.02) spawnWorm();
-    // auto attack logic
-    if (autoEnabled && worms.length > 0) {
+    // auto attack logic — merged worm + boss targeting
+    if (autoEnabled) {
         const now = Date.now();
         if (now - lastAutoAttack >= AUTO_COOLDOWN_MS) {
-            lastAutoAttack = now;
-            if (!autoTarget || !worms.includes(autoTarget)) autoTarget = worms[0];
-            if (autoTarget) {
+            if (bossFocusUnlocked && boss) {
+                // boss focus: always hit boss first when alive
+                lastAutoAttack = now;
                 const dmg = rollBasicDmg();
-                autoTarget.hp -= dmg;
-                spawnAttackEffect(autoTarget.x, autoTarget.y);
-                dmgNumbers.push({ x: autoTarget.x + (Math.random()*20-10), y: autoTarget.y - autoTarget.size, value: dmg, color: '#dd88ff', life: 60 });
-                if (autoTarget.hp <= 0) {
-                    killWorm(autoTarget);
-                    worms = worms.filter(w => w !== autoTarget);
-                    autoTarget = worms.length > 0 ? worms[0] : (boss || null);
+                boss.hp -= dmg;
+                spawnAttackEffect(boss.x, boss.y);
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#ff6600', life: 60 });
+                if (boss.hp <= 0) killBoss(boss);
+            } else if (worms.length > 0) {
+                lastAutoAttack = now;
+                if (!autoTarget || !worms.includes(autoTarget)) autoTarget = worms[0];
+                if (autoTarget) {
+                    const dmg = rollBasicDmg();
+                    autoTarget.hp -= dmg;
+                    spawnAttackEffect(autoTarget.x, autoTarget.y);
+                    dmgNumbers.push({ x: autoTarget.x + (Math.random()*20-10), y: autoTarget.y - autoTarget.size, value: dmg, color: '#dd88ff', life: 60 });
+                    if (autoTarget.hp <= 0) {
+                        killWorm(autoTarget);
+                        worms = worms.filter(w => w !== autoTarget);
+                        autoTarget = worms.length > 0 ? worms[0] : null;
+                    }
                 }
+            } else if (boss) {
+                // no worms — attack boss even without boss focus
+                lastAutoAttack = now;
+                const dmg = rollBasicDmg();
+                boss.hp -= dmg;
+                spawnAttackEffect(boss.x, boss.y);
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#ff6600', life: 60 });
+                if (boss.hp <= 0) killBoss(boss);
             }
-        }
-    }
-    // auto attack boss if no worms and boss present
-    if (autoEnabled && !worms.length && boss) {
-        const now = Date.now();
-        if (now - lastAutoAttack >= AUTO_COOLDOWN_MS) {
-            lastAutoAttack = now;
-            const dmg = rollBasicDmg();
-            boss.hp -= dmg;
-            spawnAttackEffect(boss.x, boss.y);
-            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#ff6600', life: 60 });
-            if (boss.hp <= 0) killBoss(boss);
         }
     }
     // auto GFB logic — cluster targeting, also hits boss
@@ -1071,6 +1098,14 @@ document.getElementById('autoUeBtn').addEventListener('click', () => {
         return;
     }
     autoUeEnabled = !autoUeEnabled;
+});
+
+// boss focus button
+document.getElementById('bossFocusBtn').addEventListener('click', () => {
+    if (bossFocusUnlocked) return;
+    if (!autoUnlocked || level < BOSS_FOCUS_UNLOCK_LEVEL || gold < BOSS_FOCUS_UNLOCK_GOLD) return;
+    gold -= BOSS_FOCUS_UNLOCK_GOLD;
+    bossFocusUnlocked = true;
 });
 
 // upgrade button listeners
