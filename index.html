@@ -7,72 +7,122 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="layout">
-        <div id="hud">
-            <div class="hud-row player-row">
-                <span id="hud-player">—</span>
-                <button id="logoutBtn">Logout</button>
-            </div>
-            <h2>Rotworm Killer</h2>
-            <div class="hud-row"><span>Level</span><span id="hud-level">1</span></div>
-            <div class="hud-xpbar-wrap">
-                <div id="hud-xpbar"></div>
-            </div>
-            <div class="hud-row"><span>EXP</span><span id="hud-exp">0 / 100</span></div>
-            <hr>
-            <div class="hud-row"><span>Score</span><span id="hud-score">0</span></div>
-            <div class="hud-row"><span>Gold</span><span id="hud-gold">0</span></div>
-            <hr>
-            <div class="hud-section">Weapon</div>
-            <div class="hud-row weapon-row">
-                <img id="hud-weapon-img" src="Serpent_Sword.gif" class="weapon-icon">
-                <span id="hud-weapon-name">Serpent Sword</span>
-            </div>
-            <div class="hud-section">Damage</div>
-            <div class="hud-row"><span class="dmg-basic">Basic</span><span id="hud-dmg-basic">0–10</span></div>
-            <div class="cd-wrap">
-                <div class="cd-label"><span>Cooldown</span><span id="cd-basic-text">Ready</span></div>
-                <div class="cd-bar-bg"><div id="cd-basic-bar" class="cd-bar cd-bar-basic"></div></div>
-            </div>
-            <div class="hud-row"><span class="dmg-fire">Fireball</span><span id="hud-dmg-fire">10–20</span></div>
-            <div class="cd-wrap">
-                <div class="cd-label"><span>Cooldown</span><span id="cd-fire-text">Ready</span></div>
-                <div class="cd-bar-bg"><div id="cd-fire-bar" class="cd-bar cd-bar-fire"></div></div>
-            </div>
-            <hr>
-            <div class="hud-section">Debug</div>
-            <button onclick="exp+=1000;checkLevelUp();">+1,000 EXP</button>
-            <button onclick="exp+=10000;checkLevelUp();">+10,000 EXP</button>
-            <button onclick="gold+=100000;">+100,000 Gold</button>
-            <hr>
-            <button id="weaponUpgradeBtn">-</button>
-            <button id="fireballBtn"><img src="Great_Fireball_Rune.gif" class="btn-icon"> Great Fireball (need lvl 4)</button>
-            <button id="ultimateExplosionBtn"><img src="Ultimate_Explosion.gif" class="btn-icon"> Ultimate Explosion (need lvl 20)</button>
-            <div class="cd-wrap">
-                <div class="cd-label"><span>Ult. Cooldown</span><span id="cd-ue-text">Locked</span></div>
-                <div class="cd-bar-bg"><div id="cd-ue-bar" class="cd-bar cd-bar-ue"></div></div>
-            </div>
-            <hr>
-            <div class="hud-section">Upgrades</div>
-            <button id="upgradeAtkSpeedBtn">Atk Speed +10% (10K) 0/10</button>
-            <button id="upgradeGfbCdBtn">GFB CD -10% (10K) 0/10</button>
-            <button id="upgradeUeCdBtn">Ult CD -10% (100K) 0/10</button>
-            <hr>
-            <div class="hud-section">Automation</div>
-            <button id="autoAttackBtn">Auto Attack (need lvl 20)</button>
-            <button id="autoGfbBtn">Auto GFB (unlock GFB first)</button>
-            <button id="autoUeBtn">Auto UE (unlock UE first)</button>
-            <hr>
-            <div class="hud-section sb-header">
-                Top Killers
-                <button class="sb-refresh-btn" onclick="fetchScoreboard()">↻</button>
-            </div>
-            <div id="scoreboard-list"><div class="sb-loading">Loading…</div></div>
+    <!-- ── Top Navigation ─────────────────────────────────────── -->
+    <nav id="top-nav">
+        <span class="nav-logo">⚔ Rotworm Killer</span>
+        <div class="nav-links">
+            <button class="nav-btn nav-active" id="nav-game-btn" onclick="showPage('game')">▶ Game</button>
+            <button class="nav-btn" id="nav-about-btn" onclick="showPage('about')">About</button>
         </div>
-        <div id="game-area">
-            <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </nav>
+
+    <!-- ── Game Page ──────────────────────────────────────────── -->
+    <div id="page-game">
+        <div id="layout">
+
+            <!-- Left HUD: weapons, spells, upgrades, automation -->
+            <div id="hud-left">
+                <div class="hud-section">Weapon</div>
+                <div class="hud-row weapon-row">
+                    <img id="hud-weapon-img" src="Serpent_Sword.gif" class="weapon-icon">
+                    <span id="hud-weapon-name">Serpent Sword</span>
+                </div>
+                <button id="weaponUpgradeBtn">-</button>
+                <hr>
+                <div class="hud-section">Damage</div>
+                <div class="hud-row"><span class="dmg-basic">Basic</span><span id="hud-dmg-basic">0–10</span></div>
+                <div class="cd-wrap">
+                    <div class="cd-label"><span>Cooldown</span><span id="cd-basic-text">Ready</span></div>
+                    <div class="cd-bar-bg"><div id="cd-basic-bar" class="cd-bar cd-bar-basic"></div></div>
+                </div>
+                <div class="hud-row"><span class="dmg-fire">Fireball</span><span id="hud-dmg-fire">10–20</span></div>
+                <div class="cd-wrap">
+                    <div class="cd-label"><span>Cooldown</span><span id="cd-fire-text">Ready</span></div>
+                    <div class="cd-bar-bg"><div id="cd-fire-bar" class="cd-bar cd-bar-fire"></div></div>
+                </div>
+                <hr>
+                <div class="hud-section">Spells</div>
+                <button id="fireballBtn"><img src="Great_Fireball_Rune.gif" class="btn-icon"> Great Fireball (need lvl 4)</button>
+                <button id="ultimateExplosionBtn"><img src="Ultimate_Explosion.gif" class="btn-icon"> Ultimate Explosion (need lvl 20)</button>
+                <div class="cd-wrap">
+                    <div class="cd-label"><span>Ult. Cooldown</span><span id="cd-ue-text">Locked</span></div>
+                    <div class="cd-bar-bg"><div id="cd-ue-bar" class="cd-bar cd-bar-ue"></div></div>
+                </div>
+                <hr>
+                <div class="hud-section">Upgrades</div>
+                <button id="upgradeAtkSpeedBtn">Atk Speed +10% (10K) 0/10</button>
+                <button id="upgradeGfbCdBtn">GFB CD -10% (10K) 0/10</button>
+                <button id="upgradeUeCdBtn">Ult CD -10% (100K) 0/10</button>
+                <hr>
+                <div class="hud-section">Automation</div>
+                <button id="autoAttackBtn">Auto Attack (need lvl 20)</button>
+                <button id="autoGfbBtn">Auto GFB (unlock GFB first)</button>
+                <button id="autoUeBtn">Auto UE (unlock UE first)</button>
+                <hr>
+                <div class="hud-section">Debug</div>
+                <button onclick="exp+=1000;checkLevelUp();">+1,000 EXP</button>
+                <button onclick="exp+=10000;checkLevelUp();">+10,000 EXP</button>
+                <button onclick="gold+=100000;">+100,000 Gold</button>
+            </div>
+
+            <!-- Canvas -->
+            <div id="game-area">
+                <canvas id="gameCanvas" width="800" height="600"></canvas>
+            </div>
+
+            <!-- Right HUD: player info, stats, scoreboard -->
+            <div id="hud-right">
+                <div class="hud-row player-row">
+                    <span id="hud-player">—</span>
+                    <button id="logoutBtn">Logout</button>
+                </div>
+                <hr>
+                <div class="hud-row"><span>Level</span><span id="hud-level">1</span></div>
+                <div class="hud-xpbar-wrap">
+                    <div id="hud-xpbar"></div>
+                </div>
+                <div class="hud-row"><span>EXP</span><span id="hud-exp">0 / 100</span></div>
+                <hr>
+                <div class="hud-row"><span>Score</span><span id="hud-score">0</span></div>
+                <div class="hud-row"><span>Gold</span><span id="hud-gold">0</span></div>
+                <hr>
+                <div class="hud-section sb-header">
+                    Top Killers
+                    <button class="sb-refresh-btn" onclick="fetchScoreboard()">↻</button>
+                </div>
+                <div id="scoreboard-list"><div class="sb-loading">Loading…</div></div>
+            </div>
+
         </div>
     </div>
+
+    <!-- ── About Page ─────────────────────────────────────────── -->
+    <div id="page-about" style="display:none">
+        <div class="about-box">
+            <h2 class="about-title">About Rotworm Killer</h2>
+            <p>A browser-based idle/clicker RPG inspired by <strong>Tibia</strong>, built entirely with vanilla HTML5, Canvas API, and JavaScript &mdash; no frameworks, no dependencies.</p>
+            <h3>Features</h3>
+            <ul>
+                <li>Click-to-attack combat with animated hit effects</li>
+                <li>Weapon progression across 5 tiers</li>
+                <li>Great Fireball (GFB) AoE spell &amp; Ultimate Explosion</li>
+                <li>Upgrade shop: attack speed, spell cooldown reduction</li>
+                <li>Automation: auto-attack, auto-GFB, auto-UE</li>
+                <li>Boss encounters (Versperoth) every 20 kills</li>
+                <li>Offline progress simulation (up to 8 hours)</li>
+                <li>Global scoreboard with persistent account system</li>
+                <li>Guest mode &mdash; play instantly without registration</li>
+            </ul>
+            <h3>Tech Stack</h3>
+            <ul>
+                <li><strong>Frontend:</strong> HTML5 Canvas, vanilla JavaScript, CSS</li>
+                <li><strong>Backend:</strong> Python 3 stdlib only (no frameworks), SQLite WAL</li>
+                <li><strong>Deployment:</strong> Railway, auto-deploy from GitHub on every push</li>
+            </ul>
+            <p class="about-credit">Sprites &amp; inspiration from <a href="https://www.tibia.com" target="_blank" rel="noopener noreferrer">Tibia</a> by CipSoft.</p>
+        </div>
+    </div>
+
     <!-- Offline progress modal -->
     <div id="offline-modal">
         <div class="offline-box">
@@ -109,6 +159,14 @@
             <button id="guestBtn" class="auth-guest">Play as Guest</button>
         </div>
     </div>
+    <script>
+    function showPage(page) {
+        document.getElementById('page-game').style.display  = page === 'game'  ? '' : 'none';
+        document.getElementById('page-about').style.display = page === 'about' ? '' : 'none';
+        document.getElementById('nav-game-btn').classList.toggle('nav-active', page === 'game');
+        document.getElementById('nav-about-btn').classList.toggle('nav-active', page === 'about');
+    }
+    </script>
     <script src="js/main.js"></script>
 </body>
 </html>
