@@ -520,6 +520,30 @@ canvas {
     box-shadow: none;
 }
 
+.auth-guest-sep {
+    text-align: center;
+    color: #5a4820;
+    font-size: 11px;
+    margin: 8px 0 4px;
+}
+
+.auth-guest {
+    width: 100%;
+    padding: 6px;
+    background: transparent;
+    color: #8a7040;
+    border: 1px solid #4a3810;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: Verdana, sans-serif;
+    transition: color 0.1s, border-color 0.1s;
+}
+
+.auth-guest:hover {
+    color: #c0a050;
+    border-color: #7a5818;
+}
+
 /* ── Offline Progress Modal ──────────────────────────────── */
 #offline-modal {
     display: none;

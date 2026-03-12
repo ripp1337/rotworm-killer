@@ -19,6 +19,7 @@ let bossSpawnCounter = 0;    // increments with every worm/boss kill
 // ── Auth & persistence ───────────────────────────────────────────
 let authToken    = localStorage.getItem('rk_token');
 let authUsername = localStorage.getItem('rk_username');
+let guestMode    = false;
 let gameStarted  = false;
 let _saveTimer   = null;
 let _sbTimer     = null;
@@ -507,7 +508,8 @@ function startGame(stateRaw) {
     }
 
     document.getElementById('login-modal').style.display = 'none';
-    document.getElementById('hud-player').textContent = authUsername;
+    document.getElementById('hud-player').textContent = guestMode ? 'Guest' : authUsername;
+    document.getElementById('logoutBtn').textContent = guestMode ? 'Exit' : 'Logout';
     if (!gameStarted) {
         gameStarted = true;
         loop();
@@ -518,6 +520,7 @@ function startGame(stateRaw) {
 }
 
 async function doLogout() {
+    if (guestMode) { location.reload(); return; }
     await saveProgress();
     try {
         await fetch('/api/logout', {
@@ -1154,5 +1157,10 @@ document.getElementById('auth-reg-form').addEventListener('submit', async e => {
 });
 
 document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+document.getElementById('guestBtn').addEventListener('click', () => {
+    guestMode = true;
+    startGame(null);
+});
 
 initAuth();
