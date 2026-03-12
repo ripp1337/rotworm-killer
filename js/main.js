@@ -137,10 +137,8 @@ function updateHUD() {
     if (!autoUnlocked) {
         autoBtn.textContent = level < AUTO_UNLOCK_LEVEL
             ? `Auto Attack (need lvl ${AUTO_UNLOCK_LEVEL})`
-            : gold < AUTO_UNLOCK_GOLD
-                ? `Auto Attack (need ${AUTO_UNLOCK_GOLD}g)`
-                : `Auto Attack (${AUTO_UNLOCK_GOLD}g)`;
-        autoBtn.disabled = level < AUTO_UNLOCK_LEVEL || gold < AUTO_UNLOCK_GOLD;
+            : `Auto Attack (Free)`;
+        autoBtn.disabled = level < AUTO_UNLOCK_LEVEL;
         autoBtn.classList.remove('auto-on');
     } else {
         autoBtn.textContent = autoEnabled ? 'Auto: ON' : 'Auto: OFF';
@@ -189,21 +187,21 @@ let dmgNumbers = []; // floating damage numbers
 
 const BASIC_COOLDOWN_MS  = 500;    // 0.5s
 const GFB_COOLDOWN_MS    = 10000;  // 10s
-const GFB_GOLD_COST      = 100;    // per cast
+const GFB_GOLD_COST      = 0;      // free to cast
 const GFB_UNLOCK_LEVEL   = 4;
-const GFB_UNLOCK_GOLD    = 1000;
+const GFB_UNLOCK_GOLD    = 100;
 let gfbUnlocked     = false;
 let lastBasicAttack = 0;   // timestamp of last basic hit
 let gfbCooldownEnd  = 0;   // timestamp when GFB is ready again
 
-const UE_UNLOCK_LEVEL = 20;
-const UE_UNLOCK_GOLD  = 20000;
+const UE_UNLOCK_LEVEL = 10;
+const UE_UNLOCK_GOLD  = 1000;
 const UE_COOLDOWN_MS  = 30000; // 30s
 let ueUnlocked    = false;
 let ueCooldownEnd = 0;
 
-const AUTO_UNLOCK_LEVEL = 20;
-const AUTO_UNLOCK_GOLD  = 20000;
+const AUTO_UNLOCK_LEVEL = 5;
+const AUTO_UNLOCK_GOLD  = 0;
 const AUTO_COOLDOWN_MS  = 1000; // fixed 1s, unaffected by upgrades
 let autoUnlocked   = false;
 let autoEnabled    = false;
@@ -211,12 +209,12 @@ let autoTarget     = null;
 let lastAutoAttack = 0;
 
 const AUTO_GFB_UNLOCK_LEVEL = 20;
-const AUTO_GFB_UNLOCK_GOLD  = 20000;
+const AUTO_GFB_UNLOCK_GOLD  = 1000;
 let autoGfbUnlocked = false;
 let autoGfbEnabled  = false;
 
-const AUTO_UE_UNLOCK_LEVEL = 20;
-const AUTO_UE_UNLOCK_GOLD  = 20000;
+const AUTO_UE_UNLOCK_LEVEL = 25;
+const AUTO_UE_UNLOCK_GOLD  = 10000;
 let autoUeUnlocked = false;
 let autoUeEnabled  = false;
 
@@ -229,9 +227,12 @@ let ueCdUpgrades     = 0;
 function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS * Math.pow(0.9, atkSpeedUpgrades); }
 function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS   * Math.pow(0.9, gfbCdUpgrades); }
 function effectiveUeCooldown()    { return UE_COOLDOWN_MS    * Math.pow(0.9, ueCdUpgrades); }
-function atkSpeedCost() { return 10000  * Math.pow(10, atkSpeedUpgrades); }
-function gfbCdCost()    { return 10000  * Math.pow(10, gfbCdUpgrades); }
-function ueCdCost()     { return 100000 * Math.pow(10, ueCdUpgrades); }
+const ATK_SPEED_COSTS = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000];
+const GFB_CD_COSTS    = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000];
+const UE_CD_COSTS     = [5000, 10000, 20000, 50000, 100000, 250000, 750000, 1000000, 2000000, 5000000];
+function atkSpeedCost() { return ATK_SPEED_COSTS[atkSpeedUpgrades] ?? Infinity; }
+function gfbCdCost()    { return GFB_CD_COSTS[gfbCdUpgrades]       ?? Infinity; }
+function ueCdCost()     { return UE_CD_COSTS[ueCdUpgrades]         ?? Infinity; }
 function fmtCost(n) {
     if (n >= 1e12) return (n/1e12).toFixed(0) + 'T';
     if (n >= 1e9)  return (n/1e9).toFixed(0)  + 'B';
