@@ -197,6 +197,8 @@ function updateHUD() {
         bossFocusBtn.classList.add('auto-on');
     }
 }
+
+let fireballActive = false;
 let spawnPaused = false;
 let dmgNumbers = []; // floating damage numbers
 
