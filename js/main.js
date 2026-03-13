@@ -70,7 +70,7 @@ function applyMobConfig() {
         MOB_EXP    = 150;
         MOB_KILLS  = 5;
         MOB_GOLD_MAX = 60;
-        MOB_SIZE   = 22;
+        MOB_SIZE   = 80;
     } else {
         MOB_MAXHP  = 65;
         MOB_EXP    = 40;
