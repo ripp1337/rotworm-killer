@@ -1114,10 +1114,28 @@ canvas {
     line-height: 1.5;
 }
 
-.st-node-lock {
+.st-node-reqs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin: 2px 0 1px;
+}
+.st-req {
     font-size: 8px;
-    color: #6a3a10;
-    font-style: italic;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-family: Verdana, sans-serif;
+    white-space: nowrap;
+}
+.st-req-met {
+    color: #60cc40;
+    border: 1px solid #3a7a20;
+    background: #1a2a10;
+}
+.st-req-fail {
+    color: #cc6030;
+    border: 1px solid #7a3a10;
+    background: #2a1808;
 }
 
 .st-node-maxed-label {

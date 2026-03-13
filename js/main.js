@@ -561,9 +561,13 @@ function renderGeneralPane() {
                 ? `<div class="st-connector ${prereqs ? 'st-conn-open' : 'st-conn-locked'}">▾</div>`
                 : '';
 
-            let lockNote = '';
-            if (!prereqs) lockNote = 'Requires previous tier';
-            else if (!lvlOk) lockNote = `Requires level ${skill.reqLevel}`;
+            const reqChips = [];
+            if (skill.reqLevel > 1) reqChips.push(`<span class="st-req ${lvlOk ? 'st-req-met' : 'st-req-fail'}">Lv.${skill.reqLevel}</span>`);
+            skill.prereqs.forEach(pid => {
+                const pname = GENERAL_SKILLS.find(s => s.id === pid)?.name || `Skill ${pid}`;
+                reqChips.push(`<span class="st-req ${skillPts(pid) >= 1 ? 'st-req-met' : 'st-req-fail'}">${pname}</span>`);
+            });
+            const reqsHTML = reqChips.length ? `<div class="st-node-reqs">${reqChips.join('')}</div>` : '';
 
             html += `
                 ${connector}
@@ -573,10 +577,10 @@ function renderGeneralPane() {
                         <span class="st-node-pts ${maxed ? 'st-pts-maxed' : ''}">${pts}/${skill.max}</span>
                     </div>
                     <div class="st-node-desc">${skill.desc}</div>
-                    ${lockNote ? `<div class="st-node-lock">${lockNote}</div>` : ''}
-                    ${!maxed && prereqs && lvlOk
+                    ${reqsHTML}
+                    ${!maxed
                         ? `<button class="st-buy-btn" onclick="buySkill(${skill.id})" ${canBuy ? '' : 'disabled'}>${fmtCost(cost)}g</button>`
-                        : (maxed ? `<div class="st-node-maxed-label">MAXED</div>` : '')
+                        : `<div class="st-node-maxed-label">MAXED</div>`
                     }
                 </div>`;
         }
@@ -610,9 +614,13 @@ function renderKnightPane() {
             const connector = row > 1
                 ? `<div class="st-connector ${prereqs ? 'st-conn-open' : 'st-conn-locked'}">&#9660;</div>`
                 : '';
-            let lockNote = '';
-            if (!prereqs) lockNote = 'Requires previous tier';
-            else if (!lvlOk) lockNote = `Requires level ${skill.reqLevel}`;
+            const reqChips = [];
+            if (skill.reqLevel > 1) reqChips.push(`<span class="st-req ${lvlOk ? 'st-req-met' : 'st-req-fail'}">Lv.${skill.reqLevel}</span>`);
+            skill.prereqs.forEach(pid => {
+                const pname = KNIGHT_SKILLS.find(s => s.id === pid)?.name || `Skill ${pid}`;
+                reqChips.push(`<span class="st-req ${kPts(pid) >= 1 ? 'st-req-met' : 'st-req-fail'}">${pname}</span>`);
+            });
+            const reqsHTML = reqChips.length ? `<div class="st-node-reqs">${reqChips.join('')}</div>` : '';
             html += `
                 ${connector}
                 <div class="${cls}" data-id="${skill.id}" title="${skill.desc}">
@@ -621,10 +629,10 @@ function renderKnightPane() {
                         <span class="st-node-pts ${maxed ? 'st-pts-maxed' : ''}">${pts}/${skill.max}</span>
                     </div>
                     <div class="st-node-desc">${skill.desc}</div>
-                    ${lockNote ? `<div class="st-node-lock">${lockNote}</div>` : ''}
-                    ${!maxed && prereqs && lvlOk
+                    ${reqsHTML}
+                    ${!maxed
                         ? `<button class="st-buy-btn" onclick="buyKnightSkill(${skill.id})" ${canBuy ? '' : 'disabled'}>${cost === 0 ? 'Free' : fmtCost(cost) + 'g'}</button>`
-                        : (maxed ? `<div class="st-node-maxed-label">MAXED</div>` : '')
+                        : `<div class="st-node-maxed-label">MAXED</div>`
                     }
                 </div>`;
         }
@@ -658,10 +666,14 @@ function renderSorcPane() {
             const connector = row > 1
                 ? `<div class="st-connector ${prereqs ? 'st-conn-open' : 'st-conn-locked'}">&#9660;</div>`
                 : '';
-            let lockNote = '';
-            if (!prereqs) lockNote = 'Requires previous tier';
-            else if (!lvlOk) lockNote = `Requires level ${skill.reqLevel}`;
-            else if (extraLock) lockNote = 'Requires Fireball (General Skill Tree)';
+            const reqChips = [];
+            if (skill.reqLevel > 1) reqChips.push(`<span class="st-req ${lvlOk ? 'st-req-met' : 'st-req-fail'}">Lv.${skill.reqLevel}</span>`);
+            skill.prereqs.forEach(pid => {
+                const pname = SORC_SKILLS.find(s => s.id === pid)?.name || `Skill ${pid}`;
+                reqChips.push(`<span class="st-req ${sPts(pid) >= 1 ? 'st-req-met' : 'st-req-fail'}">${pname}</span>`);
+            });
+            if (skill.id === 201) reqChips.push(`<span class="st-req ${gfbUnlocked ? 'st-req-met' : 'st-req-fail'}">Fireball</span>`);
+            const reqsHTML = reqChips.length ? `<div class="st-node-reqs">${reqChips.join('')}</div>` : '';
             html += `
                 ${connector}
                 <div class="${cls}" data-id="${skill.id}" title="${skill.desc}">
@@ -670,10 +682,10 @@ function renderSorcPane() {
                         <span class="st-node-pts ${maxed ? 'st-pts-maxed' : ''}">${pts}/${skill.max}</span>
                     </div>
                     <div class="st-node-desc">${skill.desc}</div>
-                    ${lockNote ? `<div class="st-node-lock">${lockNote}</div>` : ''}
-                    ${!maxed && prereqs && lvlOk
+                    ${reqsHTML}
+                    ${!maxed
                         ? `<button class="st-buy-btn" onclick="buySorcSkill(${skill.id})" ${canBuy ? '' : 'disabled'}>${fmtCost(cost)}g</button>`
-                        : (maxed ? `<div class="st-node-maxed-label">MAXED</div>` : '')
+                        : `<div class="st-node-maxed-label">MAXED</div>`
                     }
                 </div>`;
         }
