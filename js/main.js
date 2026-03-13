@@ -231,34 +231,6 @@ function updateHUD() {
     } else {
         document.getElementById('weaponUpgradeBtn').style.display = 'none';
     }
-    // upgrade buttons
-    const upgAtkBtn = document.getElementById('upgradeAtkSpeedBtn');
-    if (atkSpeedUpgrades >= MAX_UPGRADES) {
-        upgAtkBtn.textContent = 'Atk Speed MAX';
-        upgAtkBtn.disabled = true;
-    } else {
-        const aCost = atkSpeedCost();
-        upgAtkBtn.textContent = `Atk Speed +10% (${fmtCost(aCost)}g) ${atkSpeedUpgrades}/${MAX_UPGRADES}`;
-        upgAtkBtn.disabled = gold < aCost;
-    }
-    const upgGfbBtn = document.getElementById('upgradeGfbCdBtn');
-    if (gfbCdUpgrades >= MAX_UPGRADES) {
-        upgGfbBtn.textContent = 'Fireball CD MAX';
-        upgGfbBtn.disabled = true;
-    } else {
-        const gCost = gfbCdCost();
-        upgGfbBtn.textContent = `Fireball CD -10% (${fmtCost(gCost)}g) ${gfbCdUpgrades}/${MAX_UPGRADES}`;
-        upgGfbBtn.disabled = gold < gCost;
-    }
-    const upgUeBtn = document.getElementById('upgradeUeCdBtn');
-    if (ueCdUpgrades >= MAX_UPGRADES) {
-        upgUeBtn.textContent = 'Ult CD MAX';
-        upgUeBtn.disabled = true;
-    } else {
-        const uCost = ueCdCost();
-        upgUeBtn.textContent = `Ult CD -10% (${fmtCost(uCost)}g) ${ueCdUpgrades}/${MAX_UPGRADES}`;
-        upgUeBtn.disabled = gold < uCost;
-    }
     // auto attack button
     const autoBtn = document.getElementById('autoAttackBtn');
     if (!autoUnlocked) {
@@ -381,21 +353,6 @@ const BOSS_FOCUS_UNLOCK_LEVEL = 10;
 const BOSS_FOCUS_UNLOCK_GOLD  = 1000;
 let bossFocusUnlocked = false;
 
-// upgrades
-const MAX_UPGRADES   = 10;
-let atkSpeedUpgrades = 0;
-let gfbCdUpgrades    = 0;
-let ueCdUpgrades     = 0;
-
-function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS * Math.pow(0.9, atkSpeedUpgrades); }
-function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS   * Math.pow(0.9, gfbCdUpgrades); }
-function effectiveUeCooldown()    { return UE_COOLDOWN_MS    * Math.pow(0.9, ueCdUpgrades); }
-const ATK_SPEED_COSTS = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000];
-const GFB_CD_COSTS    = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000];
-const UE_CD_COSTS     = [5000, 10000, 20000, 50000, 100000, 250000, 750000, 1000000, 2000000, 5000000];
-function atkSpeedCost() { return ATK_SPEED_COSTS[atkSpeedUpgrades] ?? Infinity; }
-function gfbCdCost()    { return GFB_CD_COSTS[gfbCdUpgrades]       ?? Infinity; }
-function ueCdCost()     { return UE_CD_COSTS[ueCdUpgrades]         ?? Infinity; }
 function fmtCost(n) {
     if (n >= 1e12) return (n/1e12).toFixed(0) + 'T';
     if (n >= 1e9)  return (n/1e9).toFixed(0)  + 'B';
@@ -404,11 +361,172 @@ function fmtCost(n) {
     return n.toString();
 }
 
+// ── Skill Tree ────────────────────────────────────────────────────────────────
+// Cost per point: tier 1 = 500g, tier 2 = 2000g, tier 3 = 10000g
+const SKILL_COST_PER_TIER = [0, 500, 2000, 10000];
+
+// General skill tree definition
+// col: 1-indexed column (1=placeholder, 2=Monster/Boss, 3=Economy/CDR)
+// row: tier within column (1=base, 2=mid, 3=top) — must unlock previous tier fully first
+const GENERAL_SKILLS = [
+    // Column 2 — Monster/Boss
+    { id: 1, col: 2, row: 1, name: 'More Monsters',  max: 5, reqLevel: 1,  prereqs: [],     desc: '+1 max spawn cap per point (base: 10)' },
+    { id: 2, col: 2, row: 2, name: 'More Bosses',    max: 5, reqLevel: 5,  prereqs: [1],    desc: 'Boss spawns every -2 kills per point (base: 50)' },
+    { id: 3, col: 2, row: 3, name: 'Uber Bosses',    max: 1, reqLevel: 15, prereqs: [1, 2], desc: 'Enables uber bosses (every 50 kills, unaffected by More Bosses)' },
+    // Column 3 — Economy/CDR
+    { id: 4, col: 3, row: 1, name: 'More Gold',      max: 5, reqLevel: 1,  prereqs: [],     desc: '+10% gold per kill per point' },
+    { id: 5, col: 3, row: 2, name: 'More EXP',       max: 5, reqLevel: 5,  prereqs: [4],    desc: '+10% exp per kill per point' },
+    { id: 6, col: 3, row: 3, name: 'Cooldown Reset', max: 1, reqLevel: 15, prereqs: [4, 5], desc: '1% chance on kill to reset all cooldowns' },
+];
+
+// skill points spent: keyed by skill id
+let skillPoints = {}; // e.g. { 1: 3, 4: 5 }
+
+function skillPts(id) { return skillPoints[id] || 0; }
+
+function skillPrereqsMet(skill) {
+    return skill.prereqs.every(pid => {
+        const ps = GENERAL_SKILLS.find(s => s.id === pid);
+        return ps && skillPts(pid) >= ps.max;
+    });
+}
+
+function skillCanBuy(skill) {
+    if (level < skill.reqLevel) return false;
+    if (skillPts(skill.id) >= skill.max) return false;
+    if (!skillPrereqsMet(skill)) return false;
+    const cost = SKILL_COST_PER_TIER[skill.row] ?? 0;
+    return gold >= cost;
+}
+
+function buySkill(id) {
+    const skill = GENERAL_SKILLS.find(s => s.id === id);
+    if (!skill || !skillCanBuy(skill)) return;
+    const cost = SKILL_COST_PER_TIER[skill.row] ?? 0;
+    gold -= cost;
+    skillPoints[id] = (skillPoints[id] || 0) + 1;
+    renderSkillTree();
+}
+
+// ── Skill effect helpers ──────────────────────────────────────────
+function skillMonsterCap()    { return 10 + skillPts(1); }
+function skillBossInterval()  { return Math.max(20, BOSS_EVERY - skillPts(2) * 2); }
+function skillGoldMult()      { return 1 + skillPts(4) * 0.1; }
+function skillExpMult()       { return 1 + skillPts(5) * 0.1; }
+function skillCdResetEnabled(){ return skillPts(6) >= 1; }
+function skillUberBossEnabled(){ return skillPts(3) >= 1; }
+
+// ── Skill tree UI ─────────────────────────────────────────────────
+let _skillTab = 'general';
+
+function openSkillTree() {
+    _skillTab = 'general';
+    document.getElementById('skill-modal').style.display = 'flex';
+    renderSkillTree();
+}
+
+function switchSkillTab(tab) {
+    _skillTab = tab;
+    ['general', 'knight', 'sorcerer'].forEach(t => {
+        document.getElementById('st-tab-' + t).classList.toggle('st-tab-active', t === tab);
+    });
+    renderSkillTree();
+}
+
+function renderSkillTree() {
+    // Update tab visibility
+    const knightTab   = document.getElementById('st-tab-knight');
+    const sorcTab     = document.getElementById('st-tab-sorcerer');
+    knightTab.style.display  = ascendedClass === 'knight'   ? '' : 'none';
+    sorcTab.style.display    = ascendedClass === 'sorcerer' ? '' : 'none';
+
+    // If current tab is unavailable, fall back to general
+    if ((_skillTab === 'knight'   && ascendedClass !== 'knight') ||
+        (_skillTab === 'sorcerer' && ascendedClass !== 'sorcerer')) {
+        _skillTab = 'general';
+    }
+
+    ['general', 'knight', 'sorcerer'].forEach(t => {
+        document.getElementById('st-tab-' + t).classList.toggle('st-tab-active', t === _skillTab);
+        document.getElementById('st-pane-' + t).style.display = t === _skillTab ? '' : 'none';
+    });
+
+    if (_skillTab === 'general') renderGeneralPane();
+}
+
+function renderGeneralPane() {
+    const pane = document.getElementById('st-pane-general');
+
+    // Build a 3-column × 3-row grid of skill nodes
+    // col indices 1,2,3 ; row indices 1,2,3
+    let html = '<div class="st-grid">';
+    for (let col = 1; col <= 3; col++) {
+        html += '<div class="st-col">';
+        for (let row = 1; row <= 3; row++) {
+            const skill = GENERAL_SKILLS.find(s => s.col === col && s.row === row);
+            if (!skill) {
+                // Placeholder column or empty slot
+                if (col === 1) {
+                    html += `<div class="st-node st-node-placeholder"><span class="st-node-name">—</span><span class="st-node-sub">Coming soon</span></div>`;
+                } else {
+                    html += `<div class="st-node st-node-empty"></div>`;
+                }
+                continue;
+            }
+            const pts     = skillPts(skill.id);
+            const maxed   = pts >= skill.max;
+            const prereqs = skillPrereqsMet(skill);
+            const lvlOk   = level >= skill.reqLevel;
+            const cost    = SKILL_COST_PER_TIER[skill.row];
+            const canBuy  = !maxed && prereqs && lvlOk && gold >= cost;
+            const locked  = !prereqs || !lvlOk;
+
+            let cls = 'st-node';
+            if (maxed)       cls += ' st-node-maxed';
+            else if (locked) cls += ' st-node-locked';
+            else if (canBuy) cls += ' st-node-available';
+            else             cls += ' st-node-unaffordable';
+
+            // Connector arrow from previous row (row > 1)
+            const connector = row > 1
+                ? `<div class="st-connector ${prereqs ? 'st-conn-open' : 'st-conn-locked'}">▾</div>`
+                : '';
+
+            let lockNote = '';
+            if (!prereqs) lockNote = 'Requires previous tier (max)';
+            else if (!lvlOk) lockNote = `Requires level ${skill.reqLevel}`;
+
+            html += `
+                ${connector}
+                <div class="${cls}" data-id="${skill.id}" title="${skill.desc}">
+                    <div class="st-node-header">
+                        <span class="st-node-name">${skill.name}</span>
+                        <span class="st-node-pts ${maxed ? 'st-pts-maxed' : ''}">${pts}/${skill.max}</span>
+                    </div>
+                    <div class="st-node-desc">${skill.desc}</div>
+                    ${lockNote ? `<div class="st-node-lock">${lockNote}</div>` : ''}
+                    ${!maxed && prereqs && lvlOk
+                        ? `<button class="st-buy-btn" onclick="buySkill(${skill.id})" ${canBuy ? '' : 'disabled'}>${fmtCost(cost)}g</button>`
+                        : (maxed ? `<div class="st-node-maxed-label">MAXED</div>` : '')
+                    }
+                </div>`;
+        }
+        html += '</div>'; // st-col
+    }
+    html += '</div>'; // st-grid
+
+    pane.innerHTML = html;
+}
+
+function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS; }
+function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS; }
+function effectiveUeCooldown()    { return UE_COOLDOWN_MS; }
+
 // ── Progress save / load ─────────────────────────────────────────
 function getProgress() {
     return {
         score, gold, exp, level, weaponIndex,
-        atkSpeedUpgrades, gfbCdUpgrades, ueCdUpgrades,
+        skillPoints,
         gfbUnlocked, ueUnlocked,
         autoUnlocked, autoEnabled,
         autoGfbUnlocked, autoGfbEnabled,
@@ -430,9 +548,8 @@ function loadProgress(state) {
         if (s.exp              != null) exp              = s.exp;
         if (s.level            != null) level            = s.level;
         if (s.weaponIndex      != null) weaponIndex      = Math.min(s.weaponIndex, WEAPONS.length - 1);
-        if (s.atkSpeedUpgrades != null) atkSpeedUpgrades = s.atkSpeedUpgrades;
-        if (s.gfbCdUpgrades    != null) gfbCdUpgrades    = s.gfbCdUpgrades;
-        if (s.ueCdUpgrades     != null) ueCdUpgrades     = s.ueCdUpgrades;
+        if (s.skillPoints      != null) skillPoints      = s.skillPoints;
+        // legacy migration: old upgrade fields → skill points ignored (fresh start for skill tree)
         if (s.gfbUnlocked      != null) gfbUnlocked      = s.gfbUnlocked;
         if (s.ueUnlocked       != null) ueUnlocked       = s.ueUnlocked;
         if (s.autoUnlocked     != null) autoUnlocked     = s.autoUnlocked;
@@ -804,7 +921,7 @@ function spawnAttackEffect(x, y) {
 }
 
 function spawnWorm() {
-    if (worms.length >= 10) return; // cap at 10 worms
+    if (worms.length >= skillMonsterCap()) return; // cap from skill tree (base 10)
     const size = MOB_SIZE;
     const margin = size + 8; // keep worm fully inside the canvas
     const minDist = size * 2 + 6; // minimum center-to-center distance (no overlap, small gap)
@@ -836,20 +953,30 @@ function spawnBoss() {
 
 function killWorm(w) {
     score += MOB_KILLS;
-    exp   += MOB_EXP;
+    const expGain  = Math.floor(MOB_EXP  * skillExpMult());
+    const goldGain = Math.floor(Math.random() * (MOB_GOLD_MAX + 1) * skillGoldMult());
+    exp  += expGain;
+    gold += goldGain;
     checkLevelUp();
-    gold += Math.floor(Math.random() * (MOB_GOLD_MAX + 1));
-    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: MOB_EXP, color: 'white', life: 80 });
+    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: expGain, color: 'white', life: 80 });
     bossSpawnCounter++;
-    if (bossSpawnCounter % BOSS_EVERY === 0) spawnBoss();
+    if (bossSpawnCounter % skillBossInterval() === 0) spawnBoss();
+    // Cooldown reset proc (skill 6)
+    if (skillCdResetEnabled() && Math.random() < 0.01) {
+        gfbCooldownEnd  = 0;
+        ueCooldownEnd   = 0;
+        annihilationCooldownEnd = 0;
+    }
 }
 
 function killBoss(b) {
     score += BOSS_KILLS;
-    exp   += BOSS_EXP;
+    const expGain  = Math.floor(BOSS_EXP  * skillExpMult());
+    const goldGain = Math.floor(BOSS_GOLD * skillGoldMult());
+    exp  += expGain;
+    gold += goldGain;
     checkLevelUp();
-    gold  += BOSS_GOLD;
-    dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 18, value: BOSS_EXP, color: '#ffd700', life: 100 });
+    dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 18, value: expGain, color: '#ffd700', life: 100 });
     boss = null;
 }
 
@@ -1326,29 +1453,6 @@ document.getElementById('bossFocusBtn').addEventListener('click', () => {
     if (!autoUnlocked || level < BOSS_FOCUS_UNLOCK_LEVEL || gold < BOSS_FOCUS_UNLOCK_GOLD) return;
     gold -= BOSS_FOCUS_UNLOCK_GOLD;
     bossFocusUnlocked = true;
-});
-
-// upgrade button listeners
-document.getElementById('upgradeAtkSpeedBtn').addEventListener('click', () => {
-    if (atkSpeedUpgrades >= MAX_UPGRADES) return;
-    const cost = atkSpeedCost();
-    if (gold < cost) return;
-    gold -= cost;
-    atkSpeedUpgrades++;
-});
-document.getElementById('upgradeGfbCdBtn').addEventListener('click', () => {
-    if (gfbCdUpgrades >= MAX_UPGRADES) return;
-    const cost = gfbCdCost();
-    if (gold < cost) return;
-    gold -= cost;
-    gfbCdUpgrades++;
-});
-document.getElementById('upgradeUeCdBtn').addEventListener('click', () => {
-    if (ueCdUpgrades >= MAX_UPGRADES) return;
-    const cost = ueCdCost();
-    if (gold < cost) return;
-    gold -= cost;
-    ueCdUpgrades++;
 });
 
 function loop() {

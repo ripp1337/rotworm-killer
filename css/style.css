@@ -901,3 +901,248 @@ canvas {
     color: #c05050;
     margin: 0;
 }
+
+/* ── Skill Tree button ───────────────────────────────────────── */
+#skillTreeBtn {
+    width: 100%;
+    background: #0a1a0a !important;
+    color: #60cc80 !important;
+    border-color: #2a6a3a !important;
+    box-shadow: inset 0 1px 0 #3a8a50, 0 1px 0 #000 !important;
+    font-size: 11px !important;
+    font-weight: bold;
+}
+#skillTreeBtn:hover:not(:disabled) {
+    background: #0e2814 !important;
+    color: #80ee99 !important;
+}
+
+/* ── Skill Tree modal ────────────────────────────────────────── */
+#skill-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    z-index: 1001;
+    justify-content: center;
+    align-items: center;
+}
+
+.st-modal-box {
+    background: #160e03;
+    border: 2px solid #7a5818;
+    box-shadow:
+        inset 0 0 0 1px #3a2408,
+        inset 0 0 16px #00000070,
+        0 8px 32px #000000cc;
+    width: 620px;
+    max-width: 96vw;
+    display: flex;
+    flex-direction: column;
+}
+
+.st-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid #5a3e10;
+}
+
+.st-modal-title {
+    font-size: 14px;
+    color: #f0c040;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px #c8800060;
+}
+
+.st-close-btn {
+    background: none !important;
+    border: none !important;
+    color: #7a6030 !important;
+    font-size: 14px !important;
+    cursor: pointer;
+    padding: 0 2px !important;
+    box-shadow: none !important;
+    line-height: 1;
+}
+.st-close-btn:hover { color: #f0c040 !important; }
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.st-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #3a2408;
+}
+
+.st-tab {
+    padding: 7px 18px;
+    background: #0d0900;
+    color: #6a5030;
+    border: none !important;
+    border-right: 1px solid #3a2408 !important;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: Verdana, sans-serif;
+    box-shadow: none !important;
+    transition: background 0.1s, color 0.1s;
+}
+.st-tab:last-child { border-right: none !important; }
+.st-tab:hover:not(.st-tab-active) { background: #1a1006; color: #c0a050; }
+.st-tab-active {
+    background: #2e1e08 !important;
+    color: #f0c040 !important;
+    border-bottom: 2px solid #f0c040 !important;
+}
+
+/* ── Pane ────────────────────────────────────────────────────── */
+.st-pane {
+    padding: 16px;
+    min-height: 260px;
+}
+
+.st-coming-soon {
+    text-align: center;
+    color: #5a4020;
+    font-size: 12px;
+    margin-top: 40px;
+}
+
+/* ── Grid layout: 3 columns ──────────────────────────────────── */
+.st-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0 16px;
+}
+
+.st-col {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+}
+
+/* ── Connector arrow between tiers ──────────────────────────── */
+.st-connector {
+    text-align: center;
+    font-size: 16px;
+    line-height: 1.2;
+    padding: 2px 0;
+}
+.st-conn-open   { color: #7a5818; }
+.st-conn-locked { color: #2a1a08; }
+
+/* ── Skill node ──────────────────────────────────────────────── */
+.st-node {
+    border: 1px solid #3a2408;
+    background: #1a1006;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 70px;
+}
+
+.st-node-placeholder {
+    border-color: #2a1a04;
+    background: #100900;
+    opacity: 0.4;
+    justify-content: center;
+    align-items: center;
+}
+
+.st-node-empty {
+    border: 1px dashed #1e1004;
+    background: none;
+    min-height: 70px;
+}
+
+.st-node-maxed {
+    border-color: #4a8a1a;
+    background: #0e1a06;
+}
+
+.st-node-available {
+    border-color: #7a5818;
+    background: #1e1408;
+    box-shadow: inset 0 0 8px #3a2808;
+}
+
+.st-node-locked {
+    opacity: 0.45;
+}
+
+.st-node-unaffordable {
+    border-color: #4a3208;
+    opacity: 0.7;
+}
+
+/* ── Node internals ──────────────────────────────────────────── */
+.st-node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.st-node-name {
+    font-size: 10px;
+    font-weight: bold;
+    color: #e0c060;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.st-node-pts {
+    font-size: 9px;
+    color: #7a6030;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.st-pts-maxed { color: #60cc40; }
+
+.st-node-desc {
+    font-size: 9px;
+    color: #8a7040;
+    line-height: 1.5;
+}
+
+.st-node-lock {
+    font-size: 8px;
+    color: #6a3a10;
+    font-style: italic;
+}
+
+.st-node-maxed-label {
+    font-size: 9px;
+    color: #60cc40;
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+.st-buy-btn {
+    margin-top: 2px;
+    padding: 3px 6px !important;
+    background: #2a1e08 !important;
+    color: #f0c040 !important;
+    border: 1px solid #7a5818 !important;
+    cursor: pointer;
+    font-size: 9px !important;
+    font-family: Verdana, sans-serif;
+    box-shadow: inset 0 1px 0 #6a4e14 !important;
+    transition: background 0.1s;
+    align-self: flex-start;
+}
+.st-buy-btn:hover:not(:disabled) {
+    background: #3e2a10 !important;
+    color: #ffd860 !important;
+}
+.st-buy-btn:disabled {
+    background: #181008 !important;
+    color: #5a4820 !important;
+    border-color: #3a2408 !important;
+    box-shadow: none !important;
+    cursor: default;
+}

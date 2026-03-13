@@ -55,11 +55,6 @@
                     <div class="cd-bar-bg"><div id="cd-anni-bar" class="cd-bar cd-bar-anni"></div></div>
                 </div>
                 <hr>
-                <div class="hud-section">Upgrades</div>
-                <button id="upgradeAtkSpeedBtn">Atk Speed +10% (10K) 0/10</button>
-                <button id="upgradeGfbCdBtn">GFB CD -10% (10K) 0/10</button>
-                <button id="upgradeUeCdBtn">Ult CD -10% (100K) 0/10</button>
-                <hr>
                 <div class="hud-section">Automation</div>
                 <button id="autoAttackBtn">Auto Attack (need lvl 20)</button>
                 <button id="bossFocusBtn">Boss Focus (unlock Auto first)</button>
@@ -97,6 +92,7 @@
                 <div class="hud-row"><span>Gold</span><span id="hud-gold">0</span></div>
                 <hr>
                 <button id="ascendBtn" disabled>&#9734; Ascend (need lvl 30)</button>
+                <button id="skillTreeBtn" onclick="openSkillTree()">&#9643; Skill Tree</button>
                 <hr>
                 <div class="hud-section sb-header">
                     Top Killers
@@ -179,6 +175,23 @@
         document.getElementById('nav-about-btn').classList.toggle('nav-active', page === 'about');
     }
     </script>
+    <!-- Skill Tree modal -->
+    <div id="skill-modal" style="display:none">
+        <div class="st-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">&#9643; Skill Tree</span>
+                <button class="st-close-btn" onclick="document.getElementById('skill-modal').style.display='none'">&#x2715;</button>
+            </div>
+            <div class="st-tabs">
+                <button id="st-tab-general"  class="st-tab st-tab-active" onclick="switchSkillTab('general')">General</button>
+                <button id="st-tab-knight"   class="st-tab" style="display:none" onclick="switchSkillTab('knight')">&#9876; Knight</button>
+                <button id="st-tab-sorcerer" class="st-tab" style="display:none" onclick="switchSkillTab('sorcerer')">&#10022; Sorcerer</button>
+            </div>
+            <div id="st-pane-general"  class="st-pane"></div>
+            <div id="st-pane-knight"   class="st-pane" style="display:none"><div class="st-coming-soon">Knight skills coming soon.</div></div>
+            <div id="st-pane-sorcerer" class="st-pane" style="display:none"><div class="st-coming-soon">Sorcerer skills coming soon.</div></div>
+        </div>
+    </div>
     <!-- Class choice modal -->
     <div id="class-modal" style="display:none">
         <div class="class-choice-box">
