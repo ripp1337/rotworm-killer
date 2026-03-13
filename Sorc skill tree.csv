@@ -1,0 +1,13 @@
+ID,Tier,Name,What it does,Max points,Value per point,Required level,Prerequisites ID,Comment,Cost per level
+1,1,Great Fireball,Improve Fireball into Great Fireball,1,1,30,,Kills all monsters except for bosses in the range,5000
+2,2,Blast Radius,+50% Fireball blast radius,1,50%,35,1,hits a much wider area,20000
+3,3,Additional GFBs,"While casting GFB, you cast an additional 1",1,1,50,"1, 2",,50 000
+4,1,Ultimate Explosion,Kills all the monsters except for bosses,1,1,40,3,"Cooldown - 5 min, doesn't work on bosses",20 000
+5,2,Auto Ultimate Explosion,Cast UE automatically,1,1,50,4,Same as auto fireball or attack,50 000
+6,3,Ultimate Explosion cooldown,Reduced UE cooldown,1,1,60,"4, 5",max 50% reduction at level 5,"1000, 2000, 5000, 20000, 100000 (for levels 1, 2, 3...)"
+7,4,Increase max damage,Increases maximal damage,5,5,30,,additional 25 max damage on level 5,"100, 500, 2000, 5000, 10000 (for levels 1, 2, 3...)"
+8,5,Increase min damage,Increases minimal damage,5,5,40,7,additional 25 min damage on level 5,"500, 1000, 5000, 20000, 50000 (for levels 1, 2, 3...)"
+9,6,Increase min and max damage,Increase both min and max damage,5,5,50,"7, 8",additional 25 min and max damage,"1000, 2000, 5000, 20000, 100000 (for levels 1, 2, 3...)"
+10,1,Power Stance,Temporarily grants huge attack and attack speed boost,1,1,40,,"Gives +15 max damage, +15 min damage, +50% attack speed for 90 seconds. 6 minute cooldown",10 000
+11,2,Auto Power Stance,Auto Power Stance,1,1,50,10,Casts Power Stance automatically,20 000
+12,3,Power Stance cooldown,Reducec Power Stance cooldown,5,10%,60,"10, 11",max 50% reduction at level 5,"1000, 2000, 5000, 20000, 100000 (for levels 1, 2, 3...)"
