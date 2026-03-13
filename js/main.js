@@ -53,7 +53,14 @@ let level = 1; // player level
 let levelUpMsg = 0; // timer for level-up flash
 let ascendMsg  = 0; // timer for ascension flash
 
-// ── Ascension ────────────────────────────────────────────────────
+// Park all animated sprites in the DOM so browsers run their GIF animation timers
+window.addEventListener('DOMContentLoaded', () => {
+    const spriteHolder = document.getElementById('gif-sprites');
+    [rotwormImg, cyclopImg, versperothImg, floorImg, stoneFloorImg].forEach(img => {
+        spriteHolder.appendChild(img);
+    });
+});
+──────────────────────────────────────────────────
 const ASCEND_LEVEL = 30;
 let ascended = false;
 
@@ -781,10 +788,10 @@ function draw() {
             ctx.arc(w.x, w.y, w.size, 0, Math.PI * 2);
             ctx.fill();
         }
-        // draw health bar above worm
-        const barW = w.size * 2;
+        // draw health bar above worm — fixed 40px wide regardless of mob size
+        const barW = 40;
         const barH = 4;
-        const barX = w.x - w.size;
+        const barX = w.x - 20;
         const barY = w.y - w.size - 8;
         const hpRatio = w.hp / MOB_MAXHP;
         ctx.fillStyle = '#1a0000';
