@@ -757,13 +757,18 @@ function spawnWorm() {
     if (worms.length >= 10) return; // cap at 10 worms
     const size = MOB_SIZE;
     const margin = size + 8; // keep worm fully inside the canvas
-    worms.push({
-        x: margin + Math.random() * (canvas.width  - margin * 2),
-        y: margin + Math.random() * (canvas.height - margin * 2),
-        size,
-        hp: MOB_MAXHP,
-        _id: ++_eid,
-    });
+    const minDist = size * 2 + 6; // minimum center-to-center distance (no overlap, small gap)
+    for (let attempt = 0; attempt < 15; attempt++) {
+        const x = margin + Math.random() * (canvas.width  - margin * 2);
+        const y = margin + Math.random() * (canvas.height - margin * 2);
+        const tooClose = worms.some(w => Math.hypot(w.x - x, w.y - y) < minDist)
+                      || (boss && Math.hypot(boss.x - x, boss.y - y) < size + BOSS_SIZE + 6);
+        if (!tooClose) {
+            worms.push({ x, y, size, hp: MOB_MAXHP, _id: ++_eid });
+            return;
+        }
+    }
+    // no valid position found this frame — skip; next frame will retry
 }
 
 function spawnBoss() {
