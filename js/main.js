@@ -2,10 +2,59 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Monster sprites — reference rendered <img> tags so browsers animate the GIFs
-const rotwormImg    = document.getElementById('sprite-rotworm');
-const cyclopImg     = document.getElementById('sprite-cyclop');
-const versperothImg = document.getElementById('sprite-versperoth');
+// Monster sprites are managed as DOM <img> elements in #sprite-layer (canvas drawImage never animates GIFs)
+let _eid = 0; // entity ID counter
+const _sprites = new Map(); // eid -> <img> element
+
+function syncSpriteLayer() {
+    const layer = document.getElementById('sprite-layer');
+    if (!layer) return;
+    const activeIds = new Set();
+
+    worms.forEach(w => {
+        activeIds.add(w._id);
+        let img = _sprites.get(w._id);
+        if (!img) {
+            img = document.createElement('img');
+            img.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;';
+            layer.appendChild(img);
+            _sprites.set(w._id, img);
+        }
+        const src = ascended ? 'Cyclops.gif' : 'Rotworm.gif';
+        if (!img.getAttribute('data-src') || img.getAttribute('data-src') !== src) {
+            img.src = src;
+            img.setAttribute('data-src', src);
+        }
+        img.style.left   = (w.x - w.size) + 'px';
+        img.style.top    = (w.y - w.size) + 'px';
+        img.style.width  = (w.size * 2) + 'px';
+        img.style.height = (w.size * 2) + 'px';
+    });
+
+    if (boss) {
+        activeIds.add(boss._id);
+        let img = _sprites.get(boss._id);
+        if (!img) {
+            img = document.createElement('img');
+            img.src = 'Versperoth.gif';
+            img.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;';
+            layer.appendChild(img);
+            _sprites.set(boss._id, img);
+        }
+        img.style.left   = (boss.x - boss.size) + 'px';
+        img.style.top    = (boss.y - boss.size) + 'px';
+        img.style.width  = (boss.size * 2) + 'px';
+        img.style.height = (boss.size * 2) + 'px';
+    }
+
+    for (const [id, img] of _sprites) {
+        if (!activeIds.has(id)) {
+            img.remove();
+            _sprites.delete(id);
+        }
+    }
+}
+
 
 const BOSS_EVERY     = 50;   // spawn a boss every N worm kills
 const BOSS_HP        = 500;
@@ -712,7 +761,8 @@ function spawnWorm() {
         x: margin + Math.random() * (canvas.width  - margin * 2),
         y: margin + Math.random() * (canvas.height - margin * 2),
         size,
-        hp: MOB_MAXHP
+        hp: MOB_MAXHP,
+        _id: ++_eid,
     });
 }
 
@@ -725,6 +775,7 @@ function spawnBoss() {
         size: BOSS_SIZE,
         hp: BOSS_HP,
         maxHp: BOSS_HP,
+        _id: ++_eid,
     };
 }
 
@@ -768,16 +819,7 @@ function draw() {
         }
     }
     worms.forEach(w => {
-        const mobImg = ascended ? cyclopImg : rotwormImg;
-        if (mobImg.complete) {
-            ctx.drawImage(mobImg, w.x - w.size, w.y - w.size, w.size * 2, w.size * 2);
-        } else {
-            ctx.fillStyle = 'green';
-            ctx.beginPath();
-            ctx.arc(w.x, w.y, w.size, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        // draw health bar above worm — fixed 40px wide regardless of mob size
+        // sprite drawn as DOM <img> via syncSpriteLayer() — only draw HP bar here
         const barW = 40;
         const barH = 4;
         const barX = w.x - 20;
@@ -790,14 +832,7 @@ function draw() {
     });
     // draw boss
     if (boss) {
-        if (versperothImg.complete) {
-            ctx.drawImage(versperothImg, boss.x - boss.size, boss.y - boss.size, boss.size * 2, boss.size * 2);
-        } else {
-            ctx.fillStyle = '#c00';
-            ctx.beginPath();
-            ctx.arc(boss.x, boss.y, boss.size, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        // sprite drawn as DOM <img> via syncSpriteLayer()
         // boss HP bar (wider, red/orange)
         const bBarW = boss.size * 2;
         const bBarH = 6;
@@ -853,6 +888,7 @@ function draw() {
         ctx.fillText(d.value, d.x, d.y);
     });
     ctx.globalAlpha = 1;
+    syncSpriteLayer();
     updateHUD();
 }
 
