@@ -249,6 +249,17 @@ function updateHUD() {
         bossFocusBtn.disabled = true;
         bossFocusBtn.classList.add('auto-on');
     }
+    // auto fireball button
+    const autoGfbBtn = document.getElementById('autoGfbBtn');
+    if (!autoGfbUnlocked) {
+        autoGfbBtn.textContent = 'Auto Fireball (unlock in Skill Tree)';
+        autoGfbBtn.disabled = true;
+        autoGfbBtn.classList.remove('auto-on');
+    } else {
+        autoGfbBtn.textContent = autoGfbEnabled ? 'Auto Fireball: ON' : 'Auto Fireball: OFF';
+        autoGfbBtn.disabled = false;
+        autoGfbBtn.classList.toggle('auto-on', autoGfbEnabled);
+    }
     // Class-specific button visibility
     const isSorcerer = ascendedClass === 'sorcerer';
     const isKnight   = ascendedClass === 'knight';
@@ -334,6 +345,10 @@ const GENERAL_SKILLS = [
     { id: 4, col: 3, row: 1, name: 'More Gold',      max: 5, reqLevel: 1,  prereqs: [],     desc: '+10% gold per kill per point' },
     { id: 5, col: 3, row: 2, name: 'More EXP',       max: 5, reqLevel: 5,  prereqs: [4],    desc: '+10% exp per kill per point' },
     { id: 6, col: 3, row: 3, name: 'Cooldown Reset', max: 1, reqLevel: 15, prereqs: [4, 5], desc: '1% chance on kill to reset all cooldowns' },
+    // Column 4 — Fireball
+    { id: 10, col: 4, row: 1, name: 'Unlock Fireball', max: 1, reqLevel: 3,  prereqs: [],       cost: 500,  desc: 'Unlocks Fireball: 50% max HP AoE, 10s cooldown' },
+    { id: 11, col: 4, row: 2, name: 'Fireball CDR',    max: 5, reqLevel: 1,  prereqs: [10],     cost: 500,  desc: '-10% Fireball cooldown per point (base: 10s)' },
+    { id: 12, col: 4, row: 3, name: 'Auto Fireball',   max: 1, reqLevel: 10, prereqs: [10, 11], cost: 1000, desc: 'Automatically casts Fireball on the best target cluster' },
 ];
 
 // skill points spent: keyed by skill id
@@ -349,19 +364,22 @@ function skillCanBuy(skill) {
     if (level < skill.reqLevel) return false;
     if (skillPts(skill.id) >= skill.max) return false;
     if (!skillPrereqsMet(skill)) return false;
-    const cost = SKILL_COST_PER_TIER[skill.row] ?? 0;
+    const cost = skill.cost ?? SKILL_COST_PER_TIER[skill.row] ?? 0;
     return gold >= cost;
 }
 
 function buySkill(id) {
     const skill = GENERAL_SKILLS.find(s => s.id === id);
     if (!skill || !skillCanBuy(skill)) return;
-    const cost = SKILL_COST_PER_TIER[skill.row] ?? 0;
+    const cost = skill.cost ?? SKILL_COST_PER_TIER[skill.row] ?? 0;
     gold -= cost;
     skillPoints[id] = (skillPoints[id] || 0) + 1;
     // Side-effects for automation skills
-    if (id === 7) { autoUnlocked = true; autoEnabled = true; autoTarget = worms.length > 0 ? worms[0] : null; }
-    if (id === 8) { bossFocusUnlocked = true; }
+    if (id === 7)  { autoUnlocked = true; autoEnabled = true; autoTarget = worms.length > 0 ? worms[0] : null; }
+    if (id === 8)  { bossFocusUnlocked = true; }
+    // Side-effects for fireball skills
+    if (id === 10) { gfbUnlocked = true; }
+    if (id === 12) { autoGfbUnlocked = true; autoGfbEnabled = true; }
     renderSkillTree();
 }
 
@@ -373,6 +391,7 @@ function skillExpMult()        { return 1 + skillPts(5) * 0.1; }
 function skillCdResetEnabled() { return skillPts(6) >= 1; }
 function skillUberBossEnabled(){ return skillPts(3) >= 1; }
 function skillDoubleAuto()     { return skillPts(9) >= 1; }
+function skillAutoFireball()   { return skillPts(12) >= 1; }
 
 // ── Skill tree UI ─────────────────────────────────────────────────
 let _skillTab = 'general';
@@ -418,7 +437,7 @@ function renderGeneralPane() {
     // Build a 3-column × 3-row grid of skill nodes
     // col indices 1,2,3 ; row indices 1,2,3
     let html = '<div class="st-grid">';
-    for (let col = 1; col <= 3; col++) {
+    for (let col = 1; col <= 4; col++) {
         html += '<div class="st-col">';
         for (let row = 1; row <= 3; row++) {
             const skill = GENERAL_SKILLS.find(s => s.col === col && s.row === row);
@@ -435,7 +454,7 @@ function renderGeneralPane() {
             const maxed   = pts >= skill.max;
             const prereqs = skillPrereqsMet(skill);
             const lvlOk   = level >= skill.reqLevel;
-            const cost    = SKILL_COST_PER_TIER[skill.row];
+            const cost    = skill.cost ?? SKILL_COST_PER_TIER[skill.row];
             const canBuy  = !maxed && prereqs && lvlOk && gold >= cost;
             const locked  = !prereqs || !lvlOk;
 
@@ -477,7 +496,7 @@ function renderGeneralPane() {
 }
 
 function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS; }
-function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS; }
+function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS * (1 - skillPts(11) * 0.1); }
 function effectiveUeCooldown()    { return UE_COOLDOWN_MS; }
 
 // ── Progress save / load ─────────────────────────────────────────
@@ -1355,6 +1374,12 @@ document.getElementById('autoAttackBtn').addEventListener('click', () => {
 
 // boss focus button — always-on once unlocked via Skill Tree (no click action)
 document.getElementById('bossFocusBtn').addEventListener('click', () => {});
+
+// auto fireball button — toggle (unlock via Skill Tree, skill 12)
+document.getElementById('autoGfbBtn').addEventListener('click', () => {
+    if (!autoGfbUnlocked) return;
+    autoGfbEnabled = !autoGfbEnabled;
+});
 
 function loop() {
     update();
