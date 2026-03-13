@@ -303,7 +303,6 @@ function updateHUD() {
     document.getElementById('annihilationBtn').style.display      = isKnight   ? '' : 'none';
     document.getElementById('cd-anni-wrap').style.display         = isKnight   ? '' : 'none';
     document.getElementById('autoUeBtn').style.display            = isSorcerer ? '' : 'none';
-    document.getElementById('upgradeUeCdBtn').style.display       = isSorcerer ? '' : 'none';
 }
 
 let fireballActive = false;
