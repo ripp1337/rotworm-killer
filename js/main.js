@@ -234,61 +234,19 @@ function updateHUD() {
     // auto attack button
     const autoBtn = document.getElementById('autoAttackBtn');
     if (!autoUnlocked) {
-        autoBtn.textContent = level < AUTO_UNLOCK_LEVEL
-            ? `Auto Attack (need lvl ${AUTO_UNLOCK_LEVEL})`
-            : `Auto Attack (Free)`;
-        autoBtn.disabled = level < AUTO_UNLOCK_LEVEL;
+        autoBtn.textContent = 'Auto Attack (unlock in Skill Tree)';
+        autoBtn.disabled = true;
         autoBtn.classList.remove('auto-on');
     } else {
         autoBtn.textContent = autoEnabled ? 'Auto: ON' : 'Auto: OFF';
         autoBtn.disabled = false;
         autoBtn.classList.toggle('auto-on', autoEnabled);
     }
-    // auto GFB button
-    const autoGfbBtn = document.getElementById('autoGfbBtn');
-    if (!autoGfbUnlocked) {
-        autoGfbBtn.textContent = !gfbUnlocked
-            ? `Auto Fireball (unlock Fireball first)`
-            : level < AUTO_GFB_UNLOCK_LEVEL
-                ? `Auto Fireball (need lvl ${AUTO_GFB_UNLOCK_LEVEL})`
-                : gold < AUTO_GFB_UNLOCK_GOLD
-                    ? `Auto Fireball (need ${AUTO_GFB_UNLOCK_GOLD}g)`
-                    : `Auto Fireball (${AUTO_GFB_UNLOCK_GOLD}g)`;
-        autoGfbBtn.disabled = !gfbUnlocked || level < AUTO_GFB_UNLOCK_LEVEL || gold < AUTO_GFB_UNLOCK_GOLD;
-        autoGfbBtn.classList.remove('auto-on');
-    } else {
-        autoGfbBtn.textContent = autoGfbEnabled ? 'Auto Fireball: ON' : 'Auto Fireball: OFF';
-        autoGfbBtn.disabled = false;
-        autoGfbBtn.classList.toggle('auto-on', autoGfbEnabled);
-    }
-    // auto UE button
-    const autoUeBtn = document.getElementById('autoUeBtn');
-    if (!autoUeUnlocked) {
-        autoUeBtn.textContent = !ueUnlocked
-            ? `Auto UE (unlock UE first)`
-            : level < AUTO_UE_UNLOCK_LEVEL
-                ? `Auto UE (need lvl ${AUTO_UE_UNLOCK_LEVEL})`
-                : gold < AUTO_UE_UNLOCK_GOLD
-                    ? `Auto UE (need ${AUTO_UE_UNLOCK_GOLD}g)`
-                    : `Auto UE (${AUTO_UE_UNLOCK_GOLD}g)`;
-        autoUeBtn.disabled = !ueUnlocked || level < AUTO_UE_UNLOCK_LEVEL || gold < AUTO_UE_UNLOCK_GOLD;
-        autoUeBtn.classList.remove('auto-on');
-    } else {
-        autoUeBtn.textContent = autoUeEnabled ? 'Auto UE: ON' : 'Auto UE: OFF';
-        autoUeBtn.disabled = false;
-        autoUeBtn.classList.toggle('auto-on', autoUeEnabled);
-    }
     // boss focus button
     const bossFocusBtn = document.getElementById('bossFocusBtn');
     if (!bossFocusUnlocked) {
-        bossFocusBtn.textContent = !autoUnlocked
-            ? `Boss Focus (unlock Auto first)`
-            : level < BOSS_FOCUS_UNLOCK_LEVEL
-                ? `Boss Focus (need lvl ${BOSS_FOCUS_UNLOCK_LEVEL})`
-                : gold < BOSS_FOCUS_UNLOCK_GOLD
-                    ? `Boss Focus (need ${BOSS_FOCUS_UNLOCK_GOLD}g)`
-                    : `Boss Focus (${BOSS_FOCUS_UNLOCK_GOLD}g)`;
-        bossFocusBtn.disabled = !autoUnlocked || level < BOSS_FOCUS_UNLOCK_LEVEL || gold < BOSS_FOCUS_UNLOCK_GOLD;
+        bossFocusBtn.textContent = 'Boss Focus (unlock in Skill Tree)';
+        bossFocusBtn.disabled = true;
         bossFocusBtn.classList.remove('auto-on');
     } else {
         bossFocusBtn.textContent = 'Boss Focus: ON';
@@ -365,9 +323,13 @@ function fmtCost(n) {
 const SKILL_COST_PER_TIER = [0, 500, 2000, 10000];
 
 // General skill tree definition
-// col: 1-indexed column (1=placeholder, 2=Monster/Boss, 3=Economy/CDR)
+// col: 1-indexed column (1=Automation, 2=Monster/Boss, 3=Economy/CDR)
 // row: tier within column (1=base, 2=mid, 3=top) — must unlock previous tier fully first
 const GENERAL_SKILLS = [
+    // Column 1 — Automation
+    { id: 7, col: 1, row: 1, name: 'Auto Attack',       max: 1, reqLevel: 5,  prereqs: [],     desc: 'Automatically attacks once per second' },
+    { id: 8, col: 1, row: 2, name: 'Boss Focus',        max: 1, reqLevel: 10, prereqs: [7],    desc: 'Auto attack prioritises the boss when alive' },
+    { id: 9, col: 1, row: 3, name: 'Double Strike',     max: 1, reqLevel: 20, prereqs: [7, 8], desc: 'Auto attack hits two monsters simultaneously' },
     // Column 2 — Monster/Boss
     { id: 1, col: 2, row: 1, name: 'More Monsters',  max: 5, reqLevel: 1,  prereqs: [],     desc: '+1 max spawn cap per point (base: 10)' },
     { id: 2, col: 2, row: 2, name: 'More Bosses',    max: 5, reqLevel: 5,  prereqs: [1],    desc: 'Boss spawns every -2 kills per point (base: 50)' },
@@ -404,16 +366,20 @@ function buySkill(id) {
     const cost = SKILL_COST_PER_TIER[skill.row] ?? 0;
     gold -= cost;
     skillPoints[id] = (skillPoints[id] || 0) + 1;
+    // Side-effects for automation skills
+    if (id === 7) { autoUnlocked = true; autoEnabled = true; autoTarget = worms.length > 0 ? worms[0] : null; }
+    if (id === 8) { bossFocusUnlocked = true; }
     renderSkillTree();
 }
 
 // ── Skill effect helpers ──────────────────────────────────────────
-function skillMonsterCap()    { return 10 + skillPts(1); }
-function skillBossInterval()  { return Math.max(20, BOSS_EVERY - skillPts(2) * 2); }
-function skillGoldMult()      { return 1 + skillPts(4) * 0.1; }
-function skillExpMult()       { return 1 + skillPts(5) * 0.1; }
-function skillCdResetEnabled(){ return skillPts(6) >= 1; }
+function skillMonsterCap()     { return 10 + skillPts(1); }
+function skillBossInterval()   { return Math.max(20, BOSS_EVERY - skillPts(2) * 2); }
+function skillGoldMult()       { return 1 + skillPts(4) * 0.1; }
+function skillExpMult()        { return 1 + skillPts(5) * 0.1; }
+function skillCdResetEnabled() { return skillPts(6) >= 1; }
 function skillUberBossEnabled(){ return skillPts(3) >= 1; }
+function skillDoubleAuto()     { return skillPts(9) >= 1; }
 
 // ── Skill tree UI ─────────────────────────────────────────────────
 let _skillTab = 'general';
@@ -1184,6 +1150,21 @@ function update() {
                         worms = worms.filter(w => w !== autoTarget);
                         autoTarget = worms.length > 0 ? worms[0] : null;
                     }
+                    // Double Strike — hit a second worm
+                    if (skillDoubleAuto()) {
+                        const second = worms.find(w => w !== autoTarget);
+                        if (second) {
+                            const dmg2 = rollBasicDmg();
+                            second.hp -= dmg2;
+                            spawnAttackEffect(second.x, second.y);
+                            dmgNumbers.push({ x: second.x + (Math.random()*20-10), y: second.y - second.size, value: dmg2, color: '#dd88ff', life: 60 });
+                            if (second.hp <= 0) {
+                                killWorm(second);
+                                worms = worms.filter(w => w !== second);
+                                if (autoTarget && !worms.includes(autoTarget)) autoTarget = worms.length > 0 ? worms[0] : null;
+                            }
+                        }
+                    }
                 }
             } else if (boss) {
                 // no worms — attack boss even without boss focus
@@ -1408,51 +1389,15 @@ document.getElementById('annihilationBtn').addEventListener('click', () => {
     killBoss(boss);
 });
 
-// auto attack button
+// auto attack button — pure toggle (unlock via Skill Tree)
 document.getElementById('autoAttackBtn').addEventListener('click', () => {
-    if (!autoUnlocked) {
-        if (level < AUTO_UNLOCK_LEVEL || gold < AUTO_UNLOCK_GOLD) return;
-        gold -= AUTO_UNLOCK_GOLD;
-        autoUnlocked = true;
-        autoEnabled = true;
-        autoTarget = worms.length > 0 ? worms[0] : null;
-        return;
-    }
+    if (!autoUnlocked) return;
     autoEnabled = !autoEnabled;
     if (!autoEnabled) autoTarget = null;
 });
 
-// auto GFB button
-document.getElementById('autoGfbBtn').addEventListener('click', () => {
-    if (!autoGfbUnlocked) {
-        if (!gfbUnlocked || level < AUTO_GFB_UNLOCK_LEVEL || gold < AUTO_GFB_UNLOCK_GOLD) return;
-        gold -= AUTO_GFB_UNLOCK_GOLD;
-        autoGfbUnlocked = true;
-        autoGfbEnabled = true;
-        return;
-    }
-    autoGfbEnabled = !autoGfbEnabled;
-});
-
-// auto UE button
-document.getElementById('autoUeBtn').addEventListener('click', () => {
-    if (!autoUeUnlocked) {
-        if (!ueUnlocked || level < AUTO_UE_UNLOCK_LEVEL || gold < AUTO_UE_UNLOCK_GOLD) return;
-        gold -= AUTO_UE_UNLOCK_GOLD;
-        autoUeUnlocked = true;
-        autoUeEnabled = true;
-        return;
-    }
-    autoUeEnabled = !autoUeEnabled;
-});
-
-// boss focus button
-document.getElementById('bossFocusBtn').addEventListener('click', () => {
-    if (bossFocusUnlocked) return;
-    if (!autoUnlocked || level < BOSS_FOCUS_UNLOCK_LEVEL || gold < BOSS_FOCUS_UNLOCK_GOLD) return;
-    gold -= BOSS_FOCUS_UNLOCK_GOLD;
-    bossFocusUnlocked = true;
-});
+// boss focus button — always-on once unlocked via Skill Tree (no click action)
+document.getElementById('bossFocusBtn').addEventListener('click', () => {});
 
 function loop() {
     update();
