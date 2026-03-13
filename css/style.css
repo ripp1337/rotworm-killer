@@ -777,6 +777,7 @@ canvas {
 
 /* ── Annihilation CD bar ─────────────────────────────────────── */
 .cd-bar-anni { background: linear-gradient(to right, #440000, #cc0000); }
+.cd-bar-ps   { background: linear-gradient(to right, #665500, #ddbb00); }
 
 /* ── Annihilation button ─────────────────────────────────────── */
 #annihilationBtn {

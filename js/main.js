@@ -160,8 +160,8 @@ const WEAPONS = [
 ];
 let weaponIndex = 0; // current weapon
 
-function basicDmgMin()  { return WEAPONS[weaponIndex].min + knightDmgMinBonus(); }
-function basicDmgMax()  { return WEAPONS[weaponIndex].max + knightDmgMaxBonus(); }
+function basicDmgMin()  { return WEAPONS[weaponIndex].min + knightDmgMinBonus() + sorcDmgMinBonus(); }
+function basicDmgMax()  { return WEAPONS[weaponIndex].max + knightDmgMaxBonus() + sorcDmgMaxBonus(); }
 function rollBasicDmg() { return basicDmgMin() + Math.floor(Math.random() * (basicDmgMax() - basicDmgMin() + 1)); }
 
 // Tibia-accurate health bar color based on HP ratio
@@ -251,6 +251,8 @@ function updateHUD() {
     document.getElementById('annihilationBtn').style.display      = isKnight   ? '' : 'none';
     document.getElementById('cd-anni-wrap').style.display         = isKnight   ? '' : 'none';
     document.getElementById('autoUeBtn').style.display            = isSorcerer ? '' : 'none';
+    document.getElementById('powerStanceBtn').style.display       = isSorcerer ? '' : 'none';
+    document.getElementById('cd-ps-wrap').style.display           = isSorcerer ? '' : 'none';
 }
 
 let fireballActive = false;
@@ -268,9 +270,16 @@ let gfbCooldownEnd  = 0;   // timestamp when GFB is ready again
 
 const UE_UNLOCK_LEVEL = 40; // Sorcerer only
 const UE_UNLOCK_GOLD  = 1000;
-const UE_COOLDOWN_MS  = 3 * 60 * 1000; // 3 min (Sorcerer only)
+const UE_COOLDOWN_MS  = 5 * 60 * 1000; // 5 min (Sorcerer only)
 let ueUnlocked    = false;
 let ueCooldownEnd = 0;
+
+const POWER_STANCE_COOLDOWN_MS = 6 * 60 * 1000; // 6 min
+const POWER_STANCE_DURATION_MS = 90 * 1000;      // 90 sec
+let powerStanceUnlocked    = false;
+let powerStanceActive      = false;
+let powerStanceEnd         = 0;
+let powerStanceCooldownEnd = 0;
 
 // ── Annihilation (Knight only) ────────────────────────────────────────
 const ANNIHILATION_UNLOCK_LEVEL = 40;
@@ -418,6 +427,56 @@ function knightDmgMaxBonus()     { return (kPts(107) + kPts(109)) * 5; }
 function knightExtraAutoTarget() { return kPts(103) >= 1; }
 function knightAutoAnniOn()      { return kPts(105) >= 1; }
 
+// ── Sorcerer skill tree ───────────────────────────────────────────
+// costs[] = gold cost per level [lvl1, lvl2, ...]
+const SORC_SKILLS = [
+    // Column 1 — Great Fireball
+    { id: 201, col: 1, row: 1, name: 'Great Fireball',      max: 1, reqLevel: 30, prereqs: [],           costs: [5000],                              desc: 'Unlock Great Fireball: powerful AoE dealing 50% max HP in radius (10s CD)' },
+    { id: 202, col: 1, row: 2, name: 'GFB CDR',             max: 5, reqLevel: 35, prereqs: [201],         costs: [500, 1000, 5000, 20000, 50000],      desc: '-10% Fireball cooldown per point (max -50%)' },
+    { id: 203, col: 1, row: 3, name: 'Double Fireball',     max: 1, reqLevel: 50, prereqs: [201, 202],    costs: [50000],                             desc: 'Each Fireball cast fires a second Fireball at the best remaining cluster' },
+    // Column 2 — Ultimate Explosion
+    { id: 204, col: 2, row: 1, name: 'Ultimate Explosion',  max: 1, reqLevel: 40, prereqs: [203],         costs: [20000],                             desc: 'Unlock Ultimate Explosion: instantly kills all non-boss enemies (5 min CD)' },
+    { id: 205, col: 2, row: 2, name: 'Auto Ult. Explosion', max: 1, reqLevel: 50, prereqs: [204],         costs: [50000],                             desc: 'Automatically casts Ultimate Explosion whenever off cooldown' },
+    { id: 206, col: 2, row: 3, name: 'UE CDR',              max: 5, reqLevel: 60, prereqs: [204, 205],    costs: [1000, 2000, 5000, 20000, 100000],    desc: '-10% Ultimate Explosion cooldown per point (max -50%)' },
+    // Column 3 — Damage
+    { id: 207, col: 3, row: 1, name: 'Max Damage',          max: 5, reqLevel: 30, prereqs: [],            costs: [100, 500, 2000, 5000, 10000],        desc: '+5 max damage per point' },
+    { id: 208, col: 3, row: 2, name: 'Min Damage',          max: 5, reqLevel: 40, prereqs: [207],         costs: [500, 1000, 5000, 20000, 50000],      desc: '+5 min damage per point' },
+    { id: 209, col: 3, row: 3, name: 'Power Surge',         max: 5, reqLevel: 50, prereqs: [207, 208],    costs: [1000, 2000, 5000, 20000, 100000],    desc: '+5 min and max damage per point' },
+    // Column 4 — Power Stance
+    { id: 210, col: 4, row: 1, name: 'Power Stance',        max: 1, reqLevel: 40, prereqs: [],            costs: [10000],                             desc: 'Unlock Power Stance: +15 min/max damage, +50% attack speed for 90s (6 min CD)' },
+    { id: 211, col: 4, row: 2, name: 'Auto Power Stance',   max: 1, reqLevel: 50, prereqs: [210],         costs: [20000],                             desc: 'Automatically activates Power Stance whenever off cooldown' },
+    { id: 212, col: 4, row: 3, name: 'PS CDR',              max: 5, reqLevel: 60, prereqs: [210, 211],    costs: [1000, 2000, 5000, 20000, 100000],    desc: '-10% Power Stance cooldown per point (max -50%)' },
+];
+
+let sorcSkillPts = {};
+
+function sPts(id)           { return sorcSkillPts[id] || 0; }
+function sPrereqsMet(skill) { return skill.prereqs.every(pid => sPts(pid) >= 1); }
+function sCanBuy(skill) {
+    if (level < skill.reqLevel)      return false;
+    if (sPts(skill.id) >= skill.max) return false;
+    if (!sPrereqsMet(skill))         return false;
+    return gold >= (skill.costs[sPts(skill.id)] ?? 0);
+}
+function buySorcSkill(id) {
+    const skill = SORC_SKILLS.find(s => s.id === id);
+    if (!skill || !sCanBuy(skill)) return;
+    gold -= (skill.costs[sPts(skill.id)] ?? 0);
+    sorcSkillPts[id] = (sorcSkillPts[id] || 0) + 1;
+    if (id === 201) gfbUnlocked = true;
+    if (id === 204) ueUnlocked = true;
+    if (id === 205) { autoUeUnlocked = true; autoUeEnabled = true; }
+    if (id === 210) powerStanceUnlocked = true;
+    renderSkillTree();
+}
+
+// Sorc effect helpers
+function sorcDmgMinBonus()  { return (sPts(208) + sPts(209)) * 5 + (powerStanceActive ? 15 : 0); }
+function sorcDmgMaxBonus()  { return (sPts(207) + sPts(209)) * 5 + (powerStanceActive ? 15 : 0); }
+function sorcDoubleGfb()    { return sPts(203) >= 1; }
+function sorcAutoUe()       { return sPts(205) >= 1; }
+function sorcAutoPs()       { return sPts(211) >= 1; }
+
 // ── Skill tree UI ─────────────────────────────────────────────────
 let _skillTab = 'general';
 
@@ -453,8 +512,9 @@ function renderSkillTree() {
         document.getElementById('st-pane-' + t).style.display = t === _skillTab ? '' : 'none';
     });
 
-    if (_skillTab === 'general') renderGeneralPane();
-    if (_skillTab === 'knight')  renderKnightPane();
+    if (_skillTab === 'general')  renderGeneralPane();
+    if (_skillTab === 'knight')   renderKnightPane();
+    if (_skillTab === 'sorcerer') renderSorcPane();
 }
 
 function renderGeneralPane() {
@@ -568,18 +628,67 @@ function renderKnightPane() {
     pane.innerHTML = html;
 }
 
-function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS * (ascendedClass === 'knight' ? (1 - kPts(101) * 0.1) : 1); }
-function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS  * (ascendedClass === 'knight' ? (1 - kPts(102) * 0.1) : 1); }
-function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS * (1 - skillPts(11) * 0.1); }
-function effectiveUeCooldown()    { return UE_COOLDOWN_MS; }
+function renderSorcPane() {
+    const pane = document.getElementById('st-pane-sorcerer');
+    let html = '<div class="st-grid">';
+    for (let col = 1; col <= 4; col++) {
+        html += '<div class="st-col">';
+        for (let row = 1; row <= 3; row++) {
+            const skill = SORC_SKILLS.find(s => s.col === col && s.row === row);
+            if (!skill) { html += `<div class="st-node st-node-empty"></div>`; continue; }
+            const pts     = sPts(skill.id);
+            const maxed   = pts >= skill.max;
+            const prereqs = sPrereqsMet(skill);
+            const lvlOk   = level >= skill.reqLevel;
+            const cost    = skill.costs[pts] ?? 0;
+            const canBuy  = !maxed && prereqs && lvlOk && gold >= cost;
+            const locked  = !prereqs || !lvlOk;
+            let cls = 'st-node';
+            if (maxed)       cls += ' st-node-maxed';
+            else if (locked) cls += ' st-node-locked';
+            else if (canBuy) cls += ' st-node-available';
+            else             cls += ' st-node-unaffordable';
+            const connector = row > 1
+                ? `<div class="st-connector ${prereqs ? 'st-conn-open' : 'st-conn-locked'}">&#9660;</div>`
+                : '';
+            let lockNote = '';
+            if (!prereqs) lockNote = 'Requires previous tier';
+            else if (!lvlOk) lockNote = `Requires level ${skill.reqLevel}`;
+            html += `
+                ${connector}
+                <div class="${cls}" data-id="${skill.id}" title="${skill.desc}">
+                    <div class="st-node-header">
+                        <span class="st-node-name">${skill.name}</span>
+                        <span class="st-node-pts ${maxed ? 'st-pts-maxed' : ''}">${pts}/${skill.max}</span>
+                    </div>
+                    <div class="st-node-desc">${skill.desc}</div>
+                    ${lockNote ? `<div class="st-node-lock">${lockNote}</div>` : ''}
+                    ${!maxed && prereqs && lvlOk
+                        ? `<button class="st-buy-btn" onclick="buySorcSkill(${skill.id})" ${canBuy ? '' : 'disabled'}>${fmtCost(cost)}g</button>`
+                        : (maxed ? `<div class="st-node-maxed-label">MAXED</div>` : '')
+                    }
+                </div>`;
+        }
+        html += '</div>';
+    }
+    html += '</div>';
+    pane.innerHTML = html;
+}
+
+function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS * (ascendedClass === 'knight' ? (1 - kPts(101) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1); }
+function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS  * (ascendedClass === 'knight' ? (1 - kPts(102) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1); }
+function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS * (1 - (skillPts(11) + sPts(202)) * 0.1); }
+function effectiveUeCooldown()    { return UE_COOLDOWN_MS * (1 - sPts(206) * 0.1); }
+function effectivePsCooldown()    { return POWER_STANCE_COOLDOWN_MS * (1 - sPts(212) * 0.1); }
 function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * (1 - kPts(106) * 0.1); }
 
 // ── Progress save / load ─────────────────────────────────────────
 function getProgress() {
     return {
         score, gold, exp, level, weaponIndex,
-        skillPoints, knightSkillPts,
+        skillPoints, knightSkillPts, sorcSkillPts,
         gfbUnlocked, ueUnlocked,
+        powerStanceUnlocked, powerStanceCooldownEnd,
         autoUnlocked, autoEnabled,
         autoGfbUnlocked, autoGfbEnabled,
         autoUeUnlocked,  autoUeEnabled,
@@ -601,7 +710,10 @@ function loadProgress(state) {
         if (s.level            != null) level            = s.level;
         if (s.weaponIndex      != null) weaponIndex      = Math.min(s.weaponIndex, WEAPONS.length - 1);
         if (s.skillPoints      != null) skillPoints      = s.skillPoints;
-        if (s.knightSkillPts   != null) knightSkillPts   = s.knightSkillPts;
+        if (s.knightSkillPts       != null) knightSkillPts       = s.knightSkillPts;
+        if (s.sorcSkillPts         != null) sorcSkillPts         = s.sorcSkillPts;
+        if (s.powerStanceUnlocked  != null) powerStanceUnlocked  = s.powerStanceUnlocked;
+        if (s.powerStanceCooldownEnd != null) powerStanceCooldownEnd = s.powerStanceCooldownEnd;
         // legacy migration: old upgrade fields → skill points ignored (fresh start for skill tree)
         if (s.gfbUnlocked      != null) gfbUnlocked      = s.gfbUnlocked;
         if (s.ueUnlocked       != null) ueUnlocked       = s.ueUnlocked;
@@ -1323,7 +1435,41 @@ function update() {
                     if (boss.hp <= 0) killBoss(boss);
                 }
             }
-            spawnPaused = false;
+            // Double Fireball (sorc skill 203) — second GFB at next best cluster
+            if (sorcDoubleGfb() && (worms.length > 0 || boss)) {
+                const alive2 = [...worms, ...(boss ? [boss] : [])];
+                let t2 = alive2[0], best2 = 0;
+                for (const c of alive2) {
+                    const cnt = alive2.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
+                    if (cnt > best2) { best2 = cnt; t2 = c; }
+                }
+                spawnEffect(t2.x, t2.y, radius);
+                const gx = t2.x, gy = t2.y;
+                setTimeout(() => {
+                    worms = worms.filter(w => {
+                        const dx = w.x - gx, dy = w.y - gy;
+                        if (Math.hypot(dx, dy) < radius) {
+                            const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                            w.hp -= fbDmg;
+                            dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
+                            if (w.hp <= 0) { killWorm(w); return false; }
+                        }
+                        return true;
+                    });
+                    if (boss) {
+                        const dx = boss.x - gx, dy = boss.y - gy;
+                        if (Math.hypot(dx, dy) < radius) {
+                            const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                            boss.hp -= fbDmg;
+                            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
+                            if (boss.hp <= 0) killBoss(boss);
+                        }
+                    }
+                    spawnPaused = false;
+                }, 300);
+            } else {
+                spawnPaused = false;
+            }
         }, 300);
     }
     // auto UE logic — fires whenever off cooldown, boss immune (Sorcerer only)
@@ -1340,21 +1486,29 @@ function update() {
             spawnPaused = false;
         }, 900);
     }
+    // Power Stance deactivation
+    if (powerStanceActive && Date.now() >= powerStanceEnd) {
+        powerStanceActive = false;
+    }
+    // Auto Power Stance (sorc skill 211)
+    if (powerStanceUnlocked && sorcAutoPs() && !powerStanceActive && Date.now() >= powerStanceCooldownEnd) {
+        powerStanceActive      = true;
+        powerStanceEnd         = Date.now() + POWER_STANCE_DURATION_MS;
+        powerStanceCooldownEnd = Date.now() + effectivePsCooldown();
+    }
     // float damage numbers upward and expire
     dmgNumbers.forEach(d => { d.y -= 1; d.life--; });
     dmgNumbers = dmgNumbers.filter(d => d.life > 0);
     if (levelUpMsg > 0) levelUpMsg--;
     if (ascendMsg  > 0) ascendMsg--;
-    // update UE button (Sorcerer only)
+    // update UE + Power Stance buttons (Sorcerer only)
     if (ascendedClass === 'sorcerer') {
         const ueRemaining = Math.max(0, ueCooldownEnd - Date.now());
         const ueBtnEl = document.getElementById('ultimateExplosionBtn');
         const ueIcon = `<img src="Ultimate_Explosion.gif" class="btn-icon">`;
         if (!ueUnlocked) {
-            ueBtnEl.innerHTML = level < UE_UNLOCK_LEVEL
-                ? `${ueIcon} Ultimate Explosion (need lvl ${UE_UNLOCK_LEVEL})`
-                : `${ueIcon} Unlock Ult. Explosion (${UE_UNLOCK_GOLD}g)`;
-            ueBtnEl.disabled = level < UE_UNLOCK_LEVEL || gold < UE_UNLOCK_GOLD;
+            ueBtnEl.innerHTML = `${ueIcon} Ultimate Explosion (unlock in Skill Tree)`;
+            ueBtnEl.disabled = true;
         } else if (ueRemaining > 0) {
             ueBtnEl.innerHTML = `${ueIcon} Ultimate Explosion (${(ueRemaining / 1000).toFixed(1)}s)`;
             ueBtnEl.disabled = true;
@@ -1364,6 +1518,36 @@ function update() {
         }
         document.getElementById('cd-ue-bar').style.width  = ueUnlocked && ueRemaining > 0 ? ((1 - ueRemaining / effectiveUeCooldown()) * 100) + '%' : (ueUnlocked ? '100%' : '0%');
         document.getElementById('cd-ue-text').textContent = !ueUnlocked ? 'Locked' : (ueRemaining > 0 ? (ueRemaining / 1000).toFixed(1) + 's' : 'Ready');
+        // Auto UE button
+        const autoUeEl = document.getElementById('autoUeBtn');
+        if (!autoUeUnlocked) {
+            autoUeEl.textContent = 'Auto UE (unlock in Skill Tree)';
+            autoUeEl.disabled = true;
+            autoUeEl.classList.remove('auto-on');
+        } else {
+            autoUeEl.textContent = autoUeEnabled ? 'Auto UE: ON' : 'Auto UE: OFF';
+            autoUeEl.disabled = false;
+            autoUeEl.classList.toggle('auto-on', autoUeEnabled);
+        }
+        // Power Stance button
+        const psRemaining = Math.max(0, powerStanceCooldownEnd - Date.now());
+        const psBtnEl = document.getElementById('powerStanceBtn');
+        if (!powerStanceUnlocked) {
+            psBtnEl.innerHTML = '&#9889; Power Stance (unlock in Skill Tree)';
+            psBtnEl.disabled = true;
+        } else if (powerStanceActive) {
+            const psLeft = Math.max(0, powerStanceEnd - Date.now());
+            psBtnEl.innerHTML = `&#9889; Power Stance: ACTIVE (${Math.ceil(psLeft / 1000)}s)`;
+            psBtnEl.disabled = true;
+        } else if (psRemaining > 0) {
+            psBtnEl.innerHTML = `&#9889; Power Stance (${Math.ceil(psRemaining / 1000)}s)`;
+            psBtnEl.disabled = true;
+        } else {
+            psBtnEl.innerHTML = '&#9889; Power Stance';
+            psBtnEl.disabled = false;
+        }
+        document.getElementById('cd-ps-bar').style.width  = powerStanceUnlocked && psRemaining > 0 ? ((1 - psRemaining / effectivePsCooldown()) * 100) + '%' : ((powerStanceUnlocked && !powerStanceActive) ? '100%' : '0%');
+        document.getElementById('cd-ps-text').textContent = !powerStanceUnlocked ? 'Locked' : (powerStanceActive ? `Active (${Math.ceil(Math.max(0, powerStanceEnd - Date.now()) / 1000)}s)` : (psRemaining > 0 ? Math.ceil(psRemaining / 1000) + 's' : 'Ready'));
     }
     // update Annihilation button (Knight only)
     if (ascendedClass === 'knight') {
@@ -1419,13 +1603,7 @@ weaponUpgradeBtn.addEventListener('click', () => {
 // ultimate explosion button
 const ueBtn = document.getElementById('ultimateExplosionBtn');
 ueBtn.addEventListener('click', () => {
-    if (ascendedClass !== 'sorcerer') return;
-    if (!ueUnlocked) {
-        if (level < UE_UNLOCK_LEVEL || gold < UE_UNLOCK_GOLD) return;
-        gold -= UE_UNLOCK_GOLD;
-        ueUnlocked = true;
-        return;
-    }
+    if (ascendedClass !== 'sorcerer' || !ueUnlocked) return;
     if (Date.now() < ueCooldownEnd) return;
     spawnUltimateExplosion();
     ueCooldownEnd = Date.now() + effectiveUeCooldown();
@@ -1462,6 +1640,18 @@ document.getElementById('bossFocusBtn').addEventListener('click', () => {});
 document.getElementById('autoGfbBtn').addEventListener('click', () => {
     if (!autoGfbUnlocked) return;
     autoGfbEnabled = !autoGfbEnabled;
+});
+
+document.getElementById('autoUeBtn').addEventListener('click', () => {
+    if (!autoUeUnlocked) return;
+    autoUeEnabled = !autoUeEnabled;
+});
+
+document.getElementById('powerStanceBtn').addEventListener('click', () => {
+    if (!powerStanceUnlocked || powerStanceActive || Date.now() < powerStanceCooldownEnd) return;
+    powerStanceActive      = true;
+    powerStanceEnd         = Date.now() + POWER_STANCE_DURATION_MS;
+    powerStanceCooldownEnd = Date.now() + effectivePsCooldown();
 });
 
 function loop() {
