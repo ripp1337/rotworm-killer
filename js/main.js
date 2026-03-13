@@ -60,7 +60,8 @@ window.addEventListener('DOMContentLoaded', () => {
         spriteHolder.appendChild(img);
     });
 });
-──────────────────────────────────────────────────
+
+// ── Ascension ────────────────────────────────────────────────────────────────
 const ASCEND_LEVEL = 30;
 let ascended = false;
 
