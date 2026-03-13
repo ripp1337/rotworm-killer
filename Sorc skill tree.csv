@@ -1,6 +1,6 @@
 ID,Tier,Name,What it does,Max points,Value per point,Required level,Prerequisites ID,Comment,Cost per level
 1,1,Great Fireball,Improve Fireball into Great Fireball,1,1,30,,Kills all monsters except for bosses in the range,5000
-2,2,Blast Radius,+50% Fireball blast radius,1,50%,35,1,hits a much wider area,20000
+2,2,Volatile Blast,GFB deals 50% boss max HP as bonus damage,1,50%,35,1,always hits boss when Great Fireball is active,20000
 3,3,Additional GFBs,"While casting GFB, you cast an additional 1",1,1,50,"1, 2",,50 000
 4,1,Ultimate Explosion,Kills all the monsters except for bosses,1,1,40,3,"Cooldown - 5 min, doesn't work on bosses",20 000
 5,2,Auto Ultimate Explosion,Cast UE automatically,1,1,50,4,Same as auto fireball or attack,50 000

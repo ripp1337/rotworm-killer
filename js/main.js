@@ -434,7 +434,7 @@ function knightAutoAnniOn()      { return kPts(105) >= 1; }
 const SORC_SKILLS = [
     // Column 1 — Great Fireball
     { id: 201, col: 1, row: 1, name: 'Great Fireball',      max: 1, reqLevel: 30, prereqs: [],           costs: [5000],                              desc: 'Upgrades Fireball to Great Fireball: instantly kills all non-boss enemies in range (requires Fireball from General Skill Tree)' },
-    { id: 202, col: 1, row: 2, name: 'Blast Radius',       max: 1, reqLevel: 35, prereqs: [201],         costs: [20000],                              desc: '+50% Fireball blast radius — hits a much wider area' },
+    { id: 202, col: 1, row: 2, name: 'Volatile Blast',     max: 1, reqLevel: 35, prereqs: [201],         costs: [20000],                              desc: 'GFB also deals 50% of boss max HP as bonus damage when boss is in range' },
     { id: 203, col: 1, row: 3, name: 'Double Fireball',     max: 1, reqLevel: 50, prereqs: [201, 202],    costs: [50000],                             desc: 'Each Fireball cast fires a second Fireball at the best remaining cluster' },
     // Column 2 — Ultimate Explosion
     { id: 204, col: 2, row: 1, name: 'Ultimate Explosion',  max: 1, reqLevel: 40, prereqs: [203],         costs: [20000],                             desc: 'Unlock Ultimate Explosion: instantly kills all non-boss enemies (5 min CD)' },
@@ -684,7 +684,7 @@ function renderSorcPane() {
 function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS * (ascendedClass === 'knight' ? (1 - kPts(101) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1); }
 function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS  * (ascendedClass === 'knight' ? (1 - kPts(102) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1); }
 function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS * (1 - skillPts(11) * 0.1); }
-function gfbRadius()              { return 200 * (sPts(202) >= 1 ? 1.5 : 1); }
+function sorcVolatileBlast()      { return sPts(202) >= 1; }
 function effectiveUeCooldown()    { return UE_COOLDOWN_MS * (1 - sPts(206) * 0.1); }
 function effectivePsCooldown()    { return POWER_STANCE_COOLDOWN_MS * (1 - sPts(212) * 0.1); }
 function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * (1 - kPts(106) * 0.1); }
@@ -1085,7 +1085,7 @@ function castGfb() {
     const candidates = [...worms, ...(boss ? [boss] : [])];
     if (candidates.length === 0) return false;
     const upgraded = sorcGfbUpgraded();
-    const radius = gfbRadius();
+    const radius = 200;
     let t = candidates[0], bestCount = 0;
     for (const c of candidates) {
         const cnt = candidates.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
@@ -1116,6 +1116,12 @@ function castGfb() {
                 dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
                 if (boss.hp <= 0) killBoss(boss);
             }
+        } else if (upgraded && boss && sorcVolatileBlast()) {
+            // Volatile Blast: always hits boss for 50% max HP regardless of range
+            const vbDmg = Math.floor(boss.maxHp * 0.5);
+            boss.hp -= vbDmg;
+            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#ff4400', life: 60 });
+            if (boss.hp <= 0) killBoss(boss);
         }
         // Double Fireball (sorc skill 203) — fire a second fireball at next best cluster
         if (sorcDoubleGfb() && (worms.length > 0 || boss)) {
@@ -1147,6 +1153,11 @@ function castGfb() {
                         dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
                         if (boss.hp <= 0) killBoss(boss);
                     }
+                } else if (upgraded && boss && sorcVolatileBlast()) {
+                    const vbDmg = Math.floor(boss.maxHp * 0.5);
+                    boss.hp -= vbDmg;
+                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#ff4400', life: 60 });
+                    if (boss.hp <= 0) killBoss(boss);
                 }
                 spawnPaused = false;
             }, 300);
