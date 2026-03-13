@@ -96,7 +96,7 @@ let levelUpMsg = 0; // timer for level-up flash
 let ascendMsg  = 0; // timer for ascension flash
 
 const stoneFloorImg = new Image();
-stoneFloorImg.src = 'Stone_Floor.gif';
+stoneFloorImg.src = 'Gravel.gif';
 
 // ── Ascension ────────────────────────────────────────────────────────────────
 const ASCEND_LEVEL = 30;
