@@ -5,6 +5,12 @@ const ctx = canvas.getContext('2d');
 const rotwormImg = new Image();
 rotwormImg.src = 'Rotworm.gif'; // ensure path matches filename
 
+const cyclopImg = new Image();
+cyclopImg.src = 'Cyclops.gif';
+
+const stoneFloorImg = new Image();
+stoneFloorImg.src = 'Stone_Floor.gif';
+
 const versperothImg = new Image();
 versperothImg.src = 'Versperoth.gif';
 
@@ -45,9 +51,50 @@ let gold = 0;  // loot currency
 let exp = 0;   // experience points
 let level = 1; // player level
 let levelUpMsg = 0; // timer for level-up flash
+let ascendMsg  = 0; // timer for ascension flash
 
-const WORM_MAXHP = 65;
-const WORM_EXP   = 40;
+// ── Ascension ────────────────────────────────────────────────────
+const ASCEND_LEVEL = 30;
+let ascended = false;
+
+// mob stats — updated by ascend()
+let MOB_MAXHP  = 65;
+let MOB_EXP    = 40;
+let MOB_KILLS  = 1;   // score contribution per kill
+let MOB_GOLD_MAX = 30; // random gold [0, MOB_GOLD_MAX]
+let MOB_SIZE   = 20;
+
+function applyMobConfig() {
+    if (ascended) {
+        MOB_MAXHP  = 260;
+        MOB_EXP    = 150;
+        MOB_KILLS  = 5;
+        MOB_GOLD_MAX = 60;
+        MOB_SIZE   = 22;
+    } else {
+        MOB_MAXHP  = 65;
+        MOB_EXP    = 40;
+        MOB_KILLS  = 1;
+        MOB_GOLD_MAX = 30;
+        MOB_SIZE   = 20;
+    }
+}
+
+function doAscend() {
+    if (ascended || level < ASCEND_LEVEL) return;
+    ascended = true;
+    worms    = [];
+    boss     = null;
+    bossSpawnCounter = 0;
+    ascendMsg = 240; // ~4s at 60fps
+    applyMobConfig();
+    // regenerate floor tile map with new floor
+    for (let r = 0; r < TILE_ROWS; r++)
+        for (let c = 0; c < TILE_COLS; c++) {
+            floorMap[r][c].flipH = Math.random() < 0.5;
+            floorMap[r][c].flipV = Math.random() < 0.5;
+        }
+}
 
 // weapon progression
 const WEAPONS = [
@@ -272,6 +319,7 @@ function getProgress() {
         autoGfbUnlocked, autoGfbEnabled,
         autoUeUnlocked,  autoUeEnabled,
         bossFocusUnlocked,
+        ascended,
         bossSpawnCounter,
         savedAt: Date.now(),
     };
@@ -298,6 +346,7 @@ function loadProgress(state) {
         if (s.autoUeUnlocked   != null) autoUeUnlocked   = s.autoUeUnlocked;
         if (s.autoUeEnabled    != null) autoUeEnabled    = s.autoUeEnabled;
         if (s.bossFocusUnlocked!= null) bossFocusUnlocked= s.bossFocusUnlocked;
+        if (s.ascended         != null) { ascended = s.ascended; applyMobConfig(); }
         if (s.bossSpawnCounter != null) bossSpawnCounter = s.bossSpawnCounter;
     } catch (_) {}
 }
@@ -345,7 +394,7 @@ function simulateOffline(offlineSec, s) {
     const ueCoolSec  = Math.max(1, Math.floor(UE_COOLDOWN_MS  * Math.pow(0.9, s.ueCdUpgrades  || 0) / 1000));
 
     let wormsOnField  = 5;
-    let wormHp        = WORM_MAXHP;
+    let wormHp        = MOB_MAXHP;
     let bossAlive     = false;
     let bossCurrentHp = BOSS_HP;
     let killCounter   = s.bossSpawnCounter || 0;
@@ -361,9 +410,10 @@ function simulateOffline(offlineSec, s) {
     const doKillWorm = () => {
         gainKills++;
         killCounter++;
-        gainExp  += WORM_EXP;
-        gainGold += 15; // avg (0+30)/2
-        gold     += 15;
+        gainExp  += MOB_EXP;
+        const avgGold = MOB_GOLD_MAX / 2;
+        gainGold += avgGold;
+        gold     += avgGold;
         if (!bossAlive && killCounter % BOSS_EVERY === 0) {
             bossAlive     = true;
             bossCurrentHp = BOSS_HP;
@@ -389,7 +439,7 @@ function simulateOffline(offlineSec, s) {
                 const n = wormsOnField;
                 for (let i = 0; i < n; i++) doKillWorm();
                 wormsOnField = 0;
-                wormHp       = WORM_MAXHP;
+                wormHp       = MOB_MAXHP;
             } else ueCd--;
         }
 
@@ -402,7 +452,7 @@ function simulateOffline(offlineSec, s) {
                 const n = wormsOnField;
                 for (let i = 0; i < n; i++) doKillWorm();
                 wormsOnField = 0;
-                wormHp       = WORM_MAXHP;
+                wormHp       = MOB_MAXHP;
             } else if (gfbCd > 0) gfbCd--;
         }
 
@@ -416,7 +466,7 @@ function simulateOffline(offlineSec, s) {
                 if (wormHp <= 0) {
                     doKillWorm();
                     wormsOnField--;
-                    wormHp = WORM_MAXHP;
+                    wormHp = MOB_MAXHP;
                 }
             }
         }
@@ -650,13 +700,13 @@ function spawnAttackEffect(x, y) {
 
 function spawnWorm() {
     if (worms.length >= 10) return; // cap at 10 worms
-    const size = 20;
+    const size = MOB_SIZE;
     const margin = size + 8; // keep worm fully inside the canvas
     worms.push({
         x: margin + Math.random() * (canvas.width  - margin * 2),
         y: margin + Math.random() * (canvas.height - margin * 2),
         size,
-        hp: WORM_MAXHP
+        hp: MOB_MAXHP
     });
 }
 
@@ -673,11 +723,11 @@ function spawnBoss() {
 }
 
 function killWorm(w) {
-    score++;
-    exp += WORM_EXP;
+    score += MOB_KILLS;
+    exp   += MOB_EXP;
     checkLevelUp();
-    gold += Math.floor(Math.random() * 31);
-    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: WORM_EXP, color: 'white', life: 80 });
+    gold += Math.floor(Math.random() * (MOB_GOLD_MAX + 1));
+    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: MOB_EXP, color: 'white', life: 80 });
     bossSpawnCounter++;
     if (bossSpawnCounter % BOSS_EVERY === 0) spawnBoss();
 }
@@ -694,8 +744,9 @@ function killBoss(b) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // draw tiled muddy floor
-    if (floorImg.complete && floorImg.naturalWidth > 0) {
+    // draw tiled floor (stone after ascension, muddy before)
+    const activeFloor = ascended ? stoneFloorImg : floorImg;
+    if (activeFloor.complete && activeFloor.naturalWidth > 0) {
         for (let row = 0; row < TILE_ROWS; row++) {
             for (let col = 0; col < TILE_COLS; col++) {
                 const tx = col * TILE;
@@ -705,14 +756,15 @@ function draw() {
                 ctx.translate(tx, ty);
                 if (flipH) { ctx.translate(TILE, 0); ctx.scale(-1, 1); }
                 if (flipV) { ctx.translate(0, TILE); ctx.scale(1, -1); }
-                ctx.drawImage(floorImg, 0, 0, TILE, TILE);
+                ctx.drawImage(activeFloor, 0, 0, TILE, TILE);
                 ctx.restore();
             }
         }
     }
     worms.forEach(w => {
-        if (rotwormImg.complete) {
-            ctx.drawImage(rotwormImg, w.x - w.size, w.y - w.size, w.size * 2, w.size * 2);
+        const mobImg = ascended ? cyclopImg : rotwormImg;
+        if (mobImg.complete) {
+            ctx.drawImage(mobImg, w.x - w.size, w.y - w.size, w.size * 2, w.size * 2);
         } else {
             ctx.fillStyle = 'green';
             ctx.beginPath();
@@ -727,7 +779,7 @@ function draw() {
         ctx.fillStyle = '#600';
         ctx.fillRect(barX, barY, barW, barH);
         ctx.fillStyle = '#0f0';
-        ctx.fillRect(barX, barY, barW * (w.hp / WORM_MAXHP), barH);
+        ctx.fillRect(barX, barY, barW * (w.hp / MOB_MAXHP), barH);
     });
     // draw boss
     if (boss) {
@@ -772,6 +824,19 @@ function draw() {
         ctx.fillText(`LEVEL UP! (${level})`, canvas.width / 2 - 100, canvas.height / 2);
         ctx.globalAlpha = 1;
     }
+    // ascension message
+    if (ascendMsg > 0) {
+        ctx.globalAlpha = Math.min(ascendMsg / 40, 1);
+        ctx.fillStyle = '#ffe066';
+        ctx.font = 'bold 28px Verdana, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('\u2726 ASCENDED \u2014 CYCLOPS REALM \u2726', canvas.width / 2, canvas.height / 2 - 36);
+        ctx.font = '16px Verdana, sans-serif';
+        ctx.fillStyle = '#ffcc33';
+        ctx.fillText('Stronger monsters, greater rewards!', canvas.width / 2, canvas.height / 2 - 6);
+        ctx.textAlign = 'left';
+        ctx.globalAlpha = 1;
+    }
     // draw floating damage numbers
     dmgNumbers.forEach(d => {
         ctx.globalAlpha = d.life / 60;
@@ -801,13 +866,11 @@ canvas.addEventListener('click', e => {
                 const dx = w.x - mx;
                 const dy = w.y - my;
                 if (Math.hypot(dx, dy) < radius) {
-                    const dmg = WORM_MAXHP;
-                    w.hp -= dmg;
-                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: dmg, color: 'orange', life: 60 });
-                    if (w.hp <= 0) {
-                        killWorm(w);
-                        return false;
-                    }
+                    // GFB one-shots all mob tiers
+                    w.hp = 0;
+                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: MOB_MAXHP, color: 'orange', life: 60 });
+                    killWorm(w);
+                    return false;
                 }
                 return true;
             });
@@ -815,9 +878,8 @@ canvas.addEventListener('click', e => {
             if (boss) {
                 const dx = boss.x - mx, dy = boss.y - my;
                 if (Math.hypot(dx, dy) < radius) {
-                    const dmg = WORM_MAXHP;
-                    boss.hp -= dmg;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#ff6600', life: 60 });
+                    boss.hp -= MOB_MAXHP;
+                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: MOB_MAXHP, color: '#ff6600', life: 60 });
                     if (boss.hp <= 0) killBoss(boss);
                 }
             }
@@ -917,18 +979,19 @@ function update() {
             worms = worms.filter(w => {
                 const dx = w.x - fx, dy = w.y - fy;
                 if (Math.hypot(dx, dy) < radius) {
-                    const dmg = WORM_MAXHP;
-                    w.hp -= dmg;
-                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: dmg, color: 'orange', life: 60 });
-                    if (w.hp <= 0) { killWorm(w); return false; }
+                    // GFB one-shots all mob tiers
+                    w.hp = 0;
+                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: MOB_MAXHP, color: 'orange', life: 60 });
+                    killWorm(w);
+                    return false;
                 }
                 return true;
             });
             if (boss) {
                 const dx = boss.x - fx, dy = boss.y - fy;
                 if (Math.hypot(dx, dy) < radius) {
-                    boss.hp -= WORM_MAXHP;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: WORM_MAXHP, color: '#ff6600', life: 60 });
+                    boss.hp -= MOB_MAXHP;
+                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: MOB_MAXHP, color: '#ff6600', life: 60 });
                     if (boss.hp <= 0) killBoss(boss);
                 }
             }
@@ -953,6 +1016,7 @@ function update() {
     dmgNumbers.forEach(d => { d.y -= 1; d.life--; });
     dmgNumbers = dmgNumbers.filter(d => d.life > 0);
     if (levelUpMsg > 0) levelUpMsg--;
+    if (ascendMsg  > 0) ascendMsg--;
     // update UE button
     const ueRemaining = Math.max(0, ueCooldownEnd - Date.now());
     const ueBtn = document.getElementById('ultimateExplosionBtn');
@@ -1005,9 +1069,21 @@ function update() {
     const fireFrac = remaining > 0 ? (1 - remaining / effectiveGfbCooldown()) : 1;
     document.getElementById('cd-fire-bar').style.width  = gfbUnlocked ? (fireFrac * 100) + '%' : '0%';
     document.getElementById('cd-fire-text').textContent = !gfbUnlocked ? 'Locked' : (remaining > 0 ? ((remaining / 1000).toFixed(1) + 's') : 'Ready');
+    // update Ascend button
+    const ascendBtn = document.getElementById('ascendBtn');
+    if (ascendBtn) {
+        if (ascended) {
+            ascendBtn.textContent = '✦ Ascended — Cyclops Realm';
+            ascendBtn.disabled = true;
+        } else if (level >= ASCEND_LEVEL) {
+            ascendBtn.textContent = `✦ Ascend (lvl ${ASCEND_LEVEL} reached!)`;
+            ascendBtn.disabled = false;
+        } else {
+            ascendBtn.textContent = `✦ Ascend (need lvl ${ASCEND_LEVEL})`;
+            ascendBtn.disabled = true;
+        }
+    }
 }
-
-// fireball button logic
 const fireBtn = document.getElementById('fireballBtn');
 fireBtn.innerHTML = `<img src="Great_Fireball_Rune.gif" class="btn-icon"> Great Fireball (need lvl ${GFB_UNLOCK_LEVEL})`;
 fireBtn.disabled = true;
@@ -1195,6 +1271,10 @@ document.getElementById('auth-reg-form').addEventListener('submit', async e => {
 });
 
 document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+document.getElementById('ascendBtn').addEventListener('click', () => {
+    if (!ascended && level >= ASCEND_LEVEL) doAscend();
+});
 
 document.getElementById('guestBtn').addEventListener('click', () => {
     guestMode = true;

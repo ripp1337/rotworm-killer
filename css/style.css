@@ -398,6 +398,37 @@ canvas {
     color: #e07070 !important;
 }
 
+/* ── Ascend button ───────────────────────────────────────────── */
+#ascendBtn {
+    width: 100%;
+    margin: 2px 0;
+    background: #1a1500 !important;
+    color: #b8960a !important;
+    border-color: #6a5500 !important;
+    font-size: 11px !important;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 6px #b8960a88;
+}
+
+#ascendBtn:not(:disabled) {
+    background: #2a2000 !important;
+    color: #ffe066 !important;
+    border-color: #b8960a !important;
+    box-shadow: 0 0 8px #b8960a55;
+    animation: ascend-pulse 1.5s ease-in-out infinite;
+}
+
+#ascendBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@keyframes ascend-pulse {
+    0%,100% { box-shadow: 0 0 4px #b8960a55; }
+    50%      { box-shadow: 0 0 12px #ffe066aa; }
+}
+
 /* ── Scoreboard section ──────────────────────────────────────── */
 .sb-header {
     display: flex;
