@@ -214,10 +214,6 @@ function updateHUD() {
     document.getElementById('hud-score').textContent = score;
     document.getElementById('hud-gold').textContent = gold;
     document.getElementById('hud-dmg-basic').textContent = `${basicDmgMin()}–${basicDmgMax()}`;
-    const fbCasts = sorcGfbCasts();
-    document.getElementById('hud-dmg-fire').textContent = fbCasts > 1
-        ? `${Math.floor(MOB_MAXHP * 0.5)} ×${fbCasts}`
-        : `${Math.floor(MOB_MAXHP * 0.5)}`;
     // weapon
     const nextWeapon = WEAPONS[weaponIndex + 1];
     document.getElementById('hud-weapon-name').textContent = WEAPONS[weaponIndex].name;
@@ -346,10 +342,7 @@ let skillPoints = {}; // e.g. { 1: 3, 4: 5 }
 function skillPts(id) { return skillPoints[id] || 0; }
 
 function skillPrereqsMet(skill) {
-    return skill.prereqs.every(pid => {
-        const ps = GENERAL_SKILLS.find(s => s.id === pid);
-        return ps && skillPts(pid) >= ps.max;
-    });
+    return skill.prereqs.every(pid => skillPts(pid) >= 1);
 }
 
 function skillCanBuy(skill) {
@@ -458,7 +451,7 @@ function renderGeneralPane() {
                 : '';
 
             let lockNote = '';
-            if (!prereqs) lockNote = 'Requires previous tier (max)';
+            if (!prereqs) lockNote = 'Requires previous tier';
             else if (!lvlOk) lockNote = `Requires level ${skill.reqLevel}`;
 
             html += `
@@ -1006,6 +999,20 @@ function draw() {
         ctx.stroke();
         ctx.restore();
     }
+    // Double Strike — highlight second target too
+    if (autoEnabled && skillDoubleAuto()) {
+        const second = worms.find(w => w !== autoTarget);
+        if (second) {
+            ctx.save();
+            ctx.strokeStyle = '#dd88ff';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath();
+            ctx.arc(second.x, second.y, second.size + 5, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
     // level-up message (canvas only)
     if (levelUpMsg > 0) {
         ctx.globalAlpha = Math.min(levelUpMsg / 30, 1);
@@ -1051,7 +1058,6 @@ canvas.addEventListener('click', e => {
         spawnEffect(mx, my, radius);
         fireballActive = false;
         spawnPaused = true;
-        document.getElementById('fireballBtn').disabled = false;
         // delay worm removal until fireball animation completes
         setTimeout(() => {
             worms = worms.filter(w => {
@@ -1273,36 +1279,11 @@ function update() {
         document.getElementById('cd-anni-bar').style.width  = annihilationUnlocked && anniRemaining > 0 ? ((1 - anniRemaining / ANNIHILATION_COOLDOWN_MS) * 100) + '%' : (annihilationUnlocked ? '100%' : '0%');
         document.getElementById('cd-anni-text').textContent = !annihilationUnlocked ? 'Locked' : (anniRemaining > 0 ? Math.ceil(anniRemaining / 1000) + 's' : (boss ? 'Ready' : 'No boss'));
     }
-    // update Fireball button cooldown label
-    const remaining = Math.max(0, gfbCooldownEnd - Date.now());
-    if (remaining > 0) {
-        fireBtn.innerHTML = `<img src="Fireball_Rune.gif" class="btn-icon"> Fireball (${(remaining / 1000).toFixed(1)}s)`;
-        fireBtn.disabled = true;
-    } else if (!fireballActive) {
-        const icon = `<img src="Fireball_Rune.gif" class="btn-icon">`;
-        if (!gfbUnlocked) {
-            if (level < GFB_UNLOCK_LEVEL) {
-                fireBtn.innerHTML = `${icon} Fireball (need lvl ${GFB_UNLOCK_LEVEL})`;
-            } else if (gold < GFB_UNLOCK_GOLD) {
-                fireBtn.innerHTML = `${icon} Unlock Fireball (need ${GFB_UNLOCK_GOLD}g)`;
-            } else {
-                fireBtn.innerHTML = `${icon} Unlock Fireball (${GFB_UNLOCK_GOLD}g)`;
-            }
-            fireBtn.disabled = (level < GFB_UNLOCK_LEVEL || gold < GFB_UNLOCK_GOLD);
-        } else {
-            fireBtn.innerHTML = `${icon} Fireball`;
-            fireBtn.disabled = false;
-        }
-    }
     // cooldown bars
     const basicElapsed = Date.now() - lastBasicAttack;
     const basicFrac = Math.min(basicElapsed / effectiveBasicCooldown(), 1);
     document.getElementById('cd-basic-bar').style.width  = (basicFrac * 100) + '%';
     document.getElementById('cd-basic-text').textContent = basicFrac >= 1 ? 'Ready' : (((effectiveBasicCooldown() - basicElapsed) / 1000).toFixed(1) + 's');
-
-    const fireFrac = remaining > 0 ? (1 - remaining / effectiveGfbCooldown()) : 1;
-    document.getElementById('cd-fire-bar').style.width  = gfbUnlocked ? (fireFrac * 100) + '%' : '0%';
-    document.getElementById('cd-fire-text').textContent = !gfbUnlocked ? 'Locked' : (remaining > 0 ? ((remaining / 1000).toFixed(1) + 's') : 'Ready');
     // update Ascend button
     const ascendBtn = document.getElementById('ascendBtn');
     if (ascendBtn) {
@@ -1319,30 +1300,6 @@ function update() {
         }
     }
 }
-const fireBtn = document.getElementById('fireballBtn');
-fireBtn.innerHTML = `<img src="Fireball_Rune.gif" class="btn-icon"> Fireball (need lvl ${GFB_UNLOCK_LEVEL})`;
-fireBtn.disabled = true;
-fireBtn.addEventListener('click', () => {
-    // one-time unlock purchase
-    if (!gfbUnlocked) {
-        if (level < GFB_UNLOCK_LEVEL || gold < GFB_UNLOCK_GOLD) return;
-        gold -= GFB_UNLOCK_GOLD;
-        gfbUnlocked = true;
-        return;
-    }
-    if (Date.now() < gfbCooldownEnd) return; // still on cooldown
-    if (gold < GFB_GOLD_COST) {
-        // flash button red briefly to indicate not enough gold
-        fireBtn.style.background = '#800';
-        setTimeout(() => { fireBtn.style.background = ''; }, 400);
-        return;
-    }
-    gold -= GFB_GOLD_COST;
-    gfbCooldownEnd = Date.now() + effectiveGfbCooldown();
-    fireballActive = true;
-    fireBtn.disabled = true;
-});
-
 // weapon upgrade button
 const weaponUpgradeBtn = document.getElementById('weaponUpgradeBtn');
 weaponUpgradeBtn.addEventListener('click', () => {
