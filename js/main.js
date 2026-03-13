@@ -246,6 +246,8 @@ function updateHUD() {
     // Class-specific button visibility
     const isSorcerer = ascendedClass === 'sorcerer';
     const isKnight   = ascendedClass === 'knight';
+    document.getElementById('fireballBtn').style.display  = gfbUnlocked ? '' : 'none';
+    document.getElementById('cd-fire-wrap').style.display  = gfbUnlocked ? '' : 'none';
     document.getElementById('ultimateExplosionBtn').style.display = isSorcerer ? '' : 'none';
     document.getElementById('cd-ue-wrap').style.display           = isSorcerer ? '' : 'none';
     document.getElementById('annihilationBtn').style.display      = isKnight   ? '' : 'none';
@@ -431,7 +433,7 @@ function knightAutoAnniOn()      { return kPts(105) >= 1; }
 // costs[] = gold cost per level [lvl1, lvl2, ...]
 const SORC_SKILLS = [
     // Column 1 — Great Fireball
-    { id: 201, col: 1, row: 1, name: 'Great Fireball',      max: 1, reqLevel: 30, prereqs: [],           costs: [5000],                              desc: 'Unlock Great Fireball: powerful AoE dealing 50% max HP in radius (10s CD)' },
+    { id: 201, col: 1, row: 1, name: 'Great Fireball',      max: 1, reqLevel: 30, prereqs: [],           costs: [5000],                              desc: 'Upgrades Fireball to Great Fireball: instantly kills all non-boss enemies in range (requires Fireball from General Skill Tree)' },
     { id: 202, col: 1, row: 2, name: 'GFB CDR',             max: 5, reqLevel: 35, prereqs: [201],         costs: [500, 1000, 5000, 20000, 50000],      desc: '-10% Fireball cooldown per point (max -50%)' },
     { id: 203, col: 1, row: 3, name: 'Double Fireball',     max: 1, reqLevel: 50, prereqs: [201, 202],    costs: [50000],                             desc: 'Each Fireball cast fires a second Fireball at the best remaining cluster' },
     // Column 2 — Ultimate Explosion
@@ -456,6 +458,7 @@ function sCanBuy(skill) {
     if (level < skill.reqLevel)      return false;
     if (sPts(skill.id) >= skill.max) return false;
     if (!sPrereqsMet(skill))         return false;
+    if (skill.id === 201 && !gfbUnlocked) return false; // requires Fireball from General tree first
     return gold >= (skill.costs[sPts(skill.id)] ?? 0);
 }
 function buySorcSkill(id) {
@@ -463,7 +466,7 @@ function buySorcSkill(id) {
     if (!skill || !sCanBuy(skill)) return;
     gold -= (skill.costs[sPts(skill.id)] ?? 0);
     sorcSkillPts[id] = (sorcSkillPts[id] || 0) + 1;
-    if (id === 201) gfbUnlocked = true;
+    // id 201: no side-effect — fireball already unlocked via general tree; 201 just upgrades it
     if (id === 204) ueUnlocked = true;
     if (id === 205) { autoUeUnlocked = true; autoUeEnabled = true; }
     if (id === 210) powerStanceUnlocked = true;
@@ -474,6 +477,7 @@ function buySorcSkill(id) {
 function sorcDmgMinBonus()  { return (sPts(208) + sPts(209)) * 5 + (powerStanceActive ? 15 : 0); }
 function sorcDmgMaxBonus()  { return (sPts(207) + sPts(209)) * 5 + (powerStanceActive ? 15 : 0); }
 function sorcDoubleGfb()    { return sPts(203) >= 1; }
+function sorcGfbUpgraded()  { return ascendedClass === 'sorcerer' && sPts(201) >= 1; }
 function sorcAutoUe()       { return sPts(205) >= 1; }
 function sorcAutoPs()       { return sPts(211) >= 1; }
 
@@ -640,9 +644,10 @@ function renderSorcPane() {
             const maxed   = pts >= skill.max;
             const prereqs = sPrereqsMet(skill);
             const lvlOk   = level >= skill.reqLevel;
+            const extraLock = skill.id === 201 && !gfbUnlocked;
             const cost    = skill.costs[pts] ?? 0;
-            const canBuy  = !maxed && prereqs && lvlOk && gold >= cost;
-            const locked  = !prereqs || !lvlOk;
+            const canBuy  = !maxed && prereqs && lvlOk && !extraLock && gold >= cost;
+            const locked  = !prereqs || !lvlOk || extraLock;
             let cls = 'st-node';
             if (maxed)       cls += ' st-node-maxed';
             else if (locked) cls += ' st-node-locked';
@@ -654,6 +659,7 @@ function renderSorcPane() {
             let lockNote = '';
             if (!prereqs) lockNote = 'Requires previous tier';
             else if (!lvlOk) lockNote = `Requires level ${skill.reqLevel}`;
+            else if (extraLock) lockNote = 'Requires Fireball (General Skill Tree)';
             html += `
                 ${connector}
                 <div class="${cls}" data-id="${skill.id}" title="${skill.desc}">
@@ -1071,6 +1077,85 @@ function spawnUltimateExplosion() {
     }
 }
 
+// ── Fireball cast (shared by manual button + auto-GFB) ───────────────────────────
+function castGfb() {
+    if (!gfbUnlocked || fireballActive || spawnPaused) return false;
+    if (Date.now() < gfbCooldownEnd || gold < GFB_GOLD_COST) return false;
+    const candidates = [...worms, ...(boss ? [boss] : [])];
+    if (candidates.length === 0) return false;
+    const upgraded = sorcGfbUpgraded();
+    const radius = 200;
+    let t = candidates[0], bestCount = 0;
+    for (const c of candidates) {
+        const cnt = candidates.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
+        if (cnt > bestCount) { bestCount = cnt; t = c; }
+    }
+    gold -= GFB_GOLD_COST;
+    gfbCooldownEnd = Date.now() + effectiveGfbCooldown();
+    spawnEffect(t.x, t.y, radius);
+    spawnPaused = true;
+    const fx = t.x, fy = t.y;
+    setTimeout(() => {
+        worms = worms.filter(w => {
+            const dx = w.x - fx, dy = w.y - fy;
+            if (Math.hypot(dx, dy) < radius) {
+                if (upgraded) { killWorm(w); return false; }
+                const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                w.hp -= fbDmg;
+                dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
+                if (w.hp <= 0) { killWorm(w); return false; }
+            }
+            return true;
+        });
+        if (!upgraded && boss) {
+            const dx = boss.x - fx, dy = boss.y - fy;
+            if (Math.hypot(dx, dy) < radius) {
+                const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                boss.hp -= fbDmg;
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
+                if (boss.hp <= 0) killBoss(boss);
+            }
+        }
+        // Double Fireball (sorc skill 203) — fire a second fireball at next best cluster
+        if (sorcDoubleGfb() && (worms.length > 0 || boss)) {
+            const alive2 = [...worms, ...(boss ? [boss] : [])];
+            let t2 = alive2[0], best2 = 0;
+            for (const c of alive2) {
+                const cnt = alive2.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
+                if (cnt > best2) { best2 = cnt; t2 = c; }
+            }
+            spawnEffect(t2.x, t2.y, radius);
+            const gx = t2.x, gy = t2.y;
+            setTimeout(() => {
+                worms = worms.filter(w => {
+                    const dx = w.x - gx, dy = w.y - gy;
+                    if (Math.hypot(dx, dy) < radius) {
+                        if (upgraded) { killWorm(w); return false; }
+                        const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                        w.hp -= fbDmg;
+                        dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
+                        if (w.hp <= 0) { killWorm(w); return false; }
+                    }
+                    return true;
+                });
+                if (!upgraded && boss) {
+                    const dx = boss.x - gx, dy = boss.y - gy;
+                    if (Math.hypot(dx, dy) < radius) {
+                        const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                        boss.hp -= fbDmg;
+                        dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
+                        if (boss.hp <= 0) killBoss(boss);
+                    }
+                }
+                spawnPaused = false;
+            }, 300);
+        } else {
+            spawnPaused = false;
+        }
+    }, 300);
+    return true;
+}
+
 function spawnAttackEffect(x, y) {
     const size = 32;
     const rect = canvas.getBoundingClientRect();
@@ -1399,78 +1484,10 @@ function update() {
         annihilationCooldownEnd = Date.now() + effectiveAnniCooldown();
         killBoss(boss);
     }
-    // auto GFB logic — cluster targeting, also hits boss
+    // auto GFB logic
     if (autoGfbEnabled && gfbUnlocked && (worms.length > 0 || boss) && !fireballActive && !spawnPaused &&
             Date.now() >= gfbCooldownEnd && gold >= GFB_GOLD_COST) {
-        const radius = 200;
-        // pick best cluster center (among worms + boss)
-        const candidates = [...worms, ...(boss ? [boss] : [])];
-        let t = candidates[0], bestCount = 0;
-        for (const c of candidates) {
-            const cnt = candidates.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
-            if (cnt > bestCount) { bestCount = cnt; t = c; }
-        }
-        gold -= GFB_GOLD_COST;
-        gfbCooldownEnd = Date.now() + effectiveGfbCooldown();
-        spawnEffect(t.x, t.y, radius);
-        spawnPaused = true;
-        const fx = t.x, fy = t.y;
-        setTimeout(() => {
-            worms = worms.filter(w => {
-                const dx = w.x - fx, dy = w.y - fy;
-                if (Math.hypot(dx, dy) < radius) {
-                    const fbDmg = Math.floor(MOB_MAXHP * 0.5);
-                    w.hp -= fbDmg;
-                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
-                    if (w.hp <= 0) { killWorm(w); return false; }
-                }
-                return true;
-            });
-            if (boss) {
-                const dx = boss.x - fx, dy = boss.y - fy;
-                if (Math.hypot(dx, dy) < radius) {
-                    const fbDmg = Math.floor(MOB_MAXHP * 0.5);
-                    boss.hp -= fbDmg;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
-                    if (boss.hp <= 0) killBoss(boss);
-                }
-            }
-            // Double Fireball (sorc skill 203) — second GFB at next best cluster
-            if (sorcDoubleGfb() && (worms.length > 0 || boss)) {
-                const alive2 = [...worms, ...(boss ? [boss] : [])];
-                let t2 = alive2[0], best2 = 0;
-                for (const c of alive2) {
-                    const cnt = alive2.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
-                    if (cnt > best2) { best2 = cnt; t2 = c; }
-                }
-                spawnEffect(t2.x, t2.y, radius);
-                const gx = t2.x, gy = t2.y;
-                setTimeout(() => {
-                    worms = worms.filter(w => {
-                        const dx = w.x - gx, dy = w.y - gy;
-                        if (Math.hypot(dx, dy) < radius) {
-                            const fbDmg = Math.floor(MOB_MAXHP * 0.5);
-                            w.hp -= fbDmg;
-                            dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
-                            if (w.hp <= 0) { killWorm(w); return false; }
-                        }
-                        return true;
-                    });
-                    if (boss) {
-                        const dx = boss.x - gx, dy = boss.y - gy;
-                        if (Math.hypot(dx, dy) < radius) {
-                            const fbDmg = Math.floor(MOB_MAXHP * 0.5);
-                            boss.hp -= fbDmg;
-                            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
-                            if (boss.hp <= 0) killBoss(boss);
-                        }
-                    }
-                    spawnPaused = false;
-                }, 300);
-            } else {
-                spawnPaused = false;
-            }
-        }, 300);
+        castGfb();
     }
     // auto UE logic — fires whenever off cooldown, boss immune (Sorcerer only)
     if (autoUeEnabled && ueUnlocked && ascendedClass === 'sorcerer' && !spawnPaused && Date.now() >= ueCooldownEnd) {
@@ -1501,6 +1518,21 @@ function update() {
     dmgNumbers = dmgNumbers.filter(d => d.life > 0);
     if (levelUpMsg > 0) levelUpMsg--;
     if (ascendMsg  > 0) ascendMsg--;
+    // update Fireball button (all classes when unlocked)
+    if (gfbUnlocked) {
+        const fbRemaining = Math.max(0, gfbCooldownEnd - Date.now());
+        const fbBtnEl = document.getElementById('fireballBtn');
+        const fbName = sorcGfbUpgraded() ? 'Great Fireball' : 'Fireball';
+        if (fbRemaining > 0) {
+            fbBtnEl.textContent = `🔥 ${fbName} (${(fbRemaining / 1000).toFixed(1)}s)`;
+            fbBtnEl.disabled = true;
+        } else {
+            fbBtnEl.textContent = `🔥 ${fbName}`;
+            fbBtnEl.disabled = worms.length === 0 && !boss;
+        }
+        document.getElementById('cd-fire-bar').style.width  = fbRemaining > 0 ? ((1 - fbRemaining / effectiveGfbCooldown()) * 100) + '%' : '100%';
+        document.getElementById('cd-fire-text').textContent = fbRemaining > 0 ? (fbRemaining / 1000).toFixed(1) + 's' : 'Ready';
+    }
     // update UE + Power Stance buttons (Sorcerer only)
     if (ascendedClass === 'sorcerer') {
         const ueRemaining = Math.max(0, ueCooldownEnd - Date.now());
@@ -1598,6 +1630,11 @@ weaponUpgradeBtn.addEventListener('click', () => {
     if (!next || gold < next.cost) return;
     gold -= next.cost;
     weaponIndex++;
+});
+
+// Fireball / Great Fireball button (all classes when fireball unlocked)
+document.getElementById('fireballBtn').addEventListener('click', () => {
+    castGfb();
 });
 
 // ultimate explosion button
