@@ -7,8 +7,10 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- hidden container so browser keeps GIF animation running -->
-    <div id="gif-sprites" style="position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;"></div>
+    <!-- 1×1 rendered img tags so browsers animate the GIFs (used by canvas drawImage) -->
+    <img id="sprite-rotworm"    src="Rotworm.gif"          style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" alt="">
+    <img id="sprite-cyclop"     src="Cyclops.gif"          style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" alt="">
+    <img id="sprite-versperoth" src="Versperoth.gif"        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" alt="">
     <!-- ── Top Navigation ─────────────────────────────────────── -->
     <nav id="top-nav">
         <span class="nav-logo">⚔ Rotworm Killer</span>

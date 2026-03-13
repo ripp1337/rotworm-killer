@@ -2,17 +2,10 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const rotwormImg = new Image();
-rotwormImg.src = 'Rotworm.gif'; // ensure path matches filename
-
-const cyclopImg = new Image();
-cyclopImg.src = 'Cyclops.gif';
-
-const stoneFloorImg = new Image();
-stoneFloorImg.src = 'Stone_Floor.gif';
-
-const versperothImg = new Image();
-versperothImg.src = 'Versperoth.gif';
+// Monster sprites — reference rendered <img> tags so browsers animate the GIFs
+const rotwormImg    = document.getElementById('sprite-rotworm');
+const cyclopImg     = document.getElementById('sprite-cyclop');
+const versperothImg = document.getElementById('sprite-versperoth');
 
 const BOSS_EVERY     = 50;   // spawn a boss every N worm kills
 const BOSS_HP        = 500;
@@ -53,13 +46,8 @@ let level = 1; // player level
 let levelUpMsg = 0; // timer for level-up flash
 let ascendMsg  = 0; // timer for ascension flash
 
-// Park all animated sprites in the DOM so browsers run their GIF animation timers
-window.addEventListener('DOMContentLoaded', () => {
-    const spriteHolder = document.getElementById('gif-sprites');
-    [rotwormImg, cyclopImg, versperothImg, floorImg, stoneFloorImg].forEach(img => {
-        spriteHolder.appendChild(img);
-    });
-});
+const stoneFloorImg = new Image();
+stoneFloorImg.src = 'Stone_Floor.gif';
 
 // ── Ascension ────────────────────────────────────────────────────────────────
 const ASCEND_LEVEL = 30;
