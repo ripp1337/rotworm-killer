@@ -113,6 +113,16 @@ function basicDmgMax()  { return WEAPONS[weaponIndex].max + levelBonus(); }
 function fireDmgMin()   { return 10 + levelBonus() * 2; }
 function fireDmgMax()   { return 20 + levelBonus() * 2; }
 function rollBasicDmg() { return basicDmgMin() + Math.floor(Math.random() * (basicDmgMax() - basicDmgMin() + 1)); }
+
+// Tibia-accurate health bar color based on HP ratio
+function hpBarColor(ratio) {
+    if (ratio > 0.92) return '#00BC00';
+    if (ratio > 0.60) return '#A0E000';
+    if (ratio > 0.30) return '#DCB400';
+    if (ratio > 0.14) return '#C86400';
+    if (ratio > 0.03) return '#C80000';
+    return '#960000';
+}
 function rollFireDmg()  { return fireDmgMin()  + Math.floor(Math.random() * (fireDmgMax()  - fireDmgMin()  + 1)); }
 
 // Tibia XP formula: total XP required to reach level x
@@ -776,10 +786,11 @@ function draw() {
         const barH = 4;
         const barX = w.x - w.size;
         const barY = w.y - w.size - 8;
-        ctx.fillStyle = '#600';
+        const hpRatio = w.hp / MOB_MAXHP;
+        ctx.fillStyle = '#1a0000';
         ctx.fillRect(barX, barY, barW, barH);
-        ctx.fillStyle = '#0f0';
-        ctx.fillRect(barX, barY, barW * (w.hp / MOB_MAXHP), barH);
+        ctx.fillStyle = hpBarColor(hpRatio);
+        ctx.fillRect(barX, barY, barW * hpRatio, barH);
     });
     // draw boss
     if (boss) {
@@ -796,10 +807,11 @@ function draw() {
         const bBarH = 6;
         const bBarX = boss.x - boss.size;
         const bBarY = boss.y - boss.size - 10;
-        ctx.fillStyle = '#600';
+        const bHpRatio = boss.hp / boss.maxHp;
+        ctx.fillStyle = '#1a0000';
         ctx.fillRect(bBarX, bBarY, bBarW, bBarH);
-        ctx.fillStyle = '#ff6600';
-        ctx.fillRect(bBarX, bBarY, bBarW * (boss.hp / boss.maxHp), bBarH);
+        ctx.fillStyle = hpBarColor(bHpRatio);
+        ctx.fillRect(bBarX, bBarY, bBarW * bHpRatio, bBarH);
         // boss label
         ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 10px Verdana, sans-serif';
