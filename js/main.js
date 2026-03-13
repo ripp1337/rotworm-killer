@@ -63,6 +63,7 @@ const BOSS_GOLD      = 1000;
 const BOSS_KILLS     = 10;   // counts as this many kills
 const BOSS_SIZE      = 32;   // half-width for hitbox/draw (64px sprite)
 let bossSpawnCounter = 0;    // increments with every worm/boss kill
+let firstBossSpawned = false; // first boss spawns early at 10 kills
 
 // ── Auth & persistence ───────────────────────────────────────────
 let authToken    = localStorage.getItem('rk_token');
@@ -107,7 +108,7 @@ let ascendedClass = null; // 'knight' | 'sorcerer'
 let MOB_MAXHP  = 65;
 let MOB_EXP    = 40;
 let MOB_KILLS  = 1;   // score contribution per kill
-let MOB_GOLD_MAX = 30; // random gold [0, MOB_GOLD_MAX]
+let MOB_GOLD_MAX = 39; // random gold [0, MOB_GOLD_MAX]
 let MOB_SIZE   = 20;
 
 function applyMobConfig() {
@@ -139,6 +140,7 @@ function doAscendAsClass(cls) {
     worms    = [];
     boss     = null;
     bossSpawnCounter = 0;
+    firstBossSpawned = false;
     ascendMsg = 240; // ~4s at 60fps
     applyMobConfig();
     document.getElementById('class-modal').style.display = 'none';
@@ -153,8 +155,8 @@ function doAscendAsClass(cls) {
 // weapon progression
 const WEAPONS = [
     { name: 'Serpent Sword',   min:  5, max: 15, cost:     0, sprite: 'Serpent_Sword.gif'   },
-    { name: 'Clerical Mace',   min:  10, max: 20, cost:  1000, sprite: 'Clerical_Mace.gif'   },
-    { name: 'Fire Sword',      min: 15, max: 30, cost:  5000, sprite: 'Fire_Sword.gif'       },
+    { name: 'Clerical Mace',   min:  10, max: 20, cost:   500, sprite: 'Clerical_Mace.gif'   },
+    { name: 'Fire Sword',      min: 15, max: 30, cost:  1500, sprite: 'Fire_Sword.gif'       },
     { name: 'Warhammer',       min: 25, max: 45, cost: 10000, sprite: 'War_Hammer.gif'       },
     { name: 'Stonecutter Axe', min: 45, max: 55, cost: 50000, sprite: 'Stonecutter_Axe.gif' },
 ];
@@ -703,6 +705,7 @@ function getProgress() {
         ascended, ascendedClass,
         annihilationUnlocked,
         bossSpawnCounter,
+        firstBossSpawned,
         savedAt: Date.now(),
     };
 }
@@ -735,6 +738,7 @@ function loadProgress(state) {
         if (s.ascendedClass         != null) ascendedClass         = s.ascendedClass;
         if (s.annihilationUnlocked  != null) annihilationUnlocked  = s.annihilationUnlocked;
         if (s.bossSpawnCounter      != null) bossSpawnCounter      = s.bossSpawnCounter;
+        if (s.firstBossSpawned       != null) firstBossSpawned      = s.firstBossSpawned;
     } catch (_) {}
 }
 
@@ -1222,7 +1226,13 @@ function killWorm(w) {
     checkLevelUp();
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: expGain, color: 'white', life: 80 });
     bossSpawnCounter++;
-    if (bossSpawnCounter % skillBossInterval() === 0) spawnBoss();
+    if (!firstBossSpawned && bossSpawnCounter >= 10) {
+        firstBossSpawned = true;
+        bossSpawnCounter = 0;
+        spawnBoss();
+    } else if (firstBossSpawned && bossSpawnCounter % skillBossInterval() === 0) {
+        spawnBoss();
+    }
     // Cooldown reset proc (skill 6)
     if (skillCdResetEnabled() && Math.random() < 0.01) {
         gfbCooldownEnd  = 0;
