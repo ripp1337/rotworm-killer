@@ -126,19 +126,6 @@ function applyMobConfig() {
     }
 }
 
-function classDmgBonus() {
-    if (!ascendedClass || level <= 30) return 0;
-    const extra = Math.floor((level - 30) / 5);
-    return ascendedClass === 'knight' ? extra * 5 : extra * 2;
-}
-function knightAoeTargets() {
-    if (ascendedClass !== 'knight' || level < 40) return 1;
-    return 1 + Math.floor((level - 30) / 10);
-}
-function sorcGfbCasts() {
-    if (ascendedClass !== 'sorcerer' || level < 40) return 1;
-    return 1 + Math.floor((level - 30) / 10);
-}
 
 function openAscendModal() {
     if (ascended || level < ASCEND_LEVEL) return;
@@ -173,12 +160,8 @@ const WEAPONS = [
 ];
 let weaponIndex = 0; // current weapon
 
-// damage scaling: +1 min/max per 5 levels on top of weapon base
-function levelBonus() { return Math.floor(level / 5); }
-function basicDmgMin()  { return WEAPONS[weaponIndex].min + levelBonus() + classDmgBonus(); }
-function basicDmgMax()  { return WEAPONS[weaponIndex].max + levelBonus() + classDmgBonus(); }
-function fireDmgMin()   { return 10 + levelBonus() * 2; }
-function fireDmgMax()   { return 20 + levelBonus() * 2; }
+function basicDmgMin()  { return WEAPONS[weaponIndex].min; }
+function basicDmgMax()  { return WEAPONS[weaponIndex].max; }
 function rollBasicDmg() { return basicDmgMin() + Math.floor(Math.random() * (basicDmgMax() - basicDmgMin() + 1)); }
 
 // Tibia-accurate health bar color based on HP ratio
@@ -190,7 +173,7 @@ function hpBarColor(ratio) {
     if (ratio > 0.03) return '#C80000';
     return '#960000';
 }
-function rollFireDmg()  { return fireDmgMin()  + Math.floor(Math.random() * (fireDmgMax()  - fireDmgMin()  + 1)); }
+
 
 // Tibia XP formula: total XP required to reach level x
 function expForLevel(x) {
@@ -1083,7 +1066,7 @@ canvas.addEventListener('click', e => {
                 const dx = w.x - mx;
                 const dy = w.y - my;
                 if (Math.hypot(dx, dy) < radius) {
-                    const fbDmg = Math.floor(MOB_MAXHP * 0.5 * sorcGfbCasts());
+                    const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                     w.hp -= fbDmg;
                     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
                     if (w.hp <= 0) { killWorm(w); return false; }
@@ -1094,7 +1077,7 @@ canvas.addEventListener('click', e => {
             if (boss) {
                 const dx = boss.x - mx, dy = boss.y - my;
                 if (Math.hypot(dx, dy) < radius) {
-                    const fbDmg = Math.floor(MOB_MAXHP * 0.5 * sorcGfbCasts());
+                    const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                     boss.hp -= fbDmg;
                     dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
                     if (boss.hp <= 0) killBoss(boss);
@@ -1128,14 +1111,7 @@ canvas.addEventListener('click', e => {
         }
         if (clickedWorm) {
             lastBasicAttack = now;
-            const aoeCount = knightAoeTargets();
             const targets = [clickedWorm];
-            if (aoeCount > 1) {
-                worms.filter(o => o !== clickedWorm)
-                    .sort((a, b) => Math.hypot(a.x - clickedWorm.x, a.y - clickedWorm.y) - Math.hypot(b.x - clickedWorm.x, b.y - clickedWorm.y))
-                    .slice(0, aoeCount - 1)
-                    .forEach(o => targets.push(o));
-            }
             targets.forEach(t => {
                 const dmg = rollBasicDmg();
                 t.hp -= dmg;
@@ -1222,7 +1198,7 @@ function update() {
             worms = worms.filter(w => {
                 const dx = w.x - fx, dy = w.y - fy;
                 if (Math.hypot(dx, dy) < radius) {
-                    const fbDmg = Math.floor(MOB_MAXHP * 0.5 * sorcGfbCasts());
+                    const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                     w.hp -= fbDmg;
                     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
                     if (w.hp <= 0) { killWorm(w); return false; }
@@ -1232,7 +1208,7 @@ function update() {
             if (boss) {
                 const dx = boss.x - fx, dy = boss.y - fy;
                 if (Math.hypot(dx, dy) < radius) {
-                    const fbDmg = Math.floor(MOB_MAXHP * 0.5 * sorcGfbCasts());
+                    const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                     boss.hp -= fbDmg;
                     dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
                     if (boss.hp <= 0) killBoss(boss);
