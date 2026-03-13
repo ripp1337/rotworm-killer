@@ -43,11 +43,16 @@
                 </div>
                 <hr>
                 <div class="hud-section">Spells</div>
-                <button id="fireballBtn"><img src="Great_Fireball_Rune.gif" class="btn-icon"> Great Fireball (need lvl 4)</button>
-                <button id="ultimateExplosionBtn"><img src="Ultimate_Explosion.gif" class="btn-icon"> Ultimate Explosion (need lvl 20)</button>
-                <div class="cd-wrap">
-                    <div class="cd-label"><span>Ult. Cooldown</span><span id="cd-ue-text">Locked</span></div>
+                <button id="fireballBtn"><img src="Fireball_Rune.gif" class="btn-icon"> Fireball (need lvl 4)</button>
+                <button id="ultimateExplosionBtn" style="display:none"><img src="Ultimate_Explosion.gif" class="btn-icon"> Ultimate Explosion (need lvl 40)</button>
+                <div class="cd-wrap" id="cd-ue-wrap" style="display:none">
+                    <div class="cd-label"><span>UE Cooldown</span><span id="cd-ue-text">Locked</span></div>
                     <div class="cd-bar-bg"><div id="cd-ue-bar" class="cd-bar cd-bar-ue"></div></div>
+                </div>
+                <button id="annihilationBtn" style="display:none"><img src="Great_Fireball_Rune.gif" class="btn-icon"> Annihilation (need lvl 40)</button>
+                <div class="cd-wrap" id="cd-anni-wrap" style="display:none">
+                    <div class="cd-label"><span>Anni. Cooldown</span><span id="cd-anni-text">Locked</span></div>
+                    <div class="cd-bar-bg"><div id="cd-anni-bar" class="cd-bar cd-bar-anni"></div></div>
                 </div>
                 <hr>
                 <div class="hud-section">Upgrades</div>
@@ -59,7 +64,7 @@
                 <button id="autoAttackBtn">Auto Attack (need lvl 20)</button>
                 <button id="bossFocusBtn">Boss Focus (unlock Auto first)</button>
                 <button id="autoGfbBtn">Auto GFB (unlock GFB first)</button>
-                <button id="autoUeBtn">Auto UE (unlock UE first)</button>
+                <button id="autoUeBtn" style="display:none">Auto UE (unlock UE first)</button>
                 <hr>
                 <div class="hud-section">Debug</div>
                 <button onclick="exp+=1000;checkLevelUp();">+1,000 EXP</button>
@@ -174,6 +179,24 @@
         document.getElementById('nav-about-btn').classList.toggle('nav-active', page === 'about');
     }
     </script>
+    <!-- Class choice modal -->
+    <div id="class-modal" style="display:none">
+        <div class="class-choice-box">
+            <div class="class-choice-title">⚔ Ascension ⚔</div>
+            <p class="class-choice-subtitle">You have reached level 30. Choose your eternal path — this cannot be reversed.</p>
+            <div class="class-choice-row">
+                <button class="class-btn class-btn-knight" onclick="doAscendAsClass('knight')">
+                    <div class="class-btn-name">⚔ Knight</div>
+                    <div class="class-btn-desc">+5/+5 damage every 5 levels<br>AoE basic attacks from level 40<br>Annihilation: instant boss kill (5 min CD)</div>
+                </button>
+                <button class="class-btn class-btn-sorcerer" onclick="doAscendAsClass('sorcerer')">
+                    <div class="class-btn-name">✦ Sorcerer</div>
+                    <div class="class-btn-desc">+2/+2 damage every 5 levels<br>Multi-cast Fireball from level 40<br>Ultimate Explosion: wipe all mobs (3 min CD)</div>
+                </button>
+            </div>
+            <p class="class-choice-warn">⚠ This choice is permanent and cannot be reversed.</p>
+        </div>
+    </div>
     <script src="js/main.js"></script>
 </body>
 </html>

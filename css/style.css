@@ -774,3 +774,130 @@ canvas {
 }
 
 .about-credit a:hover { color: #c0a050; }
+
+/* ── Annihilation CD bar ─────────────────────────────────────── */
+.cd-bar-anni { background: linear-gradient(to right, #440000, #cc0000); }
+
+/* ── Annihilation button ─────────────────────────────────────── */
+#annihilationBtn {
+    background: #1a0000 !important;
+    color: #ff6644 !important;
+    border-color: #882200 !important;
+    box-shadow: inset 0 1px 0 #aa3300, 0 1px 0 #000 !important;
+    font-weight: bold;
+}
+
+#annihilationBtn:hover:not(:disabled) {
+    background: #280000 !important;
+    color: #ff8866 !important;
+    box-shadow: 0 0 8px #cc220055 !important;
+}
+
+#annihilationBtn:disabled {
+    background: #181008 !important;
+    color: #5a2010 !important;
+    border-color: #3a1808 !important;
+    box-shadow: none !important;
+}
+
+/* ── Class choice modal ──────────────────────────────────────── */
+#class-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 1001;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.class-choice-box {
+    background: #160e03;
+    border: 2px solid #7a5818;
+    box-shadow:
+        inset 0 0 0 1px #3a2408,
+        inset 0 0 16px #00000070,
+        0 8px 32px #000000cc;
+    padding: 28px 32px;
+    width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    text-align: center;
+}
+
+.class-choice-title {
+    font-size: 17px;
+    color: #f0c040;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px #c8800070;
+    border-bottom: 1px solid #5a3e10;
+    padding-bottom: 10px;
+}
+
+.class-choice-subtitle {
+    font-size: 11px;
+    color: #8a7040;
+    margin: 0;
+}
+
+.class-choice-row {
+    display: flex;
+    gap: 12px;
+}
+
+.class-btn {
+    flex: 1;
+    padding: 14px 12px;
+    cursor: pointer;
+    border: 2px solid;
+    font-family: Verdana, sans-serif;
+    transition: box-shadow 0.15s;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: none;
+}
+
+.class-btn-knight {
+    background: #160a00;
+    border-color: #8a5010;
+    color: #e0b060;
+}
+
+.class-btn-knight:hover {
+    box-shadow: 0 0 16px #c07030aa;
+    border-color: #d08030;
+    background: #200e00;
+}
+
+.class-btn-sorcerer {
+    background: #0a0618;
+    border-color: #5a22aa;
+    color: #c088ff;
+}
+
+.class-btn-sorcerer:hover {
+    box-shadow: 0 0 16px #8844ddaa;
+    border-color: #aa44ff;
+    background: #100828;
+}
+
+.class-btn-name {
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.class-btn-desc {
+    font-size: 9px;
+    line-height: 1.8;
+    opacity: 0.85;
+}
+
+.class-choice-warn {
+    font-size: 10px;
+    color: #c05050;
+    margin: 0;
+}

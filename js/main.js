@@ -100,7 +100,8 @@ stoneFloorImg.src = 'Gravel.gif';
 
 // ── Ascension ────────────────────────────────────────────────────────────────
 const ASCEND_LEVEL = 30;
-let ascended = false;
+let ascended      = false;
+let ascendedClass = null; // 'knight' | 'sorcerer'
 
 // mob stats — updated by ascend()
 let MOB_MAXHP  = 65;
@@ -125,14 +126,35 @@ function applyMobConfig() {
     }
 }
 
-function doAscend() {
+function classDmgBonus() {
+    if (!ascendedClass || level <= 30) return 0;
+    const extra = Math.floor((level - 30) / 5);
+    return ascendedClass === 'knight' ? extra * 5 : extra * 2;
+}
+function knightAoeTargets() {
+    if (ascendedClass !== 'knight' || level < 40) return 1;
+    return 1 + Math.floor((level - 30) / 10);
+}
+function sorcGfbCasts() {
+    if (ascendedClass !== 'sorcerer' || level < 40) return 1;
+    return 1 + Math.floor((level - 30) / 10);
+}
+
+function openAscendModal() {
     if (ascended || level < ASCEND_LEVEL) return;
+    document.getElementById('class-modal').style.display = 'flex';
+}
+
+function doAscendAsClass(cls) {
+    if (ascended) return;
+    ascendedClass = cls;
     ascended = true;
     worms    = [];
     boss     = null;
     bossSpawnCounter = 0;
     ascendMsg = 240; // ~4s at 60fps
     applyMobConfig();
+    document.getElementById('class-modal').style.display = 'none';
     // regenerate floor tile map with new floor
     for (let r = 0; r < TILE_ROWS; r++)
         for (let c = 0; c < TILE_COLS; c++) {
@@ -153,8 +175,8 @@ let weaponIndex = 0; // current weapon
 
 // damage scaling: +1 min/max per 5 levels on top of weapon base
 function levelBonus() { return Math.floor(level / 5); }
-function basicDmgMin()  { return WEAPONS[weaponIndex].min + levelBonus(); }
-function basicDmgMax()  { return WEAPONS[weaponIndex].max + levelBonus(); }
+function basicDmgMin()  { return WEAPONS[weaponIndex].min + levelBonus() + classDmgBonus(); }
+function basicDmgMax()  { return WEAPONS[weaponIndex].max + levelBonus() + classDmgBonus(); }
 function fireDmgMin()   { return 10 + levelBonus() * 2; }
 function fireDmgMax()   { return 20 + levelBonus() * 2; }
 function rollBasicDmg() { return basicDmgMin() + Math.floor(Math.random() * (basicDmgMax() - basicDmgMin() + 1)); }
@@ -192,7 +214,10 @@ function updateHUD() {
     document.getElementById('hud-score').textContent = score;
     document.getElementById('hud-gold').textContent = gold;
     document.getElementById('hud-dmg-basic').textContent = `${basicDmgMin()}–${basicDmgMax()}`;
-    document.getElementById('hud-dmg-fire').textContent  = `${fireDmgMin()}–${fireDmgMax()}`;
+    const fbCasts = sorcGfbCasts();
+    document.getElementById('hud-dmg-fire').textContent = fbCasts > 1
+        ? `${Math.floor(MOB_MAXHP * 0.5)} ×${fbCasts}`
+        : `${Math.floor(MOB_MAXHP * 0.5)}`;
     // weapon
     const nextWeapon = WEAPONS[weaponIndex + 1];
     document.getElementById('hud-weapon-name').textContent = WEAPONS[weaponIndex].name;
@@ -218,11 +243,11 @@ function updateHUD() {
     }
     const upgGfbBtn = document.getElementById('upgradeGfbCdBtn');
     if (gfbCdUpgrades >= MAX_UPGRADES) {
-        upgGfbBtn.textContent = 'GFB CD MAX';
+        upgGfbBtn.textContent = 'Fireball CD MAX';
         upgGfbBtn.disabled = true;
     } else {
         const gCost = gfbCdCost();
-        upgGfbBtn.textContent = `GFB CD -10% (${fmtCost(gCost)}g) ${gfbCdUpgrades}/${MAX_UPGRADES}`;
+        upgGfbBtn.textContent = `Fireball CD -10% (${fmtCost(gCost)}g) ${gfbCdUpgrades}/${MAX_UPGRADES}`;
         upgGfbBtn.disabled = gold < gCost;
     }
     const upgUeBtn = document.getElementById('upgradeUeCdBtn');
@@ -251,16 +276,16 @@ function updateHUD() {
     const autoGfbBtn = document.getElementById('autoGfbBtn');
     if (!autoGfbUnlocked) {
         autoGfbBtn.textContent = !gfbUnlocked
-            ? `Auto GFB (unlock GFB first)`
+            ? `Auto Fireball (unlock Fireball first)`
             : level < AUTO_GFB_UNLOCK_LEVEL
-                ? `Auto GFB (need lvl ${AUTO_GFB_UNLOCK_LEVEL})`
+                ? `Auto Fireball (need lvl ${AUTO_GFB_UNLOCK_LEVEL})`
                 : gold < AUTO_GFB_UNLOCK_GOLD
-                    ? `Auto GFB (need ${AUTO_GFB_UNLOCK_GOLD}g)`
-                    : `Auto GFB (${AUTO_GFB_UNLOCK_GOLD}g)`;
+                    ? `Auto Fireball (need ${AUTO_GFB_UNLOCK_GOLD}g)`
+                    : `Auto Fireball (${AUTO_GFB_UNLOCK_GOLD}g)`;
         autoGfbBtn.disabled = !gfbUnlocked || level < AUTO_GFB_UNLOCK_LEVEL || gold < AUTO_GFB_UNLOCK_GOLD;
         autoGfbBtn.classList.remove('auto-on');
     } else {
-        autoGfbBtn.textContent = autoGfbEnabled ? 'Auto GFB: ON' : 'Auto GFB: OFF';
+        autoGfbBtn.textContent = autoGfbEnabled ? 'Auto Fireball: ON' : 'Auto Fireball: OFF';
         autoGfbBtn.disabled = false;
         autoGfbBtn.classList.toggle('auto-on', autoGfbEnabled);
     }
@@ -298,6 +323,15 @@ function updateHUD() {
         bossFocusBtn.disabled = true;
         bossFocusBtn.classList.add('auto-on');
     }
+    // Class-specific button visibility
+    const isSorcerer = ascendedClass === 'sorcerer';
+    const isKnight   = ascendedClass === 'knight';
+    document.getElementById('ultimateExplosionBtn').style.display = isSorcerer ? '' : 'none';
+    document.getElementById('cd-ue-wrap').style.display           = isSorcerer ? '' : 'none';
+    document.getElementById('annihilationBtn').style.display      = isKnight   ? '' : 'none';
+    document.getElementById('cd-anni-wrap').style.display         = isKnight   ? '' : 'none';
+    document.getElementById('autoUeBtn').style.display            = isSorcerer ? '' : 'none';
+    document.getElementById('upgradeUeCdBtn').style.display       = isSorcerer ? '' : 'none';
 }
 
 let fireballActive = false;
@@ -313,11 +347,17 @@ let gfbUnlocked     = false;
 let lastBasicAttack = 0;   // timestamp of last basic hit
 let gfbCooldownEnd  = 0;   // timestamp when GFB is ready again
 
-const UE_UNLOCK_LEVEL = 10;
+const UE_UNLOCK_LEVEL = 40; // Sorcerer only
 const UE_UNLOCK_GOLD  = 1000;
-const UE_COOLDOWN_MS  = 30000; // 30s
+const UE_COOLDOWN_MS  = 3 * 60 * 1000; // 3 min (Sorcerer only)
 let ueUnlocked    = false;
 let ueCooldownEnd = 0;
+
+// ── Annihilation (Knight only) ────────────────────────────────────────
+const ANNIHILATION_UNLOCK_LEVEL = 40;
+const ANNIHILATION_COOLDOWN_MS  = 5 * 60 * 1000; // 5 min
+let annihilationUnlocked    = false;
+let annihilationCooldownEnd = 0;
 
 const AUTO_UNLOCK_LEVEL = 5;
 const AUTO_UNLOCK_GOLD  = 0;
@@ -332,7 +372,7 @@ const AUTO_GFB_UNLOCK_GOLD  = 1000;
 let autoGfbUnlocked = false;
 let autoGfbEnabled  = false;
 
-const AUTO_UE_UNLOCK_LEVEL = 25;
+const AUTO_UE_UNLOCK_LEVEL = 45; // Sorcerer only, requires UE unlocked first
 const AUTO_UE_UNLOCK_GOLD  = 10000;
 let autoUeUnlocked = false;
 let autoUeEnabled  = false;
@@ -374,7 +414,8 @@ function getProgress() {
         autoGfbUnlocked, autoGfbEnabled,
         autoUeUnlocked,  autoUeEnabled,
         bossFocusUnlocked,
-        ascended,
+        ascended, ascendedClass,
+        annihilationUnlocked,
         bossSpawnCounter,
         savedAt: Date.now(),
     };
@@ -401,8 +442,10 @@ function loadProgress(state) {
         if (s.autoUeUnlocked   != null) autoUeUnlocked   = s.autoUeUnlocked;
         if (s.autoUeEnabled    != null) autoUeEnabled    = s.autoUeEnabled;
         if (s.bossFocusUnlocked!= null) bossFocusUnlocked= s.bossFocusUnlocked;
-        if (s.ascended         != null) { ascended = s.ascended; applyMobConfig(); }
-        if (s.bossSpawnCounter != null) bossSpawnCounter = s.bossSpawnCounter;
+        if (s.ascended             != null) { ascended = s.ascended; applyMobConfig(); }
+        if (s.ascendedClass         != null) ascendedClass         = s.ascendedClass;
+        if (s.annihilationUnlocked  != null) annihilationUnlocked  = s.annihilationUnlocked;
+        if (s.bossSpawnCounter      != null) bossSpawnCounter      = s.bossSpawnCounter;
     } catch (_) {}
 }
 
@@ -624,6 +667,13 @@ function startGame(stateRaw) {
         catch (_) {}
     }
     loadProgress(parsedState);
+
+    // Migration: existing ascended saves without a class choice
+    if (ascended && !ascendedClass) {
+        setTimeout(() => {
+            document.getElementById('class-modal').style.display = 'flex';
+        }, 300);
+    }
 
     // Offline progress
     if (parsedState && parsedState.savedAt) {
@@ -874,14 +924,15 @@ function draw() {
     }
     // ascension message
     if (ascendMsg > 0) {
+        const className = ascendedClass === 'knight' ? 'KNIGHT' : 'SORCERER';
         ctx.globalAlpha = Math.min(ascendMsg / 40, 1);
         ctx.fillStyle = '#ffe066';
         ctx.font = 'bold 28px Verdana, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('\u2726 ASCENDED \u2014 CYCLOPS REALM \u2726', canvas.width / 2, canvas.height / 2 - 36);
+        ctx.fillText(`\u2726 ASCENDED \u2014 ${className} \u2726`, canvas.width / 2, canvas.height / 2 - 36);
         ctx.font = '16px Verdana, sans-serif';
         ctx.fillStyle = '#ffcc33';
-        ctx.fillText('Stronger monsters, greater rewards!', canvas.width / 2, canvas.height / 2 - 6);
+        ctx.fillText('Cyclops Realm \u2014 Stronger monsters, greater rewards!', canvas.width / 2, canvas.height / 2 - 6);
         ctx.textAlign = 'left';
         ctx.globalAlpha = 1;
     }
@@ -915,20 +966,20 @@ canvas.addEventListener('click', e => {
                 const dx = w.x - mx;
                 const dy = w.y - my;
                 if (Math.hypot(dx, dy) < radius) {
-                    // GFB one-shots all mob tiers
-                    w.hp = 0;
-                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: MOB_MAXHP, color: 'orange', life: 60 });
-                    killWorm(w);
-                    return false;
+                    const fbDmg = Math.floor(MOB_MAXHP * 0.5 * sorcGfbCasts());
+                    w.hp -= fbDmg;
+                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
+                    if (w.hp <= 0) { killWorm(w); return false; }
                 }
                 return true;
             });
-            // GFB also damages boss (but does not one-shot)
+            // Fireball also damages boss
             if (boss) {
                 const dx = boss.x - mx, dy = boss.y - my;
                 if (Math.hypot(dx, dy) < radius) {
-                    boss.hp -= MOB_MAXHP;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: MOB_MAXHP, color: '#ff6600', life: 60 });
+                    const fbDmg = Math.floor(MOB_MAXHP * 0.5 * sorcGfbCasts());
+                    boss.hp -= fbDmg;
+                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
                     if (boss.hp <= 0) killBoss(boss);
                 }
             }
@@ -951,22 +1002,33 @@ canvas.addEventListener('click', e => {
             return;
         }
     }
-    worms = worms.filter(w => {
-        const dx = w.x - mx;
-        const dy = w.y - my;
-        if (Math.hypot(dx, dy) < w.size) {
-            lastBasicAttack = now;
-            const dmg = rollBasicDmg();
-            w.hp -= dmg;
-            spawnAttackEffect(w.x, w.y);
-            dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: dmg, color: 'red', life: 60 });
-            if (w.hp <= 0) {
-                killWorm(w);
-                return false;
-            }
+    {
+        let clickedWorm = null;
+        for (const w of worms) {
+            const dx = w.x - mx;
+            const dy = w.y - my;
+            if (Math.hypot(dx, dy) < w.size) { clickedWorm = w; break; }
         }
-        return true;
-    });
+        if (clickedWorm) {
+            lastBasicAttack = now;
+            const aoeCount = knightAoeTargets();
+            const targets = [clickedWorm];
+            if (aoeCount > 1) {
+                worms.filter(o => o !== clickedWorm)
+                    .sort((a, b) => Math.hypot(a.x - clickedWorm.x, a.y - clickedWorm.y) - Math.hypot(b.x - clickedWorm.x, b.y - clickedWorm.y))
+                    .slice(0, aoeCount - 1)
+                    .forEach(o => targets.push(o));
+            }
+            targets.forEach(t => {
+                const dmg = rollBasicDmg();
+                t.hp -= dmg;
+                spawnAttackEffect(t.x, t.y);
+                dmgNumbers.push({ x: t.x + (Math.random()*20-10), y: t.y - t.size, value: dmg, color: 'red', life: 60 });
+                if (t.hp <= 0) killWorm(t);
+            });
+            worms = worms.filter(w => w.hp > 0);
+        }
+    }
 });
 
 function update() {
@@ -1028,27 +1090,27 @@ function update() {
             worms = worms.filter(w => {
                 const dx = w.x - fx, dy = w.y - fy;
                 if (Math.hypot(dx, dy) < radius) {
-                    // GFB one-shots all mob tiers
-                    w.hp = 0;
-                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: MOB_MAXHP, color: 'orange', life: 60 });
-                    killWorm(w);
-                    return false;
+                    const fbDmg = Math.floor(MOB_MAXHP * 0.5 * sorcGfbCasts());
+                    w.hp -= fbDmg;
+                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
+                    if (w.hp <= 0) { killWorm(w); return false; }
                 }
                 return true;
             });
             if (boss) {
                 const dx = boss.x - fx, dy = boss.y - fy;
                 if (Math.hypot(dx, dy) < radius) {
-                    boss.hp -= MOB_MAXHP;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: MOB_MAXHP, color: '#ff6600', life: 60 });
+                    const fbDmg = Math.floor(MOB_MAXHP * 0.5 * sorcGfbCasts());
+                    boss.hp -= fbDmg;
+                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
                     if (boss.hp <= 0) killBoss(boss);
                 }
             }
             spawnPaused = false;
         }, 300);
     }
-    // auto UE logic — fires whenever off cooldown, boss immune
-    if (autoUeEnabled && ueUnlocked && !spawnPaused && Date.now() >= ueCooldownEnd) {
+    // auto UE logic — fires whenever off cooldown, boss immune (Sorcerer only)
+    if (autoUeEnabled && ueUnlocked && ascendedClass === 'sorcerer' && !spawnPaused && Date.now() >= ueCooldownEnd) {
         spawnUltimateExplosion();
         ueCooldownEnd = Date.now() + effectiveUeCooldown();
         spawnPaused = true;
@@ -1066,46 +1128,62 @@ function update() {
     dmgNumbers = dmgNumbers.filter(d => d.life > 0);
     if (levelUpMsg > 0) levelUpMsg--;
     if (ascendMsg  > 0) ascendMsg--;
-    // update UE button
-    const ueRemaining = Math.max(0, ueCooldownEnd - Date.now());
-    const ueBtn = document.getElementById('ultimateExplosionBtn');
-    const ueIcon = `<img src="Ultimate_Explosion.gif" class="btn-icon">`;
-    if (!ueUnlocked) {
-        ueBtn.innerHTML = level < UE_UNLOCK_LEVEL
-            ? `${ueIcon} Ultimate Explosion (need lvl ${UE_UNLOCK_LEVEL})`
-            : gold < UE_UNLOCK_GOLD
-                ? `${ueIcon} Unlock Ult. Explosion (need ${UE_UNLOCK_GOLD}g)`
+    // update UE button (Sorcerer only)
+    if (ascendedClass === 'sorcerer') {
+        const ueRemaining = Math.max(0, ueCooldownEnd - Date.now());
+        const ueBtnEl = document.getElementById('ultimateExplosionBtn');
+        const ueIcon = `<img src="Ultimate_Explosion.gif" class="btn-icon">`;
+        if (!ueUnlocked) {
+            ueBtnEl.innerHTML = level < UE_UNLOCK_LEVEL
+                ? `${ueIcon} Ultimate Explosion (need lvl ${UE_UNLOCK_LEVEL})`
                 : `${ueIcon} Unlock Ult. Explosion (${UE_UNLOCK_GOLD}g)`;
-        ueBtn.disabled = level < UE_UNLOCK_LEVEL || gold < UE_UNLOCK_GOLD;
-    } else if (ueRemaining > 0) {
-        ueBtn.innerHTML = `${ueIcon} Ultimate Explosion (${(ueRemaining / 1000).toFixed(1)}s)`;
-        ueBtn.disabled = true;
-    } else {
-        ueBtn.innerHTML = `${ueIcon} Ultimate Explosion`;
-        ueBtn.disabled = false;
+            ueBtnEl.disabled = level < UE_UNLOCK_LEVEL || gold < UE_UNLOCK_GOLD;
+        } else if (ueRemaining > 0) {
+            ueBtnEl.innerHTML = `${ueIcon} Ultimate Explosion (${(ueRemaining / 1000).toFixed(1)}s)`;
+            ueBtnEl.disabled = true;
+        } else {
+            ueBtnEl.innerHTML = `${ueIcon} Ultimate Explosion`;
+            ueBtnEl.disabled = false;
+        }
+        document.getElementById('cd-ue-bar').style.width  = ueUnlocked && ueRemaining > 0 ? ((1 - ueRemaining / effectiveUeCooldown()) * 100) + '%' : (ueUnlocked ? '100%' : '0%');
+        document.getElementById('cd-ue-text').textContent = !ueUnlocked ? 'Locked' : (ueRemaining > 0 ? (ueRemaining / 1000).toFixed(1) + 's' : 'Ready');
     }
-    document.getElementById('cd-ue-bar').style.width  = ueUnlocked && ueRemaining > 0 ? ((1 - ueRemaining / effectiveUeCooldown()) * 100) + '%' : (ueUnlocked ? '100%' : '0%');
-    document.getElementById('cd-ue-text').textContent = !ueUnlocked ? 'Locked' : (ueRemaining > 0 ? (ueRemaining / 1000).toFixed(1) + 's' : 'Ready');
-    // update GFB button cooldown label
+    // update Annihilation button (Knight only)
+    if (ascendedClass === 'knight') {
+        const anniRemaining = Math.max(0, annihilationCooldownEnd - Date.now());
+        const anniBtnEl = document.getElementById('annihilationBtn');
+        const anniIcon = `<img src="Great_Fireball_Rune.gif" class="btn-icon">`;
+        if (!annihilationUnlocked) {
+            anniBtnEl.innerHTML = `${anniIcon} Annihilation (need lvl ${ANNIHILATION_UNLOCK_LEVEL})`;
+            anniBtnEl.disabled = level < ANNIHILATION_UNLOCK_LEVEL;
+        } else if (anniRemaining > 0) {
+            anniBtnEl.innerHTML = `${anniIcon} Annihilation (${Math.ceil(anniRemaining / 1000)}s)`;
+            anniBtnEl.disabled = true;
+        } else {
+            anniBtnEl.innerHTML = `${anniIcon} Annihilation`;
+            anniBtnEl.disabled = !boss;
+        }
+        document.getElementById('cd-anni-bar').style.width  = annihilationUnlocked && anniRemaining > 0 ? ((1 - anniRemaining / ANNIHILATION_COOLDOWN_MS) * 100) + '%' : (annihilationUnlocked ? '100%' : '0%');
+        document.getElementById('cd-anni-text').textContent = !annihilationUnlocked ? 'Locked' : (anniRemaining > 0 ? Math.ceil(anniRemaining / 1000) + 's' : (boss ? 'Ready' : 'No boss'));
+    }
+    // update Fireball button cooldown label
     const remaining = Math.max(0, gfbCooldownEnd - Date.now());
     if (remaining > 0) {
-        fireBtn.innerHTML = `<img src="Great_Fireball_Rune.gif" class="btn-icon"> Great Fireball (${(remaining / 1000).toFixed(1)}s)`;
+        fireBtn.innerHTML = `<img src="Fireball_Rune.gif" class="btn-icon"> Fireball (${(remaining / 1000).toFixed(1)}s)`;
         fireBtn.disabled = true;
     } else if (!fireballActive) {
-        const icon = `<img src="Great_Fireball_Rune.gif" class="btn-icon">`;
+        const icon = `<img src="Fireball_Rune.gif" class="btn-icon">`;
         if (!gfbUnlocked) {
             if (level < GFB_UNLOCK_LEVEL) {
-                fireBtn.innerHTML = `${icon} Great Fireball (need lvl ${GFB_UNLOCK_LEVEL})`;
+                fireBtn.innerHTML = `${icon} Fireball (need lvl ${GFB_UNLOCK_LEVEL})`;
             } else if (gold < GFB_UNLOCK_GOLD) {
-                fireBtn.innerHTML = `${icon} Unlock GFB (need ${GFB_UNLOCK_GOLD}g)`;
+                fireBtn.innerHTML = `${icon} Unlock Fireball (need ${GFB_UNLOCK_GOLD}g)`;
             } else {
-                fireBtn.innerHTML = `${icon} Unlock GFB (${GFB_UNLOCK_GOLD}g)`;
+                fireBtn.innerHTML = `${icon} Unlock Fireball (${GFB_UNLOCK_GOLD}g)`;
             }
             fireBtn.disabled = (level < GFB_UNLOCK_LEVEL || gold < GFB_UNLOCK_GOLD);
         } else {
-            fireBtn.innerHTML = gold >= GFB_GOLD_COST
-                ? `${icon} Great Fireball`
-                : `${icon} Great Fireball (need ${GFB_GOLD_COST}g)`;
+            fireBtn.innerHTML = `${icon} Fireball`;
             fireBtn.disabled = false;
         }
     }
@@ -1122,7 +1200,8 @@ function update() {
     const ascendBtn = document.getElementById('ascendBtn');
     if (ascendBtn) {
         if (ascended) {
-            ascendBtn.textContent = '✦ Ascended — Cyclops Realm';
+            const cName = ascendedClass === 'knight' ? 'Knight' : 'Sorcerer';
+            ascendBtn.textContent = `✦ Ascended — ${cName}`;
             ascendBtn.disabled = true;
         } else if (level >= ASCEND_LEVEL) {
             ascendBtn.textContent = `✦ Ascend (lvl ${ASCEND_LEVEL} reached!)`;
@@ -1134,7 +1213,7 @@ function update() {
     }
 }
 const fireBtn = document.getElementById('fireballBtn');
-fireBtn.innerHTML = `<img src="Great_Fireball_Rune.gif" class="btn-icon"> Great Fireball (need lvl ${GFB_UNLOCK_LEVEL})`;
+fireBtn.innerHTML = `<img src="Fireball_Rune.gif" class="btn-icon"> Fireball (need lvl ${GFB_UNLOCK_LEVEL})`;
 fireBtn.disabled = true;
 fireBtn.addEventListener('click', () => {
     // one-time unlock purchase
@@ -1169,6 +1248,7 @@ weaponUpgradeBtn.addEventListener('click', () => {
 // ultimate explosion button
 const ueBtn = document.getElementById('ultimateExplosionBtn');
 ueBtn.addEventListener('click', () => {
+    if (ascendedClass !== 'sorcerer') return;
     if (!ueUnlocked) {
         if (level < UE_UNLOCK_LEVEL || gold < UE_UNLOCK_GOLD) return;
         gold -= UE_UNLOCK_GOLD;
@@ -1187,6 +1267,19 @@ ueBtn.addEventListener('click', () => {
         // boss is immune to UE
         spawnPaused = false;
     }, 900);
+});
+
+// Annihilation button (Knight only)
+document.getElementById('annihilationBtn').addEventListener('click', () => {
+    if (ascendedClass !== 'knight') return;
+    if (!annihilationUnlocked) {
+        if (level < ANNIHILATION_UNLOCK_LEVEL) return;
+        annihilationUnlocked = true;
+        return;
+    }
+    if (!boss || Date.now() < annihilationCooldownEnd) return;
+    annihilationCooldownEnd = Date.now() + ANNIHILATION_COOLDOWN_MS;
+    killBoss(boss);
 });
 
 // auto attack button
@@ -1322,7 +1415,7 @@ document.getElementById('auth-reg-form').addEventListener('submit', async e => {
 document.getElementById('logoutBtn').addEventListener('click', doLogout);
 
 document.getElementById('ascendBtn').addEventListener('click', () => {
-    if (!ascended && level >= ASCEND_LEVEL) doAscend();
+    if (!ascended && level >= ASCEND_LEVEL) openAscendModal();
 });
 
 document.getElementById('guestBtn').addEventListener('click', () => {
