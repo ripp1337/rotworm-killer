@@ -112,16 +112,43 @@
         <div class="about-box">
             <h2 class="about-title">About Rotworm Killer</h2>
             <p>A browser-based idle/clicker RPG inspired by <strong>Tibia</strong>, built entirely with vanilla HTML5, Canvas API, and JavaScript &mdash; no frameworks, no dependencies.</p>
-            <h3>Features</h3>
+            <h3>Gameplay</h3>
             <ul>
-                <li>Click-to-attack combat with animated hit effects</li>
-                <li>Weapon progression across 5 tiers</li>
-                <li>Great Fireball (GFB) AoE spell &amp; Ultimate Explosion</li>
-                <li>Upgrade shop: attack speed, spell cooldown reduction</li>
-                <li>Automation: auto-attack, auto-GFB, auto-UE</li>
-                <li>Boss encounters (Versperoth) every 20 kills</li>
-                <li>Offline progress simulation (up to 8 hours)</li>
-                <li>Global scoreboard with persistent account system</li>
+                <li>Click rotworms to attack them; land kills for gold and experience</li>
+                <li>Bosses (Versperoth) spawn periodically &mdash; frequency configurable via the Skill Tree</li>
+                <li>Uber Bosses appear every 50 kills once unlocked &mdash; tougher, bigger rewards</li>
+                <li>Weapon progression across multiple tiers &mdash; upgrade when you can afford it</li>
+                <li>Offline progress simulation: earn gold &amp; EXP while away (up to 8 hours)</li>
+            </ul>
+            <h3>Skill Trees</h3>
+            <ul>
+                <li><strong>General</strong> &mdash; automation, monster density, gold/EXP bonuses, Fireball CDR, and Auto Fireball</li>
+                <li><strong>Knight</strong> (ascension) &mdash; attack &amp; auto-attack speed, extra auto-attack target, Annihilation (instant boss kill), damage upgrades</li>
+                <li><strong>Sorcerer</strong> (ascension) &mdash; Great Fireball (upgrades Fireball to instant-kill AoE), Volatile Blast, Double Fireball, Ultimate Explosion, Power Stance, damage upgrades</li>
+            </ul>
+            <h3>Spells &amp; Abilities</h3>
+            <ul>
+                <li><strong>Fireball</strong> &mdash; AoE damage at 50% mob max HP in a radius; reduced cooldown via Skill Tree</li>
+                <li><strong>Great Fireball</strong> (Sorcerer) &mdash; upgrades Fireball to instantly slay all non-boss enemies in range</li>
+                <li><strong>Double Fireball</strong> (Sorcerer) &mdash; each cast fires a second Fireball at the next best cluster</li>
+                <li><strong>Volatile Blast</strong> (Sorcerer) &mdash; Great Fireball also deals 50% of boss max HP per cast</li>
+                <li><strong>Ultimate Explosion</strong> (Sorcerer) &mdash; wipes all non-boss enemies on screen; 5 min cooldown</li>
+                <li><strong>Power Stance</strong> (Sorcerer) &mdash; +15 min/max damage &amp; +50% attack speed for 90 seconds; 6 min cooldown</li>
+                <li><strong>Annihilation</strong> (Knight) &mdash; instantly slays the boss (non-Uber); 3 min cooldown</li>
+            </ul>
+            <h3>Automation</h3>
+            <ul>
+                <li>Auto Attack, Boss Focus, Auto Fireball, Auto UE, Auto Annihilation, Auto Power Stance &mdash; all unlockable via Skill Trees</li>
+                <li>Cooldown Reset proc (General Skill Tree): 1% chance on kill to reset all cooldowns</li>
+            </ul>
+            <h3>Ascension</h3>
+            <ul>
+                <li>Reach level 30 to Ascend as <strong>Knight</strong> or <strong>Sorcerer</strong> &mdash; permanent choice unlocking a dedicated Skill Tree</li>
+            </ul>
+            <h3>Multiplayer &amp; Persistence</h3>
+            <ul>
+                <li>Account registration &amp; login with persistent cloud saves</li>
+                <li>Global scoreboard updated every 60 seconds</li>
                 <li>Guest mode &mdash; play instantly without registration</li>
             </ul>
             <h3>Tech Stack</h3>
@@ -214,5 +241,6 @@
         </div>
     </div>
     <script src="js/main.js"></script>
+    <p style="position:fixed;bottom:8px;right:14px;margin:0;font-size:11px;color:#666;font-style:italic;pointer-events:none;">Credits to Siviertez &mdash; the man who taught me the pleasure of slaying rotworms.</p>
 </body>
 </html>

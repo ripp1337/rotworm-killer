@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 import os
 PORT    = int(os.environ.get('PORT', 3000))
 STATIC  = Path(__file__).parent
-DB_PATH = STATIC / 'game.db'
+DB_PATH = Path(os.environ.get('DATA_DIR', STATIC)) / 'game.db'
 
 # ── Database ───────────────────────────────────────────────────────
 def init_db():
