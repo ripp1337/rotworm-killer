@@ -1015,6 +1015,11 @@ canvas {
     gap: 0 16px;
 }
 
+/* Knight skill tree uses 3 columns */
+.st-grid-knight {
+    grid-template-columns: repeat(3, 1fr);
+}
+
 .st-col {
     display: flex;
     flex-direction: column;

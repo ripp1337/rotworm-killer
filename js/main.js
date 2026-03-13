@@ -160,8 +160,8 @@ const WEAPONS = [
 ];
 let weaponIndex = 0; // current weapon
 
-function basicDmgMin()  { return WEAPONS[weaponIndex].min; }
-function basicDmgMax()  { return WEAPONS[weaponIndex].max; }
+function basicDmgMin()  { return WEAPONS[weaponIndex].min + knightDmgBonus(); }
+function basicDmgMax()  { return WEAPONS[weaponIndex].max + knightDmgBonus(); }
 function rollBasicDmg() { return basicDmgMin() + Math.floor(Math.random() * (basicDmgMax() - basicDmgMin() + 1)); }
 
 // Tibia-accurate health bar color based on HP ratio
@@ -376,6 +376,51 @@ function skillUberBossEnabled(){ return skillPts(3) >= 1; }
 function skillDoubleAuto()     { return skillPts(9) >= 1; }
 function skillAutoFireball()   { return skillPts(12) >= 1; }
 
+// ── Knight skill tree ─────────────────────────────────────────────
+const KNIGHT_SKILLS = [
+    // Column 1 — Power
+    { id: 101, col: 1, row: 1, name: 'Might',         max: 5, reqLevel: 31, prereqs: [],           cost: 1000,  desc: '+5 flat damage per point (min and max)' },
+    { id: 102, col: 1, row: 2, name: 'Berserker',      max: 1, reqLevel: 35, prereqs: [101],        cost: 3000,  desc: '20% chance on each click to deal double damage' },
+    { id: 103, col: 1, row: 3, name: 'Execute',        max: 1, reqLevel: 40, prereqs: [101, 102],   cost: 8000,  desc: 'Instantly kill any target below 20% HP on click' },
+    // Column 2 — Cleave
+    { id: 104, col: 2, row: 1, name: 'Cleave',         max: 3, reqLevel: 31, prereqs: [],           cost: 1000,  desc: 'Click hits 1 extra nearest worm per point' },
+    { id: 105, col: 2, row: 2, name: 'Whirlwind',      max: 1, reqLevel: 35, prereqs: [104],        cost: 3000,  desc: 'Every 30s your next click hits ALL worms simultaneously' },
+    { id: 106, col: 2, row: 3, name: 'Ground Shaker',  max: 1, reqLevel: 40, prereqs: [104, 105],   cost: 8000,  desc: 'Whirlwind also deals 50% max HP damage to the boss' },
+    // Column 3 — Annihilation
+    { id: 107, col: 3, row: 1, name: 'Annihilation',   max: 1, reqLevel: 40, prereqs: [],           cost: 0,     desc: 'Unlock Annihilation: instantly slay the boss (5 min CD)' },
+    { id: 108, col: 3, row: 2, name: 'Anni CDR',       max: 5, reqLevel: 41, prereqs: [107],        cost: 2000,  desc: '-10% Annihilation cooldown per point (min 30s)' },
+    { id: 109, col: 3, row: 3, name: 'Anni Wipe',      max: 1, reqLevel: 45, prereqs: [107, 108],   cost: 10000, desc: 'Annihilation also kills all worms on screen' },
+];
+
+let knightSkillPts     = {};
+let whirlwindCooldownEnd = 0;
+
+function kPts(id)           { return knightSkillPts[id] || 0; }
+function kPrereqsMet(skill) { return skill.prereqs.every(pid => kPts(pid) >= 1); }
+function kCanBuy(skill) {
+    if (level < skill.reqLevel)      return false;
+    if (kPts(skill.id) >= skill.max) return false;
+    if (!kPrereqsMet(skill))         return false;
+    return gold >= (skill.cost ?? 0);
+}
+function buyKnightSkill(id) {
+    const skill = KNIGHT_SKILLS.find(s => s.id === id);
+    if (!skill || !kCanBuy(skill)) return;
+    gold -= (skill.cost ?? 0);
+    knightSkillPts[id] = (knightSkillPts[id] || 0) + 1;
+    if (id === 107) annihilationUnlocked = true;
+    renderSkillTree();
+}
+
+// Knight effect helpers
+function knightDmgBonus()       { return kPts(101) * 5; }
+function knightCleaveCount()    { return kPts(104); }
+function knightWhirlwindOn()    { return kPts(105) >= 1 && Date.now() >= whirlwindCooldownEnd; }
+function knightExecuteOn()      { return kPts(103) >= 1; }
+function knightBerserkerOn()    { return kPts(102) >= 1; }
+function knightGroundShakerOn() { return kPts(106) >= 1; }
+function knightAnniWipeOn()     { return kPts(109) >= 1; }
+
 // ── Skill tree UI ─────────────────────────────────────────────────
 let _skillTab = 'general';
 
@@ -412,6 +457,7 @@ function renderSkillTree() {
     });
 
     if (_skillTab === 'general') renderGeneralPane();
+    if (_skillTab === 'knight')  renderKnightPane();
 }
 
 function renderGeneralPane() {
@@ -478,15 +524,64 @@ function renderGeneralPane() {
     pane.innerHTML = html;
 }
 
+function renderKnightPane() {
+    const pane = document.getElementById('st-pane-knight');
+    let html = '<div class="st-grid st-grid-knight">';
+    for (let col = 1; col <= 3; col++) {
+        html += '<div class="st-col">';
+        for (let row = 1; row <= 3; row++) {
+            const skill = KNIGHT_SKILLS.find(s => s.col === col && s.row === row);
+            if (!skill) { html += `<div class="st-node st-node-empty"></div>`; continue; }
+            const pts    = kPts(skill.id);
+            const maxed  = pts >= skill.max;
+            const prereqs = kPrereqsMet(skill);
+            const lvlOk  = level >= skill.reqLevel;
+            const cost   = skill.cost ?? 0;
+            const canBuy = !maxed && prereqs && lvlOk && gold >= cost;
+            const locked = !prereqs || !lvlOk;
+            let cls = 'st-node';
+            if (maxed)       cls += ' st-node-maxed';
+            else if (locked) cls += ' st-node-locked';
+            else if (canBuy) cls += ' st-node-available';
+            else             cls += ' st-node-unaffordable';
+            const connector = row > 1
+                ? `<div class="st-connector ${prereqs ? 'st-conn-open' : 'st-conn-locked'}">&#9660;</div>`
+                : '';
+            let lockNote = '';
+            if (!prereqs) lockNote = 'Requires previous tier';
+            else if (!lvlOk) lockNote = `Requires level ${skill.reqLevel}`;
+            html += `
+                ${connector}
+                <div class="${cls}" data-id="${skill.id}" title="${skill.desc}">
+                    <div class="st-node-header">
+                        <span class="st-node-name">${skill.name}</span>
+                        <span class="st-node-pts ${maxed ? 'st-pts-maxed' : ''}">${pts}/${skill.max}</span>
+                    </div>
+                    <div class="st-node-desc">${skill.desc}</div>
+                    ${lockNote ? `<div class="st-node-lock">${lockNote}</div>` : ''}
+                    ${!maxed && prereqs && lvlOk
+                        ? `<button class="st-buy-btn" onclick="buyKnightSkill(${skill.id})" ${canBuy ? '' : 'disabled'}>${cost === 0 ? 'Free' : fmtCost(cost) + 'g'}</button>`
+                        : (maxed ? `<div class="st-node-maxed-label">MAXED</div>` : '')
+                    }
+                </div>`;
+        }
+        html += '</div>';
+    }
+    html += '</div>';
+    pane.innerHTML = html;
+}
+
 function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS; }
 function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS * (1 - skillPts(11) * 0.1); }
 function effectiveUeCooldown()    { return UE_COOLDOWN_MS; }
+function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * Math.max(0.1, 1 - kPts(108) * 0.1); }
 
 // ── Progress save / load ─────────────────────────────────────────
 function getProgress() {
     return {
         score, gold, exp, level, weaponIndex,
-        skillPoints,
+        skillPoints, knightSkillPts,
+        whirlwindCooldownEnd,
         gfbUnlocked, ueUnlocked,
         autoUnlocked, autoEnabled,
         autoGfbUnlocked, autoGfbEnabled,
@@ -509,6 +604,8 @@ function loadProgress(state) {
         if (s.level            != null) level            = s.level;
         if (s.weaponIndex      != null) weaponIndex      = Math.min(s.weaponIndex, WEAPONS.length - 1);
         if (s.skillPoints      != null) skillPoints      = s.skillPoints;
+        if (s.knightSkillPts   != null) knightSkillPts   = s.knightSkillPts;
+        if (s.whirlwindCooldownEnd != null) whirlwindCooldownEnd = s.whirlwindCooldownEnd;
         // legacy migration: old upgrade fields → skill points ignored (fresh start for skill tree)
         if (s.gfbUnlocked      != null) gfbUnlocked      = s.gfbUnlocked;
         if (s.ueUnlocked       != null) ueUnlocked       = s.ueUnlocked;
@@ -1111,15 +1208,55 @@ canvas.addEventListener('click', e => {
         }
         if (clickedWorm) {
             lastBasicAttack = now;
-            const targets = [clickedWorm];
-            targets.forEach(t => {
-                const dmg = rollBasicDmg();
-                t.hp -= dmg;
-                spawnAttackEffect(t.x, t.y);
-                dmgNumbers.push({ x: t.x + (Math.random()*20-10), y: t.y - t.size, value: dmg, color: 'red', life: 60 });
-                if (t.hp <= 0) killWorm(t);
-            });
-            worms = worms.filter(w => w.hp > 0);
+            if (knightWhirlwindOn()) {
+                // Whirlwind — hit every worm on screen
+                whirlwindCooldownEnd = Date.now() + 30000;
+                [...worms].forEach(t => {
+                    const dmg = rollBasicDmg();
+                    t.hp -= dmg;
+                    spawnAttackEffect(t.x, t.y);
+                    dmgNumbers.push({ x: t.x + (Math.random()*20-10), y: t.y - t.size, value: dmg, color: '#ffaa00', life: 60 });
+                    if (t.hp <= 0) killWorm(t);
+                });
+                worms = worms.filter(w => w.hp > 0);
+                // Ground Shaker — Whirlwind also hits boss
+                if (boss && knightGroundShakerOn()) {
+                    const bDmg = Math.floor(MOB_MAXHP * 0.5);
+                    boss.hp -= bDmg;
+                    spawnAttackEffect(boss.x, boss.y);
+                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: bDmg, color: '#ffaa00', life: 60 });
+                    if (boss.hp <= 0) killBoss(boss);
+                }
+            } else {
+                // Standard click — with Cleave, Execute, Berserker
+                const cleaveExtra = knightCleaveCount();
+                const targets = [clickedWorm];
+                if (cleaveExtra > 0) {
+                    worms.filter(w => w !== clickedWorm)
+                        .sort((a, b) => Math.hypot(a.x - clickedWorm.x, a.y - clickedWorm.y) - Math.hypot(b.x - clickedWorm.x, b.y - clickedWorm.y))
+                        .slice(0, cleaveExtra)
+                        .forEach(w => targets.push(w));
+                }
+                targets.forEach(t => {
+                    // Execute — instantly kill targets below 20% HP
+                    if (knightExecuteOn() && t.hp < MOB_MAXHP * 0.2) {
+                        const exDmg = t.hp;
+                        t.hp = 0;
+                        killWorm(t);
+                        spawnAttackEffect(t.x, t.y);
+                        dmgNumbers.push({ x: t.x + (Math.random()*20-10), y: t.y - t.size, value: exDmg, color: '#ff4400', life: 60 });
+                        return;
+                    }
+                    // Berserker — 20% chance of double damage
+                    const berserk = knightBerserkerOn() && Math.random() < 0.2;
+                    const dmg = rollBasicDmg() * (berserk ? 2 : 1);
+                    t.hp -= dmg;
+                    spawnAttackEffect(t.x, t.y);
+                    dmgNumbers.push({ x: t.x + (Math.random()*20-10), y: t.y - t.size, value: dmg, color: berserk ? '#ff8800' : 'red', life: 60 });
+                    if (t.hp <= 0) killWorm(t);
+                });
+                worms = worms.filter(w => w.hp > 0);
+            }
         }
     }
 });
@@ -1262,8 +1399,8 @@ function update() {
         const anniBtnEl = document.getElementById('annihilationBtn');
         const anniIcon = `<img src="Great_Fireball_Rune.gif" class="btn-icon">`;
         if (!annihilationUnlocked) {
-            anniBtnEl.innerHTML = `${anniIcon} Annihilation (need lvl ${ANNIHILATION_UNLOCK_LEVEL})`;
-            anniBtnEl.disabled = level < ANNIHILATION_UNLOCK_LEVEL;
+            anniBtnEl.innerHTML = `${anniIcon} Annihilation (unlock in Skill Tree)`;
+            anniBtnEl.disabled = true;
         } else if (anniRemaining > 0) {
             anniBtnEl.innerHTML = `${anniIcon} Annihilation (${Math.ceil(anniRemaining / 1000)}s)`;
             anniBtnEl.disabled = true;
@@ -1271,8 +1408,18 @@ function update() {
             anniBtnEl.innerHTML = `${anniIcon} Annihilation`;
             anniBtnEl.disabled = !boss;
         }
-        document.getElementById('cd-anni-bar').style.width  = annihilationUnlocked && anniRemaining > 0 ? ((1 - anniRemaining / ANNIHILATION_COOLDOWN_MS) * 100) + '%' : (annihilationUnlocked ? '100%' : '0%');
+        document.getElementById('cd-anni-bar').style.width  = annihilationUnlocked && anniRemaining > 0 ? ((1 - anniRemaining / effectiveAnniCooldown()) * 100) + '%' : (annihilationUnlocked ? '100%' : '0%');
         document.getElementById('cd-anni-text').textContent = !annihilationUnlocked ? 'Locked' : (anniRemaining > 0 ? Math.ceil(anniRemaining / 1000) + 's' : (boss ? 'Ready' : 'No boss'));
+        // Whirlwind CD (skill 105)
+        const wwWrap = document.getElementById('cd-whirlwind-wrap');
+        if (wwWrap) {
+            wwWrap.style.display = kPts(105) >= 1 ? '' : 'none';
+            if (kPts(105) >= 1) {
+                const wwRem = Math.max(0, whirlwindCooldownEnd - Date.now());
+                document.getElementById('cd-whirlwind-bar').style.width = wwRem > 0 ? ((1 - wwRem / 30000) * 100) + '%' : '100%';
+                document.getElementById('cd-whirlwind-text').textContent = wwRem > 0 ? (wwRem / 1000).toFixed(1) + 's' : 'Ready!';
+            }
+        }
     }
     // cooldown bars
     const basicElapsed = Date.now() - lastBasicAttack;
@@ -1328,16 +1475,12 @@ ueBtn.addEventListener('click', () => {
     }, 900);
 });
 
-// Annihilation button (Knight only)
+// Annihilation button (Knight only — unlocked via Skill Tree)
 document.getElementById('annihilationBtn').addEventListener('click', () => {
-    if (ascendedClass !== 'knight') return;
-    if (!annihilationUnlocked) {
-        if (level < ANNIHILATION_UNLOCK_LEVEL) return;
-        annihilationUnlocked = true;
-        return;
-    }
+    if (ascendedClass !== 'knight' || !annihilationUnlocked) return;
     if (!boss || Date.now() < annihilationCooldownEnd) return;
-    annihilationCooldownEnd = Date.now() + ANNIHILATION_COOLDOWN_MS;
+    annihilationCooldownEnd = Date.now() + effectiveAnniCooldown();
+    if (knightAnniWipeOn()) { worms.forEach(w => killWorm(w)); worms = []; }
     killBoss(boss);
 });
 
