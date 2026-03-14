@@ -306,6 +306,13 @@ let autoEnabled    = false;
 let autoTarget     = null;
 let lastAutoAttack = 0;
 
+// Always target the lowest-HP worm; skip worms listed in `exclude`.
+function _pickAutoTarget(exclude = []) {
+    const pool = exclude.length ? worms.filter(w => !exclude.includes(w)) : worms;
+    if (!pool.length) return null;
+    return pool.reduce((a, b) => a.hp <= b.hp ? a : b);
+}
+
 const AUTO_GFB_UNLOCK_LEVEL = 15;
 const AUTO_GFB_UNLOCK_GOLD  = 1000;
 let autoGfbUnlocked = false;
@@ -378,7 +385,7 @@ function buySkill(id) {
     gold -= cost;
     skillPoints[id] = (skillPoints[id] || 0) + 1;
     // Side-effects for automation skills
-    if (id === 7)  { autoUnlocked = true; autoEnabled = true; autoTarget = worms.length > 0 ? worms[0] : null; }
+    if (id === 7)  { autoUnlocked = true; autoEnabled = true; autoTarget = _pickAutoTarget(); }
     if (id === 8)  { bossFocusUnlocked = true; }
     // Side-effects for fireball skills
     if (id === 10) { gfbUnlocked = true; }
@@ -1217,23 +1224,6 @@ function spawnWorm() {
     // no valid position found this frame — skip; next frame will retry
 }
 
-function spawnUberBossForced() {
-    boss = null;  // clear any existing boss
-    const baseSz = ascended ? Math.round(BOSS_SIZE * 1.5) : BOSS_SIZE;
-    const sz     = baseSz * 2;
-    const hp     = BOSS_HP * 2;
-    const margin = sz + 8;
-    boss = {
-        x: margin + Math.random() * (canvas.width  - margin * 2),
-        y: margin + Math.random() * (canvas.height - margin * 2),
-        size: sz,
-        hp: hp,
-        maxHp: hp,
-        isUber: true,
-        _id: ++_eid,
-    };
-}
-
 function spawnBoss() {
     if (boss) return;
     const isUber  = skillUberBossEnabled() && bossKillCounter > 0 && bossKillCounter % UBER_BOSS_EVERY === 0;
@@ -1361,7 +1351,7 @@ function draw() {
     }
     // Double Strike — highlight second target too
     if (autoEnabled && skillDoubleAuto()) {
-        const second = worms.find(w => w !== autoTarget);
+        const second = _pickAutoTarget([autoTarget]);
         if (second) {
             ctx.save();
             ctx.strokeStyle = '#dd88ff';
@@ -1487,7 +1477,7 @@ function update() {
                 if (boss.hp <= 0) killBoss(boss);
             } else if (worms.length > 0) {
                 lastAutoAttack = now;
-                if (!autoTarget || !worms.includes(autoTarget)) autoTarget = worms[0];
+                if (!autoTarget || !worms.includes(autoTarget)) autoTarget = _pickAutoTarget();
                 if (autoTarget) {
                     const dmg = rollBasicDmg();
                     autoTarget.hp -= dmg;
@@ -1496,11 +1486,11 @@ function update() {
                     if (autoTarget.hp <= 0) {
                         killWorm(autoTarget);
                         worms = worms.filter(w => w !== autoTarget);
-                        autoTarget = worms.length > 0 ? worms[0] : null;
+                        autoTarget = _pickAutoTarget();
                     }
                     // Double Strike (general skill 9) — hit a second worm
                     if (skillDoubleAuto()) {
-                        const second = worms.find(w => w !== autoTarget);
+                        const second = _pickAutoTarget([autoTarget]);
                         if (second) {
                             const dmg2 = rollBasicDmg();
                             second.hp -= dmg2;
@@ -1515,7 +1505,8 @@ function update() {
                     }
                     // Extra Auto Target (knight skill 103) — hit one more worm
                     if (knightExtraAutoTarget()) {
-                        const third = worms.find(w => w !== autoTarget && (!skillDoubleAuto() || w !== worms.find(x => x !== autoTarget)));
+                        const _secondRef = skillDoubleAuto() ? _pickAutoTarget([autoTarget]) : null;
+                        const third = _pickAutoTarget([autoTarget, _secondRef].filter(Boolean));
                         if (third) {
                             const dmg3 = rollBasicDmg();
                             third.hp -= dmg3;
