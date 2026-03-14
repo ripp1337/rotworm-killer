@@ -1939,11 +1939,28 @@ function _chatConnect() {
     };
 }
 
+function chatToggle() {
+    const panel = document.getElementById('chat-panel');
+    const arrow = document.getElementById('chat-toggle-arrow');
+    const collapsed = panel.classList.toggle('chat-collapsed');
+    if (arrow) arrow.textContent = collapsed ? '▶' : '▼';
+    try { localStorage.setItem('chatOpen', collapsed ? '0' : '1'); } catch (_) {}
+}
+
 function chatInit(loggedIn) {
     const hint = document.getElementById('chat-login-hint');
     const row  = document.getElementById('chat-input-row');
     if (hint) hint.style.display = loggedIn ? 'none' : '';
     if (row)  row.style.display  = loggedIn ? ''     : 'none';
+    // Restore saved open/closed preference (default: open)
+    try {
+        if (localStorage.getItem('chatOpen') === '0') {
+            const panel = document.getElementById('chat-panel');
+            const arrow = document.getElementById('chat-toggle-arrow');
+            if (panel) panel.classList.add('chat-collapsed');
+            if (arrow) arrow.textContent = '▶';
+        }
+    } catch (_) {}
     _chatConnect();
 }
 
