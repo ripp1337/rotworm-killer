@@ -1946,7 +1946,7 @@ function chatToggle() {
     const hidden = msgs && msgs.style.display === 'none';
     if (msgs)   msgs.style.display   = hidden ? '' : 'none';
     if (footer) footer.style.display = hidden ? '' : 'none';
-    if (btn)    btn.textContent       = hidden ? '▼' : '▶';
+    if (btn)    btn.textContent       = hidden ? '[hide]' : '[show]';
     try { localStorage.setItem('chatOpen', hidden ? '1' : '0'); } catch (_) {}
 }
 
@@ -1963,7 +1963,7 @@ function chatInit(loggedIn) {
             const btn    = document.getElementById('chat-toggle-btn');
             if (msgs)   msgs.style.display   = 'none';
             if (footer) footer.style.display = 'none';
-            if (btn)    btn.textContent       = '▶';
+            if (btn)    btn.textContent       = '[show]';
         }
     } catch (_) {}
     _chatConnect();
