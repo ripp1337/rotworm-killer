@@ -36,7 +36,7 @@ function syncSpriteLayer() {
         let img = _sprites.get(boss._id);
         if (!img) {
             img = document.createElement('img');
-            img.src = ascended ? 'behemoth.gif' : 'Versperoth.gif';
+            img.src = ascended ? 'Behemoth.gif' : 'Versperoth.gif';
             img.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;';
             layer.appendChild(img);
             _sprites.set(boss._id, img);
