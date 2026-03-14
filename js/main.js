@@ -1120,7 +1120,7 @@ function castGfb() {
                 if (upgraded) { killWorm(w); return false; }
                 const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                 w.hp -= fbDmg;
-                dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
+                dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: '#8b0000', life: 60 });
                 if (w.hp <= 0) { killWorm(w); return false; }
             }
             return true;
@@ -1130,14 +1130,14 @@ function castGfb() {
             if (Math.hypot(dx, dy) < radius) {
                 const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                 boss.hp -= fbDmg;
-                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#8b0000', life: 60 });
                 if (boss.hp <= 0) killBoss(boss);
             }
         } else if (upgraded && boss && sorcVolatileBlast()) {
             // Volatile Blast: always hits boss for 50% max HP regardless of range
             const vbDmg = Math.floor(boss.maxHp * 0.5);
             boss.hp -= vbDmg;
-            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#ff4400', life: 60 });
+            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#8b0000', life: 60 });
             if (boss.hp <= 0) killBoss(boss);
         }
         // Double Fireball (sorc skill 203) — fire a second fireball at next best cluster
@@ -1157,7 +1157,7 @@ function castGfb() {
                         if (upgraded) { killWorm(w); return false; }
                         const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                         w.hp -= fbDmg;
-                        dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
+                        dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: '#8b0000', life: 60 });
                         if (w.hp <= 0) { killWorm(w); return false; }
                     }
                     return true;
@@ -1167,13 +1167,13 @@ function castGfb() {
                     if (Math.hypot(dx, dy) < radius) {
                         const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                         boss.hp -= fbDmg;
-                        dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
+                        dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#8b0000', life: 60 });
                         if (boss.hp <= 0) killBoss(boss);
                     }
                 } else if (upgraded && boss && sorcVolatileBlast()) {
                     const vbDmg = Math.floor(boss.maxHp * 0.5);
                     boss.hp -= vbDmg;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#ff4400', life: 60 });
+                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#8b0000', life: 60 });
                     if (boss.hp <= 0) killBoss(boss);
                 }
                 spawnPaused = false;
@@ -1238,6 +1238,7 @@ function killWorm(w) {
     gold += goldGain;
     checkLevelUp();
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: expGain, color: 'white', life: 80 });
+    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 32, value: goldGain, color: '#f0c040', life: 80 });
     bossSpawnCounter++;
     if (!firstBossSpawned && bossSpawnCounter >= 10) {
         firstBossSpawned = true;
@@ -1262,6 +1263,7 @@ function killBoss(b) {
     gold += goldGain;
     checkLevelUp();
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 18, value: expGain, color: '#ffd700', life: 100 });
+    dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 32, value: goldGain, color: '#f0c040', life: 100 });
     boss = null;
 }
 
@@ -1393,7 +1395,7 @@ canvas.addEventListener('click', e => {
                 if (Math.hypot(dx, dy) < radius) {
                     const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                     w.hp -= fbDmg;
-                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: 'orange', life: 60 });
+                    dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: '#8b0000', life: 60 });
                     if (w.hp <= 0) { killWorm(w); return false; }
                 }
                 return true;
@@ -1404,7 +1406,7 @@ canvas.addEventListener('click', e => {
                 if (Math.hypot(dx, dy) < radius) {
                     const fbDmg = Math.floor(MOB_MAXHP * 0.5);
                     boss.hp -= fbDmg;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#ff6600', life: 60 });
+                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#8b0000', life: 60 });
                     if (boss.hp <= 0) killBoss(boss);
                 }
             }
@@ -1423,7 +1425,7 @@ canvas.addEventListener('click', e => {
             const dmg = rollBasicDmg();
             boss.hp -= dmg;
             spawnAttackEffect(boss.x, boss.y);
-            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#ff6600', life: 60 });
+            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#8b0000', life: 60 });
             if (boss.hp <= 0) killBoss(boss);
             return;
         }
@@ -1441,7 +1443,7 @@ canvas.addEventListener('click', e => {
             const dmg = rollBasicDmg();
             clickedWorm.hp -= dmg;
             spawnAttackEffect(clickedWorm.x, clickedWorm.y);
-            dmgNumbers.push({ x: clickedWorm.x + (Math.random()*20-10), y: clickedWorm.y - clickedWorm.size, value: dmg, color: 'red', life: 60 });
+            dmgNumbers.push({ x: clickedWorm.x + (Math.random()*20-10), y: clickedWorm.y - clickedWorm.size, value: dmg, color: '#8b0000', life: 60 });
             if (clickedWorm.hp <= 0) killWorm(clickedWorm);
             worms = worms.filter(w => w.hp > 0);
         }
@@ -1460,7 +1462,7 @@ function update() {
                 const dmg = rollBasicDmg();
                 boss.hp -= dmg;
                 spawnAttackEffect(boss.x, boss.y);
-                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#ff6600', life: 60 });
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#8b0000', life: 60 });
                 if (boss.hp <= 0) killBoss(boss);
             } else if (worms.length > 0) {
                 lastAutoAttack = now;
@@ -1469,7 +1471,7 @@ function update() {
                     const dmg = rollBasicDmg();
                     autoTarget.hp -= dmg;
                     spawnAttackEffect(autoTarget.x, autoTarget.y);
-                    dmgNumbers.push({ x: autoTarget.x + (Math.random()*20-10), y: autoTarget.y - autoTarget.size, value: dmg, color: '#dd88ff', life: 60 });
+                    dmgNumbers.push({ x: autoTarget.x + (Math.random()*20-10), y: autoTarget.y - autoTarget.size, value: dmg, color: '#8b0000', life: 60 });
                     if (autoTarget.hp <= 0) {
                         killWorm(autoTarget);
                         worms = worms.filter(w => w !== autoTarget);
@@ -1482,7 +1484,7 @@ function update() {
                             const dmg2 = rollBasicDmg();
                             second.hp -= dmg2;
                             spawnAttackEffect(second.x, second.y);
-                            dmgNumbers.push({ x: second.x + (Math.random()*20-10), y: second.y - second.size, value: dmg2, color: '#dd88ff', life: 60 });
+                            dmgNumbers.push({ x: second.x + (Math.random()*20-10), y: second.y - second.size, value: dmg2, color: '#8b0000', life: 60 });
                             if (second.hp <= 0) {
                                 killWorm(second);
                                 worms = worms.filter(w => w !== second);
@@ -1497,7 +1499,7 @@ function update() {
                             const dmg3 = rollBasicDmg();
                             third.hp -= dmg3;
                             spawnAttackEffect(third.x, third.y);
-                            dmgNumbers.push({ x: third.x + (Math.random()*20-10), y: third.y - third.size, value: dmg3, color: '#dd88ff', life: 60 });
+                            dmgNumbers.push({ x: third.x + (Math.random()*20-10), y: third.y - third.size, value: dmg3, color: '#8b0000', life: 60 });
                             if (third.hp <= 0) {
                                 killWorm(third);
                                 worms = worms.filter(w => w !== third);
@@ -1511,7 +1513,7 @@ function update() {
                 const dmg = rollBasicDmg();
                 boss.hp -= dmg;
                 spawnAttackEffect(boss.x, boss.y);
-                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#ff6600', life: 60 });
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#8b0000', life: 60 });
                 if (boss.hp <= 0) killBoss(boss);
             }
         }
