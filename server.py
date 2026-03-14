@@ -12,6 +12,9 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 import os
 import tempfile
@@ -27,6 +30,17 @@ def _normalize_token(value: str) -> str:
     return (value or '').strip().strip('"').strip("'")
 
 ADMIN_TOKEN = _normalize_token(os.environ.get('ADMIN_TOKEN', ''))
+
+SMTP_HOST = os.environ.get('SMTP_HOST', '')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
+SMTP_USER = os.environ.get('SMTP_USER', '')
+SMTP_PASS = os.environ.get('SMTP_PASS', '')
+SMTP_FROM = os.environ.get('SMTP_FROM', '') or SMTP_USER
+GAME_URL  = os.environ.get('GAME_URL', '')
+
+RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
+
+EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 
 def _is_writable_dir(path: Path) -> bool:
     try:
@@ -68,6 +82,7 @@ def init_db():
             username      TEXT    UNIQUE NOT NULL,
             password_hash TEXT    NOT NULL,
             salt          TEXT    NOT NULL,
+            email         TEXT    UNIQUE DEFAULT NULL,
             score         INTEGER DEFAULT 0,
             level         INTEGER DEFAULT 1,
             state         TEXT    DEFAULT NULL,
@@ -78,6 +93,12 @@ def init_db():
         CREATE TABLE IF NOT EXISTS sessions (
             token      TEXT    PRIMARY KEY,
             player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            token         TEXT    PRIMARY KEY,
+            player_id     INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+            created_at_ms INTEGER NOT NULL,
+            used          INTEGER DEFAULT 0
         );
     """)
 
@@ -91,6 +112,8 @@ def init_db():
         conn.execute('ALTER TABLE players ADD COLUMN cheat_flags INTEGER DEFAULT 0')
     if 'total_clicks' not in existing_cols:
         conn.execute('ALTER TABLE players ADD COLUMN total_clicks INTEGER DEFAULT 0')
+    if 'email' not in existing_cols:
+        conn.execute('ALTER TABLE players ADD COLUMN email TEXT UNIQUE DEFAULT NULL')
 
     conn.commit()
     conn.close()
@@ -168,6 +191,41 @@ def _upgrade_state(state: dict) -> dict:
         state['stateVersion'] = 2
 
     return state
+
+def _send_reset_email(to_email: str, reset_url: str) -> bool:
+    """Send a password-reset email via SMTP. Returns True on success."""
+    if not SMTP_HOST:
+        return False
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = 'Rotworm Killer \u2013 Password Reset'
+        msg['From']    = SMTP_FROM
+        msg['To']      = to_email
+        plain = (
+            'Click the link below to reset your Rotworm Killer password:\n\n'
+            f'{reset_url}\n\n'
+            'This link expires in 1 hour.\n'
+            'If you did not request a password reset, please ignore this email.'
+        )
+        html = (
+            '<p>Click the link below to reset your <b>Rotworm Killer</b> password:</p>'
+            f'<p><a href="{reset_url}">{reset_url}</a></p>'
+            '<p>This link expires in <b>1 hour</b>.</p>'
+            '<p><small>If you did not request a password reset, please ignore this email.</small></p>'
+        )
+        msg.attach(MIMEText(plain, 'plain'))
+        msg.attach(MIMEText(html,  'html'))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as s:
+            s.ehlo()
+            s.starttls()
+            if SMTP_USER and SMTP_PASS:
+                s.login(SMTP_USER, SMTP_PASS)
+            s.sendmail(SMTP_FROM, [to_email], msg.as_string())
+        return True
+    except Exception as exc:
+        print(f'[email] Failed to send reset email: {exc}')
+        return False
+
 
 def is_admin(request: BaseHTTPRequestHandler, body_token: str = '') -> bool:
     if not ADMIN_TOKEN:
@@ -354,23 +412,29 @@ class Handler(BaseHTTPRequestHandler):
             body = self.read_json() or {}
 
             if path == '/api/register':
-                username = (body.get('username') or '').strip()
-                password =  body.get('password') or ''
+                username  = (body.get('username') or '').strip()
+                password  =  body.get('password') or ''
+                email_raw = (body.get('email') or '').strip().lower()
+                email     = email_raw if email_raw else None
                 if not re.fullmatch(r'[a-zA-Z0-9_]{3,20}', username):
                     return self.send_json(400, {'error': 'Username: 3–20 chars, letters/numbers/underscore.'})
                 if not (4 <= len(password) <= 100):
                     return self.send_json(400, {'error': 'Password must be 4–100 characters.'})
+                if email and not EMAIL_RE.fullmatch(email):
+                    return self.send_json(400, {'error': 'Invalid email address.'})
                 salt  = secrets.token_hex(16)
                 hsh   = hash_pwd(password, salt)
                 with _write_lock:
                     conn = db()
                     try:
                         conn.execute(
-                            'INSERT INTO players (username,password_hash,salt) VALUES (?,?,?)',
-                            (username, hsh, salt)
+                            'INSERT INTO players (username,password_hash,salt,email) VALUES (?,?,?,?)',
+                            (username, hsh, salt, email)
                         )
                         conn.commit()
-                    except sqlite3.IntegrityError:
+                    except sqlite3.IntegrityError as e:
+                        if email and 'players.email' in str(e):
+                            return self.send_json(409, {'error': 'Email address already registered to another account.'})
                         return self.send_json(409, {'error': 'Username already taken.'})
                     player = conn.execute(
                         'SELECT id,username,score,level,state FROM players WHERE username=?', (username,)
@@ -584,6 +648,62 @@ class Handler(BaseHTTPRequestHandler):
                     )
                     conn.commit()
                 self.send_json(200, {'ok': True, 'score': score, 'level': level, 'flagged': suspicious})
+
+            elif path == '/api/forgot-password':
+                email = (body.get('email') or '').strip().lower()
+                # Always return 200 to prevent email enumeration.
+                if email and EMAIL_RE.fullmatch(email):
+                    row = db().execute(
+                        'SELECT id FROM players WHERE email=?', (email,)
+                    ).fetchone()
+                    if row:
+                        token = secrets.token_hex(32)
+                        now_ms = int(time.time() * 1000)
+                        with _write_lock:
+                            conn = db()
+                            conn.execute(
+                                'INSERT INTO password_reset_tokens (token,player_id,created_at_ms) VALUES (?,?,?)',
+                                (token, row['id'], now_ms)
+                            )
+                            conn.commit()
+                        host   = self.headers.get('Host', 'localhost')
+                        scheme = 'https' if (GAME_URL or 'railway' in host) else 'http'
+                        base   = GAME_URL or f'{scheme}://{host}'
+                        reset_url = f'{base}/reset-password.html?token={token}'
+                        _send_reset_email(email, reset_url)
+                self.send_json(200, {'ok': True})
+
+            elif path == '/api/reset-password':
+                token    = (body.get('token') or '').strip()
+                password =  body.get('password') or ''
+                if not token:
+                    return self.send_json(400, {'error': 'Token is required.'})
+                if not (4 <= len(password) <= 100):
+                    return self.send_json(400, {'error': 'Password must be 4\u2013100 characters.'})
+                now_ms    = int(time.time() * 1000)
+                expire_ms = now_ms - RESET_TOKEN_EXPIRY_MS
+                row = db().execute(
+                    'SELECT player_id, used, created_at_ms FROM password_reset_tokens WHERE token=?',
+                    (token,)
+                ).fetchone()
+                if not row or row['used'] or row['created_at_ms'] < expire_ms:
+                    return self.send_json(400, {'error': 'This link is invalid or has expired.'})
+                salt = secrets.token_hex(16)
+                hsh  = hash_pwd(password, salt)
+                with _write_lock:
+                    conn = db()
+                    conn.execute(
+                        'UPDATE players SET password_hash=?,salt=? WHERE id=?',
+                        (hsh, salt, row['player_id'])
+                    )
+                    conn.execute(
+                        'UPDATE password_reset_tokens SET used=1 WHERE token=?',
+                        (token,)
+                    )
+                    # Invalidate all existing sessions for security.
+                    conn.execute('DELETE FROM sessions WHERE player_id=?', (row['player_id'],))
+                    conn.commit()
+                self.send_json(200, {'ok': True})
 
             else:
                 self.send_json(404, {'error': 'Not found.'})

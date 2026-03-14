@@ -174,7 +174,7 @@
     <div id="login-modal">
         <div class="auth-box">
             <h2 class="auth-title">Rotworm Killer</h2>
-            <div class="auth-tabs">
+            <div class="auth-tabs" id="auth-tabs">
                 <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Login</button>
                 <button class="auth-tab" id="tab-reg-btn" onclick="switchAuthTab('register')">Register</button>
             </div>
@@ -185,15 +185,27 @@
                 <input id="auth-login-pass" type="password" class="auth-input" autocomplete="current-password" required>
                 <div id="auth-login-err" class="auth-error"></div>
                 <button type="submit" class="auth-submit">Login</button>
+                <div class="auth-forgot"><a href="#" id="forgotLink">Forgot your password?</a></div>
             </form>
             <form id="auth-reg-form" class="auth-form" style="display:none">
                 <label class="auth-label">Username <span class="auth-hint">(3–20 chars, A-Z 0-9 _)</span></label>
                 <input id="auth-reg-user" type="text" class="auth-input" autocomplete="username" maxlength="20" required>
                 <label class="auth-label">Password <span class="auth-hint">(min 4 chars)</span></label>
                 <input id="auth-reg-pass" type="password" class="auth-input" autocomplete="new-password" required>
+                <label class="auth-label">Email <span class="auth-hint">(optional)</span></label>
+                <input id="auth-reg-email" type="email" class="auth-input" autocomplete="email" placeholder="your@email.com">
+                <p class="auth-note">Email address will be necessary in case you lose your account access.</p>
                 <div id="auth-reg-err" class="auth-error"></div>
                 <button type="submit" class="auth-submit">Create Account</button>
             </form>
+            <div id="auth-forgot-panel" style="display:none">
+                <p class="auth-panel-title">Reset Password</p>
+                <p class="auth-note" style="text-align:center;margin-bottom:6px">Enter your registered email. We&rsquo;ll send you a reset link.</p>
+                <input id="auth-forgot-email" type="email" class="auth-input" placeholder="your@email.com">
+                <div id="auth-forgot-msg" class="auth-error"></div>
+                <button id="auth-forgot-btn" class="auth-submit" style="margin-top:4px">Send Reset Link</button>
+                <div class="auth-back"><a href="#" id="forgotBackLink">&larr; Back to login</a></div>
+            </div>
 
         </div>
     </div>

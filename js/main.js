@@ -1766,6 +1766,7 @@ document.getElementById('auth-reg-form').addEventListener('submit', async e => {
     e.preventDefault();
     const username = document.getElementById('auth-reg-user').value.trim();
     const password = document.getElementById('auth-reg-pass').value;
+    const email    = document.getElementById('auth-reg-email').value.trim();
     const errEl    = document.getElementById('auth-reg-err');
     const btn      = e.currentTarget.querySelector('button[type=submit]');
     errEl.textContent = '';
@@ -1774,7 +1775,7 @@ document.getElementById('auth-reg-form').addEventListener('submit', async e => {
         const res  = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ username, password, email }),
         });
         const data = await res.json();
         if (data.error) { errEl.textContent = data.error; btn.disabled = false; return; }
@@ -1787,6 +1788,45 @@ document.getElementById('auth-reg-form').addEventListener('submit', async e => {
         errEl.textContent = 'Connection error.';
         btn.disabled = false;
     }
+});
+
+document.getElementById('forgotLink').addEventListener('click', e => {
+    e.preventDefault();
+    document.getElementById('auth-login-form').style.display   = 'none';
+    document.getElementById('auth-reg-form').style.display     = 'none';
+    document.getElementById('auth-tabs').style.display         = 'none';
+    document.getElementById('auth-forgot-panel').style.display = '';
+    document.getElementById('auth-forgot-email').value         = '';
+    document.getElementById('auth-forgot-msg').textContent     = '';
+});
+
+document.getElementById('forgotBackLink').addEventListener('click', e => {
+    e.preventDefault();
+    document.getElementById('auth-forgot-panel').style.display = 'none';
+    document.getElementById('auth-tabs').style.display         = '';
+    switchAuthTab('login');
+});
+
+document.getElementById('auth-forgot-btn').addEventListener('click', async () => {
+    const email = document.getElementById('auth-forgot-email').value.trim();
+    const msgEl = document.getElementById('auth-forgot-msg');
+    const btn   = document.getElementById('auth-forgot-btn');
+    msgEl.style.color = '#e05050';
+    msgEl.textContent = '';
+    if (!email) { msgEl.textContent = 'Please enter your email address.'; return; }
+    btn.disabled = true;
+    try {
+        await fetch('/api/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        msgEl.style.color = '#7fff9e';
+        msgEl.textContent = 'If an account with that email exists, a reset link has been sent.';
+    } catch (_) {
+        msgEl.textContent = 'Connection error.';
+    }
+    btn.disabled = false;
 });
 
 document.getElementById('logoutBtn').addEventListener('click', doLogout);

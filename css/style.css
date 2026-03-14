@@ -634,6 +634,42 @@ canvas {
     border-color: #7a5818;
 }
 
+.auth-note {
+    font-size: 9px;
+    color: #6a5030;
+    margin: 1px 0 2px;
+    line-height: 1.4;
+}
+
+.auth-forgot {
+    text-align: right;
+    margin-top: 3px;
+}
+
+.auth-forgot a, .auth-back a {
+    color: #8a7040;
+    font-size: 10px;
+    text-decoration: none;
+    transition: color 0.1s;
+}
+
+.auth-forgot a:hover, .auth-back a:hover {
+    color: #f0c040;
+}
+
+.auth-back {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.auth-panel-title {
+    font-size: 12px;
+    color: #f0c040;
+    text-align: center;
+    margin: 4px 0 6px;
+    text-shadow: 0 0 8px #c8800050;
+}
+
 /* ── Offline Progress Modal ──────────────────────────────── */
 #offline-modal {
     display: none;
