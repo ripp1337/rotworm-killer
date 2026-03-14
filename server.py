@@ -16,6 +16,7 @@ import os
 PORT    = int(os.environ.get('PORT', 3000))
 STATIC  = Path(__file__).parent
 DB_PATH = Path(os.environ.get('DATA_DIR', STATIC)) / 'game.db'
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # ── Database ───────────────────────────────────────────────────────
 def init_db():
