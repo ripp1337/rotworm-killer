@@ -255,6 +255,7 @@ function updateHUD() {
     document.getElementById('cd-anni-wrap').style.display         = isKnight   ? '' : 'none';
     document.getElementById('autoAnniBtn').style.display          = isKnight   ? '' : 'none';
     document.getElementById('autoUeBtn').style.display            = isSorcerer ? '' : 'none';
+    document.getElementById('autoPsBtn').style.display             = isSorcerer ? '' : 'none';
     document.getElementById('powerStanceBtn').style.display       = isSorcerer ? '' : 'none';
     document.getElementById('cd-ps-wrap').style.display           = isSorcerer ? '' : 'none';
 }
@@ -285,6 +286,7 @@ let powerStanceUnlocked    = false;
 let powerStanceActive      = false;
 let powerStanceEnd         = 0;
 let powerStanceCooldownEnd = 0;
+let autoPsEnabled          = false;
 
 // ── Annihilation (Knight only) ────────────────────────────────────────
 const ANNIHILATION_UNLOCK_LEVEL = 40;
@@ -475,6 +477,7 @@ function buySorcSkill(id) {
     if (id === 204) ueUnlocked = true;
     if (id === 205) { autoUeUnlocked = true; autoUeEnabled = true; }
     if (id === 210) powerStanceUnlocked = true;
+    if (id === 211) { autoPsEnabled = true; }
     renderSkillTree();
 }
 
@@ -484,7 +487,7 @@ function sorcDmgMaxBonus()  { return (sPts(207) + sPts(209)) * 5 + (powerStanceA
 function sorcDoubleGfb()    { return sPts(203) >= 1; }
 function sorcGfbUpgraded()  { return ascendedClass === 'sorcerer' && sPts(201) >= 1; }
 function sorcAutoUe()       { return sPts(205) >= 1; }
-function sorcAutoPs()       { return sPts(211) >= 1; }
+function sorcAutoPs()       { return sPts(211) >= 1 && autoPsEnabled; }
 
 // ── Skill tree UI ─────────────────────────────────────────────────
 let _skillTab = 'general';
@@ -716,6 +719,7 @@ function getProgress() {
         autoUnlocked, autoEnabled,
         autoGfbUnlocked, autoGfbEnabled,
         autoUeUnlocked,  autoUeEnabled,
+        autoPsEnabled,
         autoAnniEnabled,
         bossFocusUnlocked,
         ascended, ascendedClass,
@@ -750,6 +754,7 @@ function loadProgress(state) {
         if (s.autoGfbEnabled   != null) autoGfbEnabled   = s.autoGfbEnabled;
         if (s.autoUeUnlocked   != null) autoUeUnlocked   = s.autoUeUnlocked;
         if (s.autoUeEnabled    != null) autoUeEnabled    = s.autoUeEnabled;
+        if (s.autoPsEnabled    != null) autoPsEnabled    = s.autoPsEnabled;
         if (s.autoAnniEnabled  != null) autoAnniEnabled  = s.autoAnniEnabled;
         if (s.bossFocusUnlocked!= null) bossFocusUnlocked= s.bossFocusUnlocked;
         if (s.ascended             != null) { ascended = s.ascended; applyMobConfig(); }
@@ -1599,6 +1604,17 @@ function update() {
         }
         document.getElementById('cd-ps-bar').style.width  = powerStanceUnlocked && psRemaining > 0 ? ((1 - psRemaining / effectivePsCooldown()) * 100) + '%' : ((powerStanceUnlocked && !powerStanceActive) ? '100%' : '0%');
         document.getElementById('cd-ps-text').textContent = !powerStanceUnlocked ? 'Locked' : (powerStanceActive ? `Active (${Math.ceil(Math.max(0, powerStanceEnd - Date.now()) / 1000)}s)` : (psRemaining > 0 ? Math.ceil(psRemaining / 1000) + 's' : 'Ready'));
+        // Auto Power Stance button
+        const autoPsEl = document.getElementById('autoPsBtn');
+        if (sPts(211) < 1) {
+            autoPsEl.textContent = 'Auto Power Stance (unlock in Skill Tree)';
+            autoPsEl.disabled = true;
+            autoPsEl.classList.remove('auto-on');
+        } else {
+            autoPsEl.textContent = autoPsEnabled ? 'Auto Power Stance: ON' : 'Auto Power Stance: OFF';
+            autoPsEl.disabled = false;
+            autoPsEl.classList.toggle('auto-on', autoPsEnabled);
+        }
     }
     // update Annihilation button (Knight only)
     if (ascendedClass === 'knight') {
@@ -1717,6 +1733,11 @@ document.getElementById('autoUeBtn').addEventListener('click', () => {
 document.getElementById('autoAnniBtn').addEventListener('click', () => {
     if (kPts(105) < 1) return;
     autoAnniEnabled = !autoAnniEnabled;
+});
+
+document.getElementById('autoPsBtn').addEventListener('click', () => {
+    if (sPts(211) < 1) return;
+    autoPsEnabled = !autoPsEnabled;
 });
 
 document.getElementById('powerStanceBtn').addEventListener('click', () => {
