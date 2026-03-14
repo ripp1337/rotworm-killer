@@ -566,8 +566,9 @@ class Handler(BaseHTTPRequestHandler):
 
         data = target.read_bytes()
         mime = MIME.get(target.suffix.lower(), 'application/octet-stream')
-        # HTML: always revalidate. All other assets: cache for 24 h.
-        cache_control = 'no-cache' if target.suffix.lower() == '.html' else 'public, max-age=86400'
+        # HTML + JS: always revalidate (ETag handles 304s efficiently). Other assets: cache 24 h.
+        no_cache_exts = {'.html', '.js'}
+        cache_control = 'no-cache' if target.suffix.lower() in no_cache_exts else 'public, max-age=86400'
         try:
             self.send_response(200)
             self.send_header('Content-Type', mime)
