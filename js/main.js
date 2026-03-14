@@ -1217,23 +1217,6 @@ function spawnWorm() {
     // no valid position found this frame — skip; next frame will retry
 }
 
-function spawnUberBossForced() {
-    boss = null;  // clear any existing boss
-    const baseSz = ascended ? Math.round(BOSS_SIZE * 1.5) : BOSS_SIZE;
-    const sz     = baseSz * 2;
-    const hp     = BOSS_HP * 2;
-    const margin = sz + 8;
-    boss = {
-        x: margin + Math.random() * (canvas.width  - margin * 2),
-        y: margin + Math.random() * (canvas.height - margin * 2),
-        size: sz,
-        hp: hp,
-        maxHp: hp,
-        isUber: true,
-        _id: ++_eid,
-    };
-}
-
 function spawnBoss() {
     if (boss) return;
     const isUber  = skillUberBossEnabled() && bossKillCounter > 0 && bossKillCounter % UBER_BOSS_EVERY === 0;
