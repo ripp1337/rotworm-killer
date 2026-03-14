@@ -1535,7 +1535,7 @@ function update() {
     if (powerStanceUnlocked && sorcAutoPs() && !powerStanceActive && Date.now() >= powerStanceCooldownEnd) {
         powerStanceActive      = true;
         powerStanceEnd         = Date.now() + POWER_STANCE_DURATION_MS;
-        powerStanceCooldownEnd = Date.now() + effectivePsCooldown();
+        powerStanceCooldownEnd = powerStanceEnd + effectivePsCooldown();
     }
     // float damage numbers upward and expire
     dmgNumbers.forEach(d => { d.y -= 1; d.life--; });
@@ -1602,7 +1602,8 @@ function update() {
             psBtnEl.innerHTML = '&#9889; Power Stance';
             psBtnEl.disabled = false;
         }
-        document.getElementById('cd-ps-bar').style.width  = powerStanceUnlocked && psRemaining > 0 ? ((1 - psRemaining / effectivePsCooldown()) * 100) + '%' : ((powerStanceUnlocked && !powerStanceActive) ? '100%' : '0%');
+        const postActiveRemaining = powerStanceActive ? effectivePsCooldown() : psRemaining;
+        document.getElementById('cd-ps-bar').style.width  = powerStanceUnlocked && postActiveRemaining > 0 ? ((1 - postActiveRemaining / effectivePsCooldown()) * 100) + '%' : ((powerStanceUnlocked && !powerStanceActive) ? '100%' : '0%');
         document.getElementById('cd-ps-text').textContent = !powerStanceUnlocked ? 'Locked' : (powerStanceActive ? `Active (${Math.ceil(Math.max(0, powerStanceEnd - Date.now()) / 1000)}s)` : (psRemaining > 0 ? Math.ceil(psRemaining / 1000) + 's' : 'Ready'));
         // Auto Power Stance button
         const autoPsEl = document.getElementById('autoPsBtn');
@@ -1744,7 +1745,7 @@ document.getElementById('powerStanceBtn').addEventListener('click', () => {
     if (!powerStanceUnlocked || powerStanceActive || Date.now() < powerStanceCooldownEnd) return;
     powerStanceActive      = true;
     powerStanceEnd         = Date.now() + POWER_STANCE_DURATION_MS;
-    powerStanceCooldownEnd = Date.now() + effectivePsCooldown();
+    powerStanceCooldownEnd = powerStanceEnd + effectivePsCooldown();
 });
 
 function loop() {
