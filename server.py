@@ -431,6 +431,7 @@ class _Server(ThreadingHTTPServer):
 
 # ── Request handler ────────────────────────────────────────────────
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'  # persistent connections — one TCP handshake for all assets
 
     def log_message(self, fmt, *args):
         pass  # suppress per-request logs (startup message still shown)
@@ -475,12 +476,26 @@ class Handler(BaseHTTPRequestHandler):
         if not target.exists():
             self.send_response(404); self.end_headers(); return
 
+        stat = target.stat()
+        etag = f'"{stat.st_mtime_ns}-{stat.st_size}"'
+
+        # Conditional GET — 304 if browser already has the current version
+        if self.headers.get('If-None-Match', '') == etag:
+            self.send_response(304)
+            self.send_header('ETag', etag)
+            self.end_headers()
+            return
+
         data = target.read_bytes()
         mime = MIME.get(target.suffix.lower(), 'application/octet-stream')
+        # HTML: always revalidate. All other assets: cache for 24 h.
+        cache_control = 'no-cache' if target.suffix.lower() == '.html' else 'public, max-age=86400'
         try:
             self.send_response(200)
             self.send_header('Content-Type', mime)
             self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', cache_control)
+            self.send_header('ETag', etag)
             self.end_headers()
             if not head_only:
                 self.wfile.write(data)
