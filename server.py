@@ -53,51 +53,52 @@ if _USE_TURSO:
     import libsql_experimental as libsql  # type: ignore[import-untyped]
     print('[startup] Using Turso remote database')
 
-    class _DictRow:
-        """sqlite3.Row-compatible wrapper for libsql cursor rows."""
-        __slots__ = ('_keys', '_values')
-        def __init__(self, description, row):
-            self._keys   = [d[0] for d in description]
-            self._values = list(row)
-        def __getitem__(self, key):
-            if isinstance(key, int):
-                return self._values[key]
-            return self._values[self._keys.index(key)]
-        def keys(self):
-            return self._keys
-        def __iter__(self):
-            return iter(self._values)
 
-    class _TursoCursor:
-        """Cursor wrapper that yields _DictRow objects."""
-        def __init__(self, cur):
-            self._cur = cur
-        @property
-        def rowcount(self):
-            return self._cur.rowcount
-        def fetchone(self):
-            desc = self._cur.description
-            row  = self._cur.fetchone()
-            return _DictRow(desc, row) if row is not None else None
-        def fetchall(self):
-            desc = self._cur.description
-            return [_DictRow(desc, r) for r in self._cur.fetchall()]
+class _DictRow:
+    """sqlite3.Row-compatible wrapper for libsql cursor rows."""
+    __slots__ = ('_keys', '_values')
+    def __init__(self, description, row):
+        self._keys   = [d[0] for d in description]
+        self._values = list(row)
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._values[key]
+        return self._values[self._keys.index(key)]
+    def keys(self):
+        return self._keys
+    def __iter__(self):
+        return iter(self._values)
 
-    class _TursoConn:
-        """Connection wrapper that adds sqlite3.Row-style column-name access."""
-        def __init__(self, raw):
-            self._raw = raw
-            self.row_factory = None  # present so assignment doesn't fail
-        def execute(self, sql, params=()):
-            return _TursoCursor(self._raw.execute(sql, params))
-        def commit(self):
-            self._raw.commit()
-        def sync(self):
-            self._raw.sync()
-        def close(self):
-            self._raw.close()
+class _TursoCursor:
+    """Cursor wrapper that yields _DictRow objects."""
+    def __init__(self, cur):
+        self._cur = cur
+    @property
+    def rowcount(self):
+        return self._cur.rowcount
+    def fetchone(self):
+        desc = self._cur.description
+        row  = self._cur.fetchone()
+        return _DictRow(desc, row) if row is not None else None
+    def fetchall(self):
+        desc = self._cur.description
+        return [_DictRow(desc, r) for r in self._cur.fetchall()]
 
-_turso_conn: '_TursoConn | None' = None  # single global connection; set in init_db() when _USE_TURSO
+class _TursoConn:
+    """Connection wrapper that adds sqlite3.Row-style column-name access."""
+    def __init__(self, raw):
+        self._raw = raw
+        self.row_factory = None  # present so assignment doesn't fail
+    def execute(self, sql, params=()):
+        return _TursoCursor(self._raw.execute(sql, params))
+    def commit(self):
+        self._raw.commit()
+    def sync(self):
+        self._raw.sync()
+    def close(self):
+        self._raw.close()
+
+_turso_conn: _TursoConn | None = None  # single global connection; set in init_db() when _USE_TURSO
 
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
@@ -207,8 +208,9 @@ init_db()
 _tls        = threading.local()
 _write_lock = threading.Lock()
 
-def db():
+def db() -> _TursoConn | sqlite3.Connection:
     if _USE_TURSO:
+        assert _turso_conn is not None
         return _turso_conn  # single global connection — no per-request libsql overhead
     if not hasattr(_tls, 'conn'):
         _tls.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -499,10 +501,10 @@ class Handler(BaseHTTPRequestHandler):
                 ms_1h   = now_ms - 60 * 60 * 1000
                 ms_24h  = now_ms - 24 * 60 * 60 * 1000
 
-                total    = conn.execute('SELECT COUNT(*) FROM players').fetchone()[0]
-                active5  = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_5min,)).fetchone()[0]
-                active1h = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_1h,)).fetchone()[0]
-                active24 = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_24h,)).fetchone()[0]
+                total    = conn.execute('SELECT COUNT(*) FROM players').fetchone()[0]  # type: ignore[index]
+                active5  = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_5min,)).fetchone()[0]  # type: ignore[index]
+                active1h = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_1h,)).fetchone()[0]  # type: ignore[index]
+                active24 = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_24h,)).fetchone()[0]  # type: ignore[index]
 
                 rows = conn.execute(
                     'SELECT username,score,level,total_clicks FROM players '
@@ -543,6 +545,7 @@ class Handler(BaseHTTPRequestHandler):
                             'WHERE score>? OR (score=? AND level>?)',
                             (player['score'], player['score'], player['level'])
                         ).fetchone()
+                        assert row is not None
                         my_entry = {
                             'rank':     row['rnk'],
                             'username': player['username'],
@@ -608,6 +611,7 @@ class Handler(BaseHTTPRequestHandler):
                     player = conn.execute(
                         'SELECT id,username,score,level,state FROM players WHERE username=?', (username,)
                     ).fetchone()
+                    assert player is not None
                     token = secrets.token_hex(32)
                     conn.execute('INSERT INTO sessions (token,player_id) VALUES (?,?)', (token, player['id']))
                     conn.commit()
@@ -755,6 +759,7 @@ class Handler(BaseHTTPRequestHandler):
                 player = db().execute(
                     'SELECT id,username,score,level,state FROM players WHERE id=?', (row['id'],)
                 ).fetchone()
+                assert player is not None
                 self.send_json(200, {'token': token, 'player': dict(player)})
 
             elif path == '/api/logout':
