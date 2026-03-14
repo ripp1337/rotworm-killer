@@ -77,7 +77,7 @@ class _TursoCursor:
         self._cur = cur
     @property
     def rowcount(self):
-        return self._cur.rowcount
+        return getattr(self._cur, 'rowcount', -1)
     def fetchone(self):
         desc = self._cur.description
         row  = self._cur.fetchone()
@@ -775,7 +775,7 @@ class Handler(BaseHTTPRequestHandler):
                     conn = db()
                     rows = conn.execute(
                         f'SELECT id,username FROM players WHERE username IN ({placeholders}) ORDER BY username',
-                        cleaned,
+                        tuple(cleaned),
                     ).fetchall()
 
                     if not rows:
@@ -786,13 +786,17 @@ class Handler(BaseHTTPRequestHandler):
                     missing = [u for u in cleaned if u not in found]
 
                     id_placeholders = ','.join('?' for _ in ids)
-                    sess_result = conn.execute(
+                    conn.execute(
                         f'DELETE FROM sessions WHERE player_id IN ({id_placeholders})',
-                        ids,
+                        tuple(ids),
+                    )
+                    conn.execute(
+                        f'DELETE FROM password_reset_tokens WHERE player_id IN ({id_placeholders})',
+                        tuple(ids),
                     )
                     player_result = conn.execute(
                         f'DELETE FROM players WHERE id IN ({id_placeholders})',
-                        ids,
+                        tuple(ids),
                     )
                     conn.commit()
 
@@ -802,7 +806,6 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(200, {
                     'deleted': found,
                     'missing': missing,
-                    'sessionsDeleted': sess_result.rowcount,
                     'playersDeleted': player_result.rowcount,
                 })
 
