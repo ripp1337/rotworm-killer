@@ -808,6 +808,48 @@ canvas {
 
 .about-credit a {
     color: #7a6030;
+}
+
+/* ── Announcements / News ───────────────────────────────────────── */
+.news-box {
+    max-width: 700px;
+}
+
+.news-entry {
+    border-bottom: 1px solid #3a2408;
+    padding: 18px 0 16px;
+}
+.news-entry:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.news-meta {
+    font-size: 10px;
+    color: #7a6030;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    font-style: italic;
+}
+
+.news-heading {
+    color: #c8a030;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 10px;
+    padding-bottom: 4px;
+}
+
+.news-entry p {
+    font-size: 12px;
+    color: #ddc88a;
+    line-height: 1.7;
+    margin: 6px 0;
+}
+
+.news-entry a {
+    color: #f0c040;
     text-decoration: none;
 }
 

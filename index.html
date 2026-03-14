@@ -32,6 +32,7 @@
         <div class="nav-links">
             <button class="nav-btn nav-active" id="nav-game-btn" onclick="showPage('game')">▶ Game</button>
             <button class="nav-btn" id="nav-about-btn" onclick="showPage('about')">About</button>
+            <button class="nav-btn" id="nav-news-btn" onclick="showPage('news')">📢 Announcements</button>
             <a class="nav-btn" href="/stats.html">📊 Statistics</a>
         </div>
     </nav>
@@ -121,6 +122,27 @@
                     <button class="sb-refresh-btn" onclick="fetchScoreboard()">↻</button>
                 </div>
                 <div id="scoreboard-list"><div class="sb-loading">Loading…</div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Announcements Page ────────────────────────────────── -->
+    <div id="page-news" style="display:none">
+        <div class="about-box news-box">
+            <h2 class="about-title">📢 Announcements</h2>
+
+            <div class="news-entry">
+                <div class="news-meta">2026-03-14 &mdash; ripp1337</div>
+                <h3 class="news-heading">Welcome &amp; Early Development Notice</h3>
+                <p>Dear Players,</p>
+                <p>Please be advised that Rotworm Killer is in its very early stage of development. Multiple changes (security, QoL, mechanics, content) are coming up in the next few days, even hours.</p>
+                <p>I am doing my very best to make this game an enjoyable experience for all of you but since I am not a game developer or any kind of IT professional, many mistakes can occur.</p>
+                <p>Please stay tuned &mdash; if something breaks, come back in a few hours &mdash; it will be back&nbsp;:&nbsp;)</p>
+                <p>If you lose your account, I am terribly sorry. At the moment I iterate a lot and it is possible. After shipping main new features, there will be an official reset and new ladder.</p>
+                <p>I'd like to warmly thank you for checking out my little project. I am very excited to see people playing the game I created.</p>
+                <p>Best regards &mdash; ripp1337</p>
+                <p>PS. Write to me at <a href="mailto:ripp1337@gmail.com">ripp1337@gmail.com</a> or /u&nbsp;ripp1337 at Reddit if you want to give me feedback or have a chat.</p>
             </div>
 
         </div>
@@ -231,8 +253,10 @@
     function showPage(page) {
         document.getElementById('page-game').style.display  = page === 'game'  ? '' : 'none';
         document.getElementById('page-about').style.display = page === 'about' ? '' : 'none';
+        document.getElementById('page-news').style.display  = page === 'news'  ? '' : 'none';
         document.getElementById('nav-game-btn').classList.toggle('nav-active', page === 'game');
         document.getElementById('nav-about-btn').classList.toggle('nav-active', page === 'about');
+        document.getElementById('nav-news-btn').classList.toggle('nav-active', page === 'news');
     }
     </script>
     <!-- Skill Tree modal -->
