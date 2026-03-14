@@ -1940,11 +1940,14 @@ function _chatConnect() {
 }
 
 function chatToggle() {
-    const panel = document.getElementById('chat-panel');
-    const arrow = document.getElementById('chat-toggle-arrow');
-    const collapsed = panel.classList.toggle('chat-collapsed');
-    if (arrow) arrow.textContent = collapsed ? '▶' : '▼';
-    try { localStorage.setItem('chatOpen', collapsed ? '0' : '1'); } catch (_) {}
+    const msgs   = document.getElementById('chat-messages');
+    const footer = document.getElementById('chat-footer');
+    const btn    = document.getElementById('chat-toggle-btn');
+    const hidden = msgs && msgs.style.display === 'none';
+    if (msgs)   msgs.style.display   = hidden ? '' : 'none';
+    if (footer) footer.style.display = hidden ? '' : 'none';
+    if (btn)    btn.textContent       = hidden ? '▼' : '▶';
+    try { localStorage.setItem('chatOpen', hidden ? '1' : '0'); } catch (_) {}
 }
 
 function chatInit(loggedIn) {
@@ -1955,10 +1958,12 @@ function chatInit(loggedIn) {
     // Restore saved open/closed preference (default: open)
     try {
         if (localStorage.getItem('chatOpen') === '0') {
-            const panel = document.getElementById('chat-panel');
-            const arrow = document.getElementById('chat-toggle-arrow');
-            if (panel) panel.classList.add('chat-collapsed');
-            if (arrow) arrow.textContent = '▶';
+            const msgs   = document.getElementById('chat-messages');
+            const footer = document.getElementById('chat-footer');
+            const btn    = document.getElementById('chat-toggle-btn');
+            if (msgs)   msgs.style.display   = 'none';
+            if (footer) footer.style.display = 'none';
+            if (btn)    btn.textContent       = '▶';
         }
     } catch (_) {}
     _chatConnect();
