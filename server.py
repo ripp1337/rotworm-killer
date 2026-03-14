@@ -367,6 +367,38 @@ class Handler(BaseHTTPRequestHandler):
 
                 self.send_json(200, {'count': len(players), 'players': players})
 
+            elif path == '/api/admin/get-player-state':
+                body_token = _normalize_token(str(body.get('adminToken', '')))
+                if not is_admin(self, body_token=body_token):
+                    return self.send_json(401, {'error': 'Unauthorized.'})
+
+                username = (body.get('username') or '').strip()
+                if not username:
+                    return self.send_json(400, {'error': 'username is required.'})
+
+                row = db().execute(
+                    'SELECT username,score,level,cheat_flags,last_save_ms,state '
+                    'FROM players WHERE username=?',
+                    (username,)
+                ).fetchone()
+                if not row:
+                    return self.send_json(404, {'error': 'Player not found.'})
+
+                raw_state = row['state']
+                try:
+                    parsed_state = json.loads(raw_state) if raw_state else None
+                except Exception:
+                    parsed_state = raw_state  # return as-is if corrupt
+
+                self.send_json(200, {
+                    'username':   row['username'],
+                    'score':      int(row['score'] or 0),
+                    'level':      int(row['level'] or 1),
+                    'cheatFlags': int(row['cheat_flags'] or 0),
+                    'lastSaveMs': int(row['last_save_ms'] or 0),
+                    'state':      parsed_state,
+                })
+
             elif path == '/api/login':
                 username = (body.get('username') or '').strip()
                 password =  body.get('password') or ''
