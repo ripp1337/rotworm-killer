@@ -1119,22 +1119,14 @@ function castGfb() {
             const dx = w.x - fx, dy = w.y - fy;
             if (Math.hypot(dx, dy) < radius) {
                 if (upgraded) { killWorm(w); return false; }
-                const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                const fbDmg = Math.ceil(MOB_MAXHP * 0.5);
                 w.hp -= fbDmg;
                 dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: '#8b0000', life: 60 });
                 if (w.hp <= 0) { killWorm(w); return false; }
             }
             return true;
         });
-        if (!upgraded && boss) {
-            const dx = boss.x - fx, dy = boss.y - fy;
-            if (Math.hypot(dx, dy) < radius) {
-                const fbDmg = Math.floor(MOB_MAXHP * 0.5);
-                boss.hp -= fbDmg;
-                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#8b0000', life: 60 });
-                if (boss.hp <= 0) killBoss(boss);
-            }
-        } else if (upgraded && boss && sorcVolatileBlast()) {
+        if (upgraded && boss && sorcVolatileBlast()) {
             // Volatile Blast: always hits boss for 50% max HP regardless of range
             const vbDmg = Math.floor(boss.maxHp * 0.5);
             boss.hp -= vbDmg;
@@ -1156,22 +1148,14 @@ function castGfb() {
                     const dx = w.x - gx, dy = w.y - gy;
                     if (Math.hypot(dx, dy) < radius) {
                         if (upgraded) { killWorm(w); return false; }
-                        const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                        const fbDmg = Math.ceil(MOB_MAXHP * 0.5);
                         w.hp -= fbDmg;
                         dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: '#8b0000', life: 60 });
                         if (w.hp <= 0) { killWorm(w); return false; }
                     }
                     return true;
                 });
-                if (!upgraded && boss) {
-                    const dx = boss.x - gx, dy = boss.y - gy;
-                    if (Math.hypot(dx, dy) < radius) {
-                        const fbDmg = Math.floor(MOB_MAXHP * 0.5);
-                        boss.hp -= fbDmg;
-                        dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#8b0000', life: 60 });
-                        if (boss.hp <= 0) killBoss(boss);
-                    }
-                } else if (upgraded && boss && sorcVolatileBlast()) {
+                if (upgraded && boss && sorcVolatileBlast()) {
                     const vbDmg = Math.floor(boss.maxHp * 0.5);
                     boss.hp -= vbDmg;
                     dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#8b0000', life: 60 });
@@ -1394,23 +1378,13 @@ canvas.addEventListener('click', e => {
                 const dx = w.x - mx;
                 const dy = w.y - my;
                 if (Math.hypot(dx, dy) < radius) {
-                    const fbDmg = Math.floor(MOB_MAXHP * 0.5);
+                    const fbDmg = Math.ceil(MOB_MAXHP * 0.5);
                     w.hp -= fbDmg;
                     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: '#8b0000', life: 60 });
                     if (w.hp <= 0) { killWorm(w); return false; }
                 }
                 return true;
             });
-            // Fireball also damages boss
-            if (boss) {
-                const dx = boss.x - mx, dy = boss.y - my;
-                if (Math.hypot(dx, dy) < radius) {
-                    const fbDmg = Math.floor(MOB_MAXHP * 0.5);
-                    boss.hp -= fbDmg;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: fbDmg, color: '#8b0000', life: 60 });
-                    if (boss.hp <= 0) killBoss(boss);
-                }
-            }
             spawnPaused = false;
         }, 300);
         return;
