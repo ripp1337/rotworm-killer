@@ -105,6 +105,12 @@ def init_db():
             created_at_ms INTEGER NOT NULL,
             used          INTEGER DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS suggestions (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            message       TEXT    NOT NULL,
+            contact       TEXT    DEFAULT NULL,
+            created_at_ms INTEGER NOT NULL
+        );
     """)
 
     # Backfill anti-cheat columns for older databases.
@@ -535,6 +541,18 @@ class Handler(BaseHTTPRequestHandler):
                     'playersDeleted': player_result.rowcount,
                 })
 
+            elif path == '/api/admin/list-suggestions':
+                body_token = _normalize_token(str(body.get('adminToken', '')))
+                if not is_admin(self, body_token=body_token):
+                    return self.send_json(401, {'error': 'Unauthorized.'})
+                rows = db().execute(
+                    'SELECT id,message,contact,created_at_ms FROM suggestions ORDER BY created_at_ms DESC'
+                ).fetchall()
+                self.send_json(200, {
+                    'count': len(rows),
+                    'suggestions': [dict(r) for r in rows]
+                })
+
             elif path == '/api/admin/list-users':
                 body_token = _normalize_token(str(body.get('adminToken', '')))
                 if not is_admin(self, body_token=body_token):
@@ -716,6 +734,24 @@ class Handler(BaseHTTPRequestHandler):
                         base   = GAME_URL or f'{scheme}://{host}'
                         reset_url = f'{base}/reset-password.html?token={token}'
                         _send_reset_email(email, reset_url)
+                self.send_json(200, {'ok': True})
+
+            elif path == '/api/suggest':
+                message = (body.get('message') or '').strip()
+                contact = (body.get('contact') or '').strip()[:100]
+                if not message:
+                    return self.send_json(400, {'error': 'Message is required.'})
+                if len(message) > 2000:
+                    return self.send_json(400, {'error': 'Message too long (max 2000 chars).'})
+                now_ms = int(time.time() * 1000)
+                with _write_lock:
+                    conn = db()
+                    conn.execute(
+                        'INSERT INTO suggestions (message,contact,created_at_ms) VALUES (?,?,?)',
+                        (message, contact or None, now_ms)
+                    )
+                    conn.commit()
+                print(f'[suggest] contact={contact!r} msg={message[:80]!r}')
                 self.send_json(200, {'ok': True})
 
             elif path == '/api/reset-password':

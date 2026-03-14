@@ -1308,3 +1308,11 @@ canvas {
 #announcement-close-btn:hover {
     background: #3e2a10;
 }
+
+/* ── Suggestion Box ──────────────────────────────────────────────── */
+.suggest-textarea {
+    height: 120px;
+    resize: vertical;
+    padding: 6px 8px;
+    line-height: 1.5;
+}

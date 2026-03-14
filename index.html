@@ -33,6 +33,7 @@
             <button class="nav-btn nav-active" id="nav-game-btn" onclick="showPage('game')">▶ Game</button>
             <button class="nav-btn" id="nav-about-btn" onclick="showPage('about')">About</button>
             <button class="nav-btn" id="nav-news-btn" onclick="showPage('news')">📢 Announcements</button>
+            <button class="nav-btn" id="nav-suggest-btn" onclick="showPage('suggest')">💬 Feedback</button>
             <a class="nav-btn" href="/stats.html">📊 Statistics</a>
         </div>
     </nav>
@@ -148,6 +149,23 @@
         </div>
     </div>
 
+    <!-- ── Feedback Page ─────────────────────────────────────── -->
+    <div id="page-suggest" style="display:none">
+        <div class="about-box news-box">
+            <h2 class="about-title">💬 Suggestion Box</h2>
+            <p style="font-size:12px;color:#ddc88a;margin:0 0 14px">Have an idea, found a bug, or just want to say something? Drop it here &mdash; I read every message.</p>
+            <div class="auth-form">
+                <label class="auth-label">Your message *</label>
+                <textarea class="auth-input suggest-textarea" id="suggest-msg" maxlength="2000" placeholder="Type your suggestion or bug report here..."></textarea>
+                <label class="auth-label">Contact <span class="auth-hint">(optional &mdash; email or username so I can follow up)</span></label>
+                <input class="auth-input" id="suggest-contact" type="text" maxlength="100" placeholder="Leave blank to stay anonymous">
+                <div class="auth-error" id="suggest-error"></div>
+                <button class="auth-submit" id="suggest-submit" onclick="submitSuggestion()">Send Feedback</button>
+                <div id="suggest-ok" style="display:none;color:#7edd7e;font-size:12px;margin-top:6px;">&#10003; Thanks! Your feedback was received.</div>
+            </div>
+        </div>
+    </div>
+
     <!-- ── About Page ─────────────────────────────────────────── -->
     <div id="page-about" style="display:none">
         <div class="about-box">
@@ -251,12 +269,40 @@
     </div>
     <script>
     function showPage(page) {
-        document.getElementById('page-game').style.display  = page === 'game'  ? '' : 'none';
-        document.getElementById('page-about').style.display = page === 'about' ? '' : 'none';
-        document.getElementById('page-news').style.display  = page === 'news'  ? '' : 'none';
-        document.getElementById('nav-game-btn').classList.toggle('nav-active', page === 'game');
-        document.getElementById('nav-about-btn').classList.toggle('nav-active', page === 'about');
-        document.getElementById('nav-news-btn').classList.toggle('nav-active', page === 'news');
+        document.getElementById('page-game').style.display    = page === 'game'    ? '' : 'none';
+        document.getElementById('page-about').style.display   = page === 'about'   ? '' : 'none';
+        document.getElementById('page-news').style.display    = page === 'news'    ? '' : 'none';
+        document.getElementById('page-suggest').style.display = page === 'suggest' ? '' : 'none';
+        document.getElementById('nav-game-btn').classList.toggle('nav-active',    page === 'game');
+        document.getElementById('nav-about-btn').classList.toggle('nav-active',   page === 'about');
+        document.getElementById('nav-news-btn').classList.toggle('nav-active',    page === 'news');
+        document.getElementById('nav-suggest-btn').classList.toggle('nav-active', page === 'suggest');
+    }
+    async function submitSuggestion() {
+        const msg     = document.getElementById('suggest-msg').value.trim();
+        const contact = document.getElementById('suggest-contact').value.trim();
+        const errEl   = document.getElementById('suggest-error');
+        const okEl    = document.getElementById('suggest-ok');
+        const btn     = document.getElementById('suggest-submit');
+        errEl.textContent = '';
+        okEl.style.display = 'none';
+        if (!msg) { errEl.textContent = 'Please write a message first.'; return; }
+        btn.disabled = true;
+        try {
+            const r = await fetch('/api/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg, contact })
+            });
+            if (r.ok) {
+                document.getElementById('suggest-msg').value = '';
+                document.getElementById('suggest-contact').value = '';
+                okEl.style.display = 'block';
+            } else {
+                errEl.textContent = 'Something went wrong, try again.';
+            }
+        } catch { errEl.textContent = 'Network error, try again.'; }
+        btn.disabled = false;
     }
     </script>
     <!-- Skill Tree modal -->
