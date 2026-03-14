@@ -97,7 +97,7 @@ if _USE_TURSO:
         def close(self):
             self._raw.close()
 
-_turso_conn = None  # single global connection; set in init_db() when _USE_TURSO
+_turso_conn: '_TursoConn | None' = None  # single global connection; set in init_db() when _USE_TURSO
 
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
@@ -185,7 +185,7 @@ def init_db():
 
     # Backfill anti-cheat columns for older databases.
     existing_cols = {
-        row[1] for row in conn.execute("PRAGMA table_info(players)").fetchall()
+        row[1] for row in conn.execute('PRAGMA table_info(players)').fetchall()
     }
     if 'last_save_ms' not in existing_cols:
         conn.execute('ALTER TABLE players ADD COLUMN last_save_ms INTEGER DEFAULT 0')
@@ -198,7 +198,8 @@ def init_db():
         conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_players_email ON players(email) WHERE email IS NOT NULL')
 
     conn.commit()
-    conn.close()
+    if not _USE_TURSO:
+        conn.close()  # keep _turso_conn open for the lifetime of the process
 
 init_db()
 
