@@ -1330,27 +1330,22 @@ canvas {
 
 /* ── Live Chat Panel ─────────────────────────────────────────────── */
 .chat-header {
-    cursor: pointer;
-    user-select: none;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-#chat-toggle-arrow {
+#chat-toggle-btn {
+    background: none;
+    border: none;
+    color: #c8a030;
     font-size: 9px;
-    opacity: 0.7;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    opacity: 0.8;
 }
-
-#chat-panel.chat-collapsed {
-    height: auto;
-    min-height: 0;
-}
-
-#chat-panel.chat-collapsed #chat-messages,
-#chat-panel.chat-collapsed #chat-footer {
-    display: none !important;
-}
+#chat-toggle-btn:hover { opacity: 1; }
 
 #chat-panel {
     width: 210px;
