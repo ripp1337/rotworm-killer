@@ -1219,8 +1219,9 @@ function spawnWorm() {
 
 function spawnBoss() {
     if (boss) return;
-    const isUber = skillUberBossEnabled() && bossKillCounter > 0 && bossKillCounter % UBER_BOSS_EVERY === 0;
-    const sz     = isUber ? BOSS_SIZE * 2 : BOSS_SIZE;
+    const isUber  = skillUberBossEnabled() && bossKillCounter > 0 && bossKillCounter % UBER_BOSS_EVERY === 0;
+    const baseSz  = ascended ? Math.round(BOSS_SIZE * 1.5) : BOSS_SIZE;
+    const sz      = isUber ? baseSz * 2 : baseSz;
     const hp     = isUber ? BOSS_HP   * 2 : BOSS_HP;
     const margin = sz + 8;
     boss = {
