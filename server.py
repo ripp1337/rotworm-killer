@@ -97,6 +97,8 @@ if _USE_TURSO:
         def close(self):
             self._raw.close()
 
+_turso_conn = None  # single global connection; set in init_db() when _USE_TURSO
+
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
 EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
@@ -134,10 +136,12 @@ print(f'[startup] DB_PATH={DB_PATH}')
 
 # ── Database ───────────────────────────────────────────────────────
 def init_db():
+    global _turso_conn
     if _USE_TURSO:
         raw = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
         raw.sync()
-        conn = _TursoConn(raw)
+        _turso_conn = _TursoConn(raw)
+        conn = _turso_conn
     else:
         conn = sqlite3.connect(str(DB_PATH))
     conn.execute("""
@@ -203,16 +207,13 @@ _tls        = threading.local()
 _write_lock = threading.Lock()
 
 def db():
+    if _USE_TURSO:
+        return _turso_conn  # single global connection — no per-request libsql overhead
     if not hasattr(_tls, 'conn'):
-        if _USE_TURSO:
-            # No sync() here — init_db() synced at startup; writes replicate automatically.
-            raw = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
-            _tls.conn = _TursoConn(raw)
-        else:
-            _tls.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-            _tls.conn.row_factory = sqlite3.Row
-            _tls.conn.execute('PRAGMA journal_mode=WAL')
-            _tls.conn.execute('PRAGMA foreign_keys=ON')
+        _tls.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        _tls.conn.row_factory = sqlite3.Row
+        _tls.conn.execute('PRAGMA journal_mode=WAL')
+        _tls.conn.execute('PRAGMA foreign_keys=ON')
     return _tls.conn
 
 # ── Auth helpers ───────────────────────────────────────────────────
