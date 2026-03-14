@@ -16,7 +16,12 @@ import os
 import tempfile
 PORT    = int(os.environ.get('PORT', 3000))
 STATIC  = Path(__file__).parent
-ADMIN_TOKEN = os.environ.get('ADMIN_TOKEN', '')
+
+def _normalize_token(value: str) -> str:
+    # Railway/env values can accidentally include whitespace or wrapping quotes.
+    return (value or '').strip().strip('"').strip("'")
+
+ADMIN_TOKEN = _normalize_token(os.environ.get('ADMIN_TOKEN', ''))
 
 def _is_writable_dir(path: Path) -> bool:
     try:
@@ -99,10 +104,16 @@ def auth_player(token: str):
         (row['player_id'],)
     ).fetchone()
 
-def is_admin(request: BaseHTTPRequestHandler) -> bool:
+def is_admin(request: BaseHTTPRequestHandler, body_token: str = '') -> bool:
     if not ADMIN_TOKEN:
         return False
     supplied = request.headers.get('X-Admin-Token', '')
+    if not supplied:
+        auth = request.headers.get('Authorization', '')
+        supplied = auth[7:] if auth.startswith('Bearer ') else ''
+    if not supplied and body_token:
+        supplied = body_token
+    supplied = _normalize_token(supplied)
     return hmac.compare_digest(supplied, ADMIN_TOKEN)
 
 # ── MIME types ─────────────────────────────────────────────────────
@@ -269,7 +280,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(200, {'token': token, 'player': dict(player)})
 
             elif path == '/api/admin/delete-users':
-                if not is_admin(self):
+                body_token = _normalize_token(str(body.get('adminToken', '')))
+                if not is_admin(self, body_token=body_token):
                     return self.send_json(401, {'error': 'Unauthorized.'})
 
                 usernames = body.get('usernames')
