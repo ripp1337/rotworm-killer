@@ -343,7 +343,7 @@ const GENERAL_SKILLS = [
     { id: 6, col: 3, row: 3, name: 'Cooldown Reset', max: 1, reqLevel: 15, prereqs: [4, 5], desc: '1% chance on kill to reset all cooldowns' },
     // Column 4 — Fireball
     { id: 10, col: 4, row: 1, name: 'Unlock Fireball', max: 1, reqLevel: 3,  prereqs: [],       cost: 500,  desc: 'Unlocks Fireball: 50% max HP AoE, 10s cooldown' },
-    { id: 11, col: 4, row: 2, name: 'Fireball CDR',    max: 5, reqLevel: 1,  prereqs: [10],     cost: 500,  desc: '-10% Fireball cooldown per point (base: 10s)' },
+    { id: 11, col: 4, row: 2, name: 'Fireball CDR',    max: 5, reqLevel: 1,  prereqs: [10],     costs: [100, 500, 750, 1000, 2000],  desc: '-10% Fireball cooldown per point (base: 10s)' },
     { id: 12, col: 4, row: 3, name: 'Auto Fireball',   max: 1, reqLevel: 10, prereqs: [10, 11], cost: 1000, desc: 'Automatically casts Fireball on the best target cluster' },
 ];
 
@@ -360,14 +360,14 @@ function skillCanBuy(skill) {
     if (level < skill.reqLevel) return false;
     if (skillPts(skill.id) >= skill.max) return false;
     if (!skillPrereqsMet(skill)) return false;
-    const cost = skill.cost ?? SKILL_COST_PER_TIER[skill.row] ?? 0;
+    const cost = skill.costs ? (skill.costs[skillPts(skill.id)] ?? 0) : (skill.cost ?? SKILL_COST_PER_TIER[skill.row] ?? 0);
     return gold >= cost;
 }
 
 function buySkill(id) {
     const skill = GENERAL_SKILLS.find(s => s.id === id);
     if (!skill || !skillCanBuy(skill)) return;
-    const cost = skill.cost ?? SKILL_COST_PER_TIER[skill.row] ?? 0;
+    const cost = skill.costs ? (skill.costs[skillPts(skill.id)] ?? 0) : (skill.cost ?? SKILL_COST_PER_TIER[skill.row] ?? 0);
     gold -= cost;
     skillPoints[id] = (skillPoints[id] || 0) + 1;
     // Side-effects for automation skills
@@ -546,7 +546,7 @@ function renderGeneralPane() {
             const maxed   = pts >= skill.max;
             const prereqs = skillPrereqsMet(skill);
             const lvlOk   = level >= skill.reqLevel;
-            const cost    = skill.cost ?? SKILL_COST_PER_TIER[skill.row];
+const cost    = skill.costs ? (skill.costs[pts] ?? 0) : (skill.cost ?? SKILL_COST_PER_TIER[skill.row]);
             const canBuy  = !maxed && prereqs && lvlOk && gold >= cost;
             const locked  = !prereqs || !lvlOk;
 
