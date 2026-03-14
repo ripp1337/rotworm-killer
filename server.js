@@ -4,10 +4,42 @@ const express  = require('express');
 const crypto   = require('crypto');
 const Database = require('better-sqlite3');
 const path     = require('path');
+const fs       = require('fs');
+const os       = require('os');
 
 const app  = express();
-const db   = new Database(path.join(__dirname, 'game.db'));
 const PORT = process.env.PORT || 3000;
+
+function isWritableDir(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const testFile = path.join(dir, '.rw-test');
+    fs.writeFileSync(testFile, 'ok');
+    fs.unlinkSync(testFile);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveDbPath() {
+  const candidates = [];
+  if (process.env.DATA_DIR) candidates.push(process.env.DATA_DIR);
+  candidates.push(__dirname);
+  candidates.push(path.join(os.tmpdir(), 'rotworm-killer'));
+
+  for (const dir of candidates) {
+    if (isWritableDir(dir)) {
+      return path.join(dir, 'game.db');
+    }
+  }
+
+  throw new Error('No writable directory found for SQLite database.');
+}
+
+const dbPath = resolveDbPath();
+console.log(`[startup] DB_PATH=${dbPath}`);
+const db = new Database(dbPath);
 
 // ── Schema ────────────────────────────────────────────────────────
 db.exec(`
