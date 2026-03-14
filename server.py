@@ -40,7 +40,7 @@ SMTP_FROM = os.environ.get('SMTP_FROM', '') or SMTP_USER
 GAME_URL  = os.environ.get('GAME_URL', '')
 
 # Resend (https://resend.com) — preferred on Railway (no SMTP port blocking)
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+RESEND_API_KEY = _normalize_token(os.environ.get('RESEND_API_KEY', ''))
 RESEND_FROM    = os.environ.get('RESEND_FROM', 'Rotworm Killer <onboarding@resend.dev>')
 
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
@@ -236,10 +236,17 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
             with urlopen(req, timeout=10) as resp:
                 if resp.status in (200, 201):
                     return True
-                print(f'[email] Resend returned HTTP {resp.status}')
+                body = resp.read().decode(errors='replace')
+                print(f'[email] Resend returned HTTP {resp.status}: {body}')
                 return False
         except Exception as exc:
-            print(f'[email] Resend failed: {exc}')
+            # Read error body if available (HTTPError from urllib)
+            body = getattr(exc, 'read', lambda: b'')() 
+            if body:
+                body = body.decode(errors='replace')
+                print(f'[email] Resend failed: {exc} — {body}')
+            else:
+                print(f'[email] Resend failed: {exc}')
             return False
 
     # ── SMTP fallback (may be blocked on Railway) ──────────────────
