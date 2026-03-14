@@ -741,7 +741,9 @@ class Handler(BaseHTTPRequestHandler):
                             (username, hsh, salt, email)
                         )
                         conn.commit()
-                    except sqlite3.IntegrityError as e:
+                    except Exception as e:
+                        if not (isinstance(e, sqlite3.IntegrityError) or 'UNIQUE constraint failed' in str(e)):
+                            raise
                         if email and 'players.email' in str(e):
                             return self.send_json(409, {'error': 'Email address already registered to another account.'})
                         return self.send_json(409, {'error': 'Username already taken.'})
