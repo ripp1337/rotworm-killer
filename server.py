@@ -77,7 +77,7 @@ class _TursoCursor:
         self._cur = cur
     @property
     def rowcount(self):
-        return self._cur.rowcount
+        return getattr(self._cur, 'rowcount', -1)
     def fetchone(self):
         desc = self._cur.description
         row  = self._cur.fetchone()
