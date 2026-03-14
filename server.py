@@ -41,7 +41,7 @@ GAME_URL  = os.environ.get('GAME_URL', '')
 
 # Resend (https://resend.com) — preferred on Railway (no SMTP port blocking)
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-RESEND_FROM    = os.environ.get('RESEND_FROM', 'Rotworm Killer <noreply@resend.dev>')
+RESEND_FROM    = os.environ.get('RESEND_FROM', 'Rotworm Killer <onboarding@resend.dev>')
 
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
