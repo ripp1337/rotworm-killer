@@ -996,6 +996,7 @@ function startGame(stateRaw) {
     document.getElementById('login-modal').style.display = 'none';
     document.getElementById('hud-player').textContent = authUsername;
     document.getElementById('logoutBtn').textContent = 'Logout';
+    chatInit(true);
     if (!gameStarted) {
         gameStarted = true;
         loop();
@@ -1851,3 +1852,76 @@ function closeAnnouncement() {
     localStorage.setItem('announcementDismissed', '2026-03-14-v1');
     document.getElementById('announcement-overlay').classList.remove('visible');
 }
+
+// ── Live Chat ─────────────────────────────────────────────────────
+let _chatSource = null;
+
+function _chatEscapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function _chatAppend(msg) {
+    const box = document.getElementById('chat-messages');
+    if (!box) return;
+    const d   = new Date(msg.ts);
+    const hh  = String(d.getHours()).padStart(2, '0');
+    const mm  = String(d.getMinutes()).padStart(2, '0');
+    const div = document.createElement('div');
+    div.className   = 'chat-msg';
+    div.innerHTML   =
+        `<span class="chat-time">${hh}:${mm}</span> ` +
+        `<span class="chat-user">${_chatEscapeHtml(msg.username)}</span>` +
+        `<span class="chat-text">: ${_chatEscapeHtml(msg.text)}</span>`;
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    box.appendChild(div);
+    while (box.children.length > 200) box.removeChild(box.firstChild);
+    if (atBottom) box.scrollTop = box.scrollHeight;
+}
+
+function _chatConnect() {
+    if (_chatSource) { _chatSource.close(); _chatSource = null; }
+    _chatSource = new EventSource('/api/chat/stream');
+    _chatSource.onmessage = e => {
+        try { _chatAppend(JSON.parse(e.data)); } catch (_) {}
+    };
+    _chatSource.onerror = () => {
+        _chatSource.close();
+        _chatSource = null;
+        setTimeout(_chatConnect, 5000);
+    };
+}
+
+function chatInit(loggedIn) {
+    const hint = document.getElementById('chat-login-hint');
+    const row  = document.getElementById('chat-input-row');
+    if (hint) hint.style.display = loggedIn ? 'none' : '';
+    if (row)  row.style.display  = loggedIn ? ''     : 'none';
+    _chatConnect();
+}
+
+function chatSend() {
+    const input = document.getElementById('chat-input');
+    const text  = (input.value || '').trim();
+    if (!text) return;
+    const btn = document.getElementById('chat-send-btn');
+    btn.disabled = true;
+    fetch('/api/chat/send', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body:    JSON.stringify({ text }),
+    }).then(r => r.json()).then(d => {
+        if (d.ok) { input.value = ''; }
+        else if (d.error) { console.warn('[chat]', d.error); }
+    }).catch(() => {}).finally(() => { btn.disabled = false; });
+}
+
+document.getElementById('chat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') chatSend();
+});
+
+// Start chat for anyone (history is visible to guests; input is locked until login)
+chatInit(!!authToken);

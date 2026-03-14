@@ -17,6 +17,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+import collections
+import queue as _queue_mod
 import os
 import tempfile
 PORT    = int(os.environ.get('PORT', 3000))
@@ -207,6 +209,12 @@ init_db()
 # Thread-local SQLite connections (WAL mode for concurrency)
 _tls        = threading.local()
 _write_lock = threading.Lock()
+
+# ── Live chat ──────────────────────────────────────────────────────
+_chat_messages: collections.deque = collections.deque(maxlen=100)
+_chat_subscribers: list = []   # list of queue.Queue
+_chat_lock      = threading.Lock()
+_chat_rate: dict = {}           # username -> last send timestamp (ms)
 
 def db() -> _TursoConn | sqlite3.Connection:
     if _USE_TURSO:
@@ -553,6 +561,42 @@ class Handler(BaseHTTPRequestHandler):
                             'level':    player['level'],
                         }
                 self.send_json(200, {'players': top10, 'me': my_entry})
+
+            elif path == '/api/chat/stream':
+                q: _queue_mod.Queue = _queue_mod.Queue()
+                with _chat_lock:
+                    _chat_subscribers.append(q)
+                try:
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/event-stream')
+                    self.send_header('Cache-Control', 'no-cache')
+                    self.send_header('X-Accel-Buffering', 'no')
+                    self.end_headers()
+                    # Send history first
+                    with _chat_lock:
+                        history = list(_chat_messages)
+                    for msg in history:
+                        self.wfile.write(f'data: {json.dumps(msg)}\n\n'.encode())
+                    self.wfile.flush()
+                    while True:
+                        try:
+                            msg = q.get(timeout=25)
+                            if msg is None:
+                                break
+                            self.wfile.write(f'data: {json.dumps(msg)}\n\n'.encode())
+                            self.wfile.flush()
+                        except _queue_mod.Empty:
+                            self.wfile.write(b': ping\n\n')
+                            self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, OSError):
+                    pass
+                finally:
+                    with _chat_lock:
+                        try:
+                            _chat_subscribers.remove(q)
+                        except ValueError:
+                            pass
+                return
 
             else:
                 self.serve_static(path)
@@ -909,6 +953,31 @@ class Handler(BaseHTTPRequestHandler):
                     # Invalidate all existing sessions for security.
                     conn.execute('DELETE FROM sessions WHERE player_id=?', (row['player_id'],))
                     conn.commit()
+                self.send_json(200, {'ok': True})
+
+            elif path == '/api/chat/send':
+                player = auth_player(self.get_token())
+                if not player:
+                    return self.send_json(401, {'error': 'Login to chat.'})
+                text = (body.get('text') or '').strip()
+                if not text:
+                    return self.send_json(400, {'error': 'Empty message.'})
+                if len(text) > 200:
+                    return self.send_json(400, {'error': 'Message too long (max 200 chars).'})
+                now_ms = int(time.time() * 1000)
+                with _chat_lock:
+                    # Rate-limit: 1 message per 2 seconds per user
+                    last_ms = _chat_rate.get(player['username'], 0)
+                    if now_ms - last_ms < 2000:
+                        return self.send_json(429, {'error': 'Slow down! One message per 2 seconds.'})
+                    _chat_rate[player['username']] = now_ms
+                    msg = {'ts': now_ms, 'username': player['username'], 'text': text}
+                    _chat_messages.append(msg)
+                    for sub_q in list(_chat_subscribers):
+                        try:
+                            sub_q.put_nowait(msg)
+                        except Exception:
+                            pass
                 self.send_json(200, {'ok': True})
 
             else:
