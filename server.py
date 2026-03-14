@@ -50,8 +50,52 @@ TURSO_AUTH_TOKEN = _normalize_token(os.environ.get('TURSO_AUTH_TOKEN', ''))
 _USE_TURSO       = bool(TURSO_URL and TURSO_AUTH_TOKEN)
 
 if _USE_TURSO:
-    import libsql_experimental as libsql
+    import libsql_experimental as libsql  # type: ignore[import-untyped]
     print('[startup] Using Turso remote database')
+
+    class _DictRow:
+        """sqlite3.Row-compatible wrapper for libsql cursor rows."""
+        __slots__ = ('_keys', '_values')
+        def __init__(self, description, row):
+            self._keys   = [d[0] for d in description]
+            self._values = list(row)
+        def __getitem__(self, key):
+            if isinstance(key, int):
+                return self._values[key]
+            return self._values[self._keys.index(key)]
+        def keys(self):
+            return self._keys
+        def __iter__(self):
+            return iter(self._values)
+
+    class _TursoCursor:
+        """Cursor wrapper that yields _DictRow objects."""
+        def __init__(self, cur):
+            self._cur = cur
+        @property
+        def rowcount(self):
+            return self._cur.rowcount
+        def fetchone(self):
+            desc = self._cur.description
+            row  = self._cur.fetchone()
+            return _DictRow(desc, row) if row is not None else None
+        def fetchall(self):
+            desc = self._cur.description
+            return [_DictRow(desc, r) for r in self._cur.fetchall()]
+
+    class _TursoConn:
+        """Connection wrapper that adds sqlite3.Row-style column-name access."""
+        def __init__(self, raw):
+            self._raw = raw
+            self.row_factory = None  # present so assignment doesn't fail
+        def execute(self, sql, params=()):
+            return _TursoCursor(self._raw.execute(sql, params))
+        def commit(self):
+            self._raw.commit()
+        def sync(self):
+            self._raw.sync()
+        def close(self):
+            self._raw.close()
 
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
@@ -91,8 +135,9 @@ print(f'[startup] DB_PATH={DB_PATH}')
 # ── Database ───────────────────────────────────────────────────────
 def init_db():
     if _USE_TURSO:
-        conn = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
-        conn.sync()
+        raw = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
+        raw.sync()
+        conn = _TursoConn(raw)
     else:
         conn = sqlite3.connect(str(DB_PATH))
     conn.execute("""
@@ -160,13 +205,14 @@ _write_lock = threading.Lock()
 def db():
     if not hasattr(_tls, 'conn'):
         if _USE_TURSO:
-            _tls.conn = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
-            _tls.conn.sync()
+            raw = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
+            raw.sync()
+            _tls.conn = _TursoConn(raw)
         else:
             _tls.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+            _tls.conn.row_factory = sqlite3.Row
             _tls.conn.execute('PRAGMA journal_mode=WAL')
             _tls.conn.execute('PRAGMA foreign_keys=ON')
-        _tls.conn.row_factory = sqlite3.Row
     return _tls.conn
 
 # ── Auth helpers ───────────────────────────────────────────────────
