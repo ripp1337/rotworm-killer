@@ -227,6 +227,43 @@ def _invalidate_player_sessions(player_id: int) -> None:
     for t in dead:
         del _session_cache[t]
 
+# ── Player data cache ─────────────────────────────────────────────
+# After the first DB fetch, every subsequent auth'd request is served
+# entirely from memory — zero Turso round-trips on the hot path.
+_player_data_cache: dict = {}   # player_id -> (row_dict, expires_at)
+_PLAYER_DATA_CACHE_TTL = 3600.0  # 1 hour
+
+_PLAYER_ALL_COLS = 'id,username,score,level,state,last_save_ms,cheat_flags,total_clicks'
+
+def _cache_player_data(row) -> None:
+    d = {k: row[k] for k in row.keys()}
+    _player_data_cache[d['id']] = (d, time.time() + _PLAYER_DATA_CACHE_TTL)
+
+def _get_cached_player_data(player_id: int):
+    entry = _player_data_cache.get(player_id)
+    if not entry:
+        return None
+    d, exp = entry
+    if time.time() < exp:
+        return d
+    del _player_data_cache[player_id]
+    return None
+
+def _evict_player(player_id: int) -> None:
+    """Remove player from both caches (on delete / password reset)."""
+    _player_data_cache.pop(player_id, None)
+    _invalidate_player_sessions(player_id)
+
+def _player_public(player) -> dict:
+    """Return only the fields the client needs — never expose anti-cheat data."""
+    return {
+        'id':       player['id'],
+        'username': player['username'],
+        'score':    player['score'],
+        'level':    player['level'],
+        'state':    player['state'],
+    }
+
 # ── Live chat ──────────────────────────────────────────────────────
 _chat_messages: collections.deque = collections.deque(maxlen=100)
 _chat_subscribers: list = []   # list of queue.Queue
@@ -252,26 +289,37 @@ def hash_pwd(password: str, salt: str) -> str:
 def auth_player(token: str):
     if not token:
         return None
-    # Fast path: session already cached — skip the sessions table query.
+    # Fast path: session cached — try player cache next (0 Turso queries).
     entry = _session_cache.get(token)
     if entry:
         player_id, exp = entry
         if time.time() < exp:
-            _session_cache[token] = (player_id, time.time() + _SESSION_CACHE_TTL)  # refresh TTL
-            return db().execute(
-                'SELECT id,username,score,level,state FROM players WHERE id=?',
-                (player_id,)
+            _session_cache[token] = (player_id, time.time() + _SESSION_CACHE_TTL)
+            cached = _get_cached_player_data(player_id)
+            if cached:
+                return cached
+            row = db().execute(
+                f'SELECT {_PLAYER_ALL_COLS} FROM players WHERE id=?', (player_id,)
             ).fetchone()
+            if row:
+                _cache_player_data(row)
+            return row
         del _session_cache[token]  # expired
     # Slow path: first request for this session — check DB.
     row = db().execute('SELECT player_id FROM sessions WHERE token=?', (token,)).fetchone()
     if not row:
         return None
-    _cache_session(token, row['player_id'])
-    return db().execute(
-        'SELECT id,username,score,level,state FROM players WHERE id=?',
-        (row['player_id'],)
+    player_id = row['player_id']
+    _cache_session(token, player_id)
+    cached = _get_cached_player_data(player_id)
+    if cached:
+        return cached
+    row = db().execute(
+        f'SELECT {_PLAYER_ALL_COLS} FROM players WHERE id=?', (player_id,)
     ).fetchone()
+    if row:
+        _cache_player_data(row)
+    return row
 
 # ── State versioning ──────────────────────────────────────────────
 LATEST_STATE_VERSION = 2
@@ -542,7 +590,7 @@ class Handler(BaseHTTPRequestHandler):
                 player = auth_player(self.get_token())
                 if not player:
                     return self.send_json(401, {'error': 'Not authenticated.'})
-                self.send_json(200, {'player': dict(player)})
+                self.send_json(200, {'player': _player_public(player)})
 
             elif path == '/healthz':
                 self.send_json(200, {'ok': True})
@@ -698,14 +746,15 @@ class Handler(BaseHTTPRequestHandler):
                             return self.send_json(409, {'error': 'Email address already registered to another account.'})
                         return self.send_json(409, {'error': 'Username already taken.'})
                     player = conn.execute(
-                        'SELECT id,username,score,level,state FROM players WHERE username=?', (username,)
+                        f'SELECT {_PLAYER_ALL_COLS} FROM players WHERE username=?', (username,)
                     ).fetchone()
                     assert player is not None
                     token = secrets.token_hex(32)
                     conn.execute('INSERT INTO sessions (token,player_id) VALUES (?,?)', (token, player['id']))
                     conn.commit()
                 _cache_session(token, player['id'])
-                self.send_json(200, {'token': token, 'player': dict(player)})
+                _cache_player_data(player)
+                self.send_json(200, {'token': token, 'player': _player_public(player)})
 
             elif path == '/api/admin/delete-users':
                 body_token = _normalize_token(str(body.get('adminToken', '')))
@@ -748,7 +797,7 @@ class Handler(BaseHTTPRequestHandler):
                     conn.commit()
 
                 for pid in ids:
-                    _invalidate_player_sessions(pid)
+                    _evict_player(pid)
 
                 self.send_json(200, {
                     'deleted': found,
@@ -851,10 +900,11 @@ class Handler(BaseHTTPRequestHandler):
                     conn.commit()
                 _cache_session(token, row['id'])
                 player = db().execute(
-                    'SELECT id,username,score,level,state FROM players WHERE id=?', (row['id'],)
+                    f'SELECT {_PLAYER_ALL_COLS} FROM players WHERE id=?', (row['id'],)
                 ).fetchone()
                 assert player is not None
-                self.send_json(200, {'token': token, 'player': dict(player)})
+                _cache_player_data(player)
+                self.send_json(200, {'token': token, 'player': _player_public(player)})
 
             elif path == '/api/logout':
                 token = self.get_token()
@@ -879,55 +929,67 @@ class Handler(BaseHTTPRequestHandler):
                 reported_level = max(1, int(state.get('level') or 1))
                 now_ms = int(time.time() * 1000)
 
-                with _write_lock:
-                    conn = db()
-                    current = conn.execute(
-                        'SELECT score,level,last_save_ms,cheat_flags FROM players WHERE id=?',
-                        (player['id'],)
-                    ).fetchone()
-                    if not current:
-                        return self.send_json(404, {'error': 'Player not found.'})
+                # Anti-cheat: use player cache — no extra DB query needed.
+                prev_score   = int(player['score']        or 0)
+                prev_level   = int(player['level']        or 1)
+                last_save_ms = int(player['last_save_ms'] or 0)
+                cheat_flags  = int(player['cheat_flags']  or 0)
 
-                    prev_score = int(current['score'] or 0)
-                    prev_level = int(current['level'] or 1)
-                    last_save_ms = int(current['last_save_ms'] or 0)
-                    cheat_flags = int(current['cheat_flags'] or 0)
+                elapsed_sec = max(0.0, (now_ms - last_save_ms) / 1000.0)
 
-                    elapsed_sec = max(0.0, (now_ms - last_save_ms) / 1000.0)
+                allowed_score_increase = max(
+                    ANTI_CHEAT_MIN_SCORE_BURST,
+                    int(elapsed_sec * ANTI_CHEAT_MAX_SCORE_PER_SEC),
+                )
+                allowed_level_increase = max(
+                    ANTI_CHEAT_MIN_LEVEL_BURST,
+                    int(elapsed_sec * (ANTI_CHEAT_MAX_LEVELS_PER_MIN / 60.0)),
+                )
 
-                    allowed_score_increase = max(
-                        ANTI_CHEAT_MIN_SCORE_BURST,
-                        int(elapsed_sec * ANTI_CHEAT_MAX_SCORE_PER_SEC),
+                max_allowed_score = prev_score + allowed_score_increase
+                max_allowed_level = prev_level + allowed_level_increase
+
+                score = min(max(reported_score, prev_score), max_allowed_score)
+                level = min(max(reported_level, prev_level), max_allowed_level)
+                suspicious = (reported_score > max_allowed_score) or (reported_level > max_allowed_level)
+                if suspicious:
+                    cheat_flags += 1
+                    print(
+                        f"[anti-cheat] user={player['username']} flagged=#{cheat_flags} "
+                        f"reported(score={reported_score},level={reported_level}) "
+                        f"allowed(score<={max_allowed_score},level<={max_allowed_level})"
                     )
-                    allowed_level_increase = max(
-                        ANTI_CHEAT_MIN_LEVEL_BURST,
-                        int(elapsed_sec * (ANTI_CHEAT_MAX_LEVELS_PER_MIN / 60.0)),
-                    )
 
-                    max_allowed_score = prev_score + allowed_score_increase
-                    max_allowed_level = prev_level + allowed_level_increase
+                state['score'] = score
+                state['level'] = level
+                new_total_clicks = max(0, int(state.get('totalClicks') or 0))
+                state_json = json.dumps(state)
 
-                    score = min(max(reported_score, prev_score), max_allowed_score)
-                    level = min(max(reported_level, prev_level), max_allowed_level)
-                    suspicious = (reported_score > max_allowed_score) or (reported_level > max_allowed_level)
-                    if suspicious:
-                        cheat_flags += 1
-                        print(
-                            f"[anti-cheat] user={player['username']} flagged=#{cheat_flags} "
-                            f"reported(score={reported_score},level={reported_level}) "
-                            f"allowed(score<={max_allowed_score},level<={max_allowed_level})"
-                        )
+                # Update player cache immediately so next request sees fresh anti-cheat state.
+                cached_entry = _player_data_cache.get(player['id'])
+                if cached_entry:
+                    cd, cexp = cached_entry
+                    cd.update(score=score, level=level, last_save_ms=now_ms,
+                              cheat_flags=cheat_flags, total_clicks=new_total_clicks,
+                              state=state_json)
 
-                    # Keep persisted state aligned with authoritative values.
-                    state['score'] = score
-                    state['level'] = level
+                # Write to Turso asynchronously — HTTP response returns immediately.
+                pid   = player['id']
+                uname = player['username']
+                def _do_save(_sj=state_json, _sc=score, _lv=level, _ts=now_ms,
+                             _cf=cheat_flags, _tc=new_total_clicks, _pid=pid, _un=uname):
+                    try:
+                        with _write_lock:
+                            c = db()
+                            c.execute(
+                                'UPDATE players SET state=?,score=?,level=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
+                                (_sj, _sc, _lv, _ts, _cf, _tc, _pid)
+                            )
+                            c.commit()
+                    except Exception as exc:
+                        print(f'[save-async] player={_un} error: {exc}')
+                threading.Thread(target=_do_save, daemon=True).start()
 
-                    conn.execute(
-                        'UPDATE players SET state=?,score=?,level=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
-                        (json.dumps(state), score, level, now_ms, cheat_flags,
-                         max(0, int(state.get('totalClicks') or 0)), player['id'])
-                    )
-                    conn.commit()
                 self.send_json(200, {'ok': True, 'score': score, 'level': level, 'flagged': suspicious})
 
             elif path == '/api/forgot-password':
@@ -1004,7 +1066,7 @@ class Handler(BaseHTTPRequestHandler):
                     # Invalidate all existing sessions for security.
                     conn.execute('DELETE FROM sessions WHERE player_id=?', (row['player_id'],))
                     conn.commit()
-                _invalidate_player_sessions(row['player_id'])
+                _evict_player(row['player_id'])
                 self.send_json(200, {'ok': True})
 
             elif path == '/api/chat/send':
