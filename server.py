@@ -8,6 +8,7 @@ import re
 import secrets
 import sqlite3
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,6 +17,10 @@ import os
 import tempfile
 PORT    = int(os.environ.get('PORT', 3000))
 STATIC  = Path(__file__).parent
+ANTI_CHEAT_MAX_SCORE_PER_SEC = float(os.environ.get('ANTI_CHEAT_MAX_SCORE_PER_SEC', '80'))
+ANTI_CHEAT_MAX_LEVELS_PER_MIN = float(os.environ.get('ANTI_CHEAT_MAX_LEVELS_PER_MIN', '18'))
+ANTI_CHEAT_MIN_SCORE_BURST = int(os.environ.get('ANTI_CHEAT_MIN_SCORE_BURST', '500'))
+ANTI_CHEAT_MIN_LEVEL_BURST = int(os.environ.get('ANTI_CHEAT_MIN_LEVEL_BURST', '3'))
 
 def _normalize_token(value: str) -> str:
     # Railway/env values can accidentally include whitespace or wrapping quotes.
@@ -65,13 +70,26 @@ def init_db():
             salt          TEXT    NOT NULL,
             score         INTEGER DEFAULT 0,
             level         INTEGER DEFAULT 1,
-            state         TEXT    DEFAULT NULL
+            state         TEXT    DEFAULT NULL,
+            last_save_ms  INTEGER DEFAULT 0,
+            cheat_flags   INTEGER DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS sessions (
             token      TEXT    PRIMARY KEY,
             player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE
         );
     """)
+
+    # Backfill anti-cheat columns for older databases.
+    existing_cols = {
+        row[1] for row in conn.execute("PRAGMA table_info(players)").fetchall()
+    }
+    if 'last_save_ms' not in existing_cols:
+        conn.execute('ALTER TABLE players ADD COLUMN last_save_ms INTEGER DEFAULT 0')
+    if 'cheat_flags' not in existing_cols:
+        conn.execute('ALTER TABLE players ADD COLUMN cheat_flags INTEGER DEFAULT 0')
+
+    conn.commit()
     conn.close()
 
 init_db()
@@ -326,6 +344,29 @@ class Handler(BaseHTTPRequestHandler):
                     'playersDeleted': player_result.rowcount,
                 })
 
+            elif path == '/api/admin/list-users':
+                body_token = _normalize_token(str(body.get('adminToken', '')))
+                if not is_admin(self, body_token=body_token):
+                    return self.send_json(401, {'error': 'Unauthorized.'})
+
+                conn = db()
+                rows = conn.execute(
+                    'SELECT username,score,level,cheat_flags FROM players '
+                    'ORDER BY score DESC, level DESC, username ASC'
+                ).fetchall()
+
+                players = [
+                    {
+                        'username': r['username'],
+                        'score': int(r['score'] or 0),
+                        'level': int(r['level'] or 1),
+                        'cheatFlags': int(r['cheat_flags'] or 0),
+                    }
+                    for r in rows
+                ]
+
+                self.send_json(200, {'count': len(players), 'players': players})
+
             elif path == '/api/login':
                 username = (body.get('username') or '').strip()
                 password =  body.get('password') or ''
@@ -360,16 +401,60 @@ class Handler(BaseHTTPRequestHandler):
                 state = body.get('state')
                 if not isinstance(state, dict):
                     return self.send_json(400, {'error': 'Invalid state.'})
-                score = max(0, int(state.get('score') or 0))
-                level = max(1, int(state.get('level') or 1))
+
+                reported_score = max(0, int(state.get('score') or 0))
+                reported_level = max(1, int(state.get('level') or 1))
+                now_ms = int(time.time() * 1000)
+
                 with _write_lock:
                     conn = db()
+                    current = conn.execute(
+                        'SELECT score,level,last_save_ms,cheat_flags FROM players WHERE id=?',
+                        (player['id'],)
+                    ).fetchone()
+                    if not current:
+                        return self.send_json(404, {'error': 'Player not found.'})
+
+                    prev_score = int(current['score'] or 0)
+                    prev_level = int(current['level'] or 1)
+                    last_save_ms = int(current['last_save_ms'] or 0)
+                    cheat_flags = int(current['cheat_flags'] or 0)
+
+                    elapsed_sec = max(0.0, (now_ms - last_save_ms) / 1000.0)
+
+                    allowed_score_increase = max(
+                        ANTI_CHEAT_MIN_SCORE_BURST,
+                        int(elapsed_sec * ANTI_CHEAT_MAX_SCORE_PER_SEC),
+                    )
+                    allowed_level_increase = max(
+                        ANTI_CHEAT_MIN_LEVEL_BURST,
+                        int(elapsed_sec * (ANTI_CHEAT_MAX_LEVELS_PER_MIN / 60.0)),
+                    )
+
+                    max_allowed_score = prev_score + allowed_score_increase
+                    max_allowed_level = prev_level + allowed_level_increase
+
+                    score = min(max(reported_score, prev_score), max_allowed_score)
+                    level = min(max(reported_level, prev_level), max_allowed_level)
+                    suspicious = (reported_score > max_allowed_score) or (reported_level > max_allowed_level)
+                    if suspicious:
+                        cheat_flags += 1
+                        print(
+                            f"[anti-cheat] user={player['username']} flagged=#{cheat_flags} "
+                            f"reported(score={reported_score},level={reported_level}) "
+                            f"allowed(score<={max_allowed_score},level<={max_allowed_level})"
+                        )
+
+                    # Keep persisted state aligned with authoritative values.
+                    state['score'] = score
+                    state['level'] = level
+
                     conn.execute(
-                        'UPDATE players SET state=?,score=?,level=? WHERE id=?',
-                        (json.dumps(state), score, level, player['id'])
+                        'UPDATE players SET state=?,score=?,level=?,last_save_ms=?,cheat_flags=? WHERE id=?',
+                        (json.dumps(state), score, level, now_ms, cheat_flags, player['id'])
                     )
                     conn.commit()
-                self.send_json(200, {'ok': True})
+                self.send_json(200, {'ok': True, 'score': score, 'level': level, 'flagged': suspicious})
 
             else:
                 self.send_json(404, {'error': 'Not found.'})
