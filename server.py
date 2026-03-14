@@ -210,6 +210,23 @@ init_db()
 _tls        = threading.local()
 _write_lock = threading.Lock()
 
+# ── In-memory session cache ────────────────────────────────────────
+# Avoids 2 Turso round-trips on every authenticated request; only the
+# first request per session hits the remote DB for the session row.
+_session_cache: dict = {}   # token -> (player_id, expires_at)
+_SESSION_CACHE_TTL = 600.0  # 10 minutes
+
+def _cache_session(token: str, player_id: int) -> None:
+    _session_cache[token] = (player_id, time.time() + _SESSION_CACHE_TTL)
+
+def _invalidate_session(token: str) -> None:
+    _session_cache.pop(token, None)
+
+def _invalidate_player_sessions(player_id: int) -> None:
+    dead = [t for t, (pid, _) in list(_session_cache.items()) if pid == player_id]
+    for t in dead:
+        del _session_cache[t]
+
 # ── Live chat ──────────────────────────────────────────────────────
 _chat_messages: collections.deque = collections.deque(maxlen=100)
 _chat_subscribers: list = []   # list of queue.Queue
@@ -235,9 +252,22 @@ def hash_pwd(password: str, salt: str) -> str:
 def auth_player(token: str):
     if not token:
         return None
+    # Fast path: session already cached — skip the sessions table query.
+    entry = _session_cache.get(token)
+    if entry:
+        player_id, exp = entry
+        if time.time() < exp:
+            _session_cache[token] = (player_id, time.time() + _SESSION_CACHE_TTL)  # refresh TTL
+            return db().execute(
+                'SELECT id,username,score,level,state FROM players WHERE id=?',
+                (player_id,)
+            ).fetchone()
+        del _session_cache[token]  # expired
+    # Slow path: first request for this session — check DB.
     row = db().execute('SELECT player_id FROM sessions WHERE token=?', (token,)).fetchone()
     if not row:
         return None
+    _cache_session(token, row['player_id'])
     return db().execute(
         'SELECT id,username,score,level,state FROM players WHERE id=?',
         (row['player_id'],)
@@ -674,6 +704,7 @@ class Handler(BaseHTTPRequestHandler):
                     token = secrets.token_hex(32)
                     conn.execute('INSERT INTO sessions (token,player_id) VALUES (?,?)', (token, player['id']))
                     conn.commit()
+                _cache_session(token, player['id'])
                 self.send_json(200, {'token': token, 'player': dict(player)})
 
             elif path == '/api/admin/delete-users':
@@ -715,6 +746,9 @@ class Handler(BaseHTTPRequestHandler):
                         ids,
                     )
                     conn.commit()
+
+                for pid in ids:
+                    _invalidate_player_sessions(pid)
 
                 self.send_json(200, {
                     'deleted': found,
@@ -815,6 +849,7 @@ class Handler(BaseHTTPRequestHandler):
                             (json.dumps(upgraded), row['id'])
                         )
                     conn.commit()
+                _cache_session(token, row['id'])
                 player = db().execute(
                     'SELECT id,username,score,level,state FROM players WHERE id=?', (row['id'],)
                 ).fetchone()
@@ -824,6 +859,7 @@ class Handler(BaseHTTPRequestHandler):
             elif path == '/api/logout':
                 token = self.get_token()
                 if token:
+                    _invalidate_session(token)
                     with _write_lock:
                         conn = db()
                         conn.execute('DELETE FROM sessions WHERE token=?', (token,))
@@ -968,6 +1004,7 @@ class Handler(BaseHTTPRequestHandler):
                     # Invalidate all existing sessions for security.
                     conn.execute('DELETE FROM sessions WHERE player_id=?', (row['player_id'],))
                     conn.commit()
+                _invalidate_player_sessions(row['player_id'])
                 self.send_json(200, {'ok': True})
 
             elif path == '/api/chat/send':
