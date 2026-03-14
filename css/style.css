@@ -868,6 +868,78 @@ canvas {
 
 /* ── Annihilation CD bar ─────────────────────────────────────── */
 .cd-bar-anni { background: linear-gradient(to right, #440000, #cc0000); }
+
+/* ── Documentation page ─────────────────────────────────────── */
+.docs-box {
+    max-width: 860px;
+}
+
+.docs-section {
+    border-bottom: 1px solid #3a2408;
+}
+
+.docs-section summary {
+    color: #c8a030;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: 10px 0;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.docs-section summary::-webkit-details-marker { display: none; }
+
+.docs-section summary::before {
+    content: '\25B6';
+    font-size: 8px;
+    opacity: 0.6;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+.docs-section[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.docs-section summary:hover { color: #f0d070; }
+
+.docs-body {
+    padding: 0 0 14px 12px;
+}
+
+.docs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 10px;
+    font-size: 11px;
+}
+
+.docs-table th {
+    background: #231405;
+    color: #f0c040;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 5px 8px;
+    text-align: left;
+    border-bottom: 1px solid #5a3e10;
+    font-size: 10px;
+}
+
+.docs-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #231405;
+    color: #c0a870;
+    vertical-align: top;
+}
+
+.docs-table tr:nth-child(even) td { background: #160e03; }
+.docs-table tr:last-child td { border-bottom: none; }
+.docs-table td strong { color: #f0d070; }
 .cd-bar-ps   { background: linear-gradient(to right, #665500, #ddbb00); }
 
 /* ── Annihilation button ─────────────────────────────────────── */

@@ -31,6 +31,7 @@
         <span class="nav-logo">⚔ Rotworm Killer</span>
         <div class="nav-links">
             <button class="nav-btn nav-active" id="nav-game-btn" onclick="showPage('game')">▶ Game</button>
+            <button class="nav-btn" id="nav-docs-btn" onclick="showPage('docs')">📖 Docs</button>
             <button class="nav-btn" id="nav-about-btn" onclick="showPage('about')">About</button>
             <button class="nav-btn" id="nav-news-btn" onclick="showPage('news')">📢 Announcements</button>
             <button class="nav-btn" id="nav-suggest-btn" onclick="showPage('suggest')">💬 Feedback</button>
@@ -140,6 +141,246 @@
                     </div>
                 </div>
             </div>
+
+        </div>
+    </div>
+
+    <!-- ── Documentation Page ───────────────────────────────── -->
+    <div id="page-docs" style="display:none">
+        <div class="about-box docs-box">
+            <h2 class="about-title">📖 Game Manual</h2>
+            <p style="font-size:11px;color:#7a6030;margin:0 0 12px">Click a section heading to expand it.</p>
+
+            <details class="docs-section" open>
+                <summary>⚔ Basic Mechanics</summary>
+                <div class="docs-body">
+                    <p><strong>Click on a monster</strong> to attack it. Each click deals damage equal to your weapon's damage range plus any bonus from the Skill Tree. A 0.5-second cooldown applies between clicks.</p>
+                    <p>Killing monsters rewards <strong>Gold</strong> and <strong>EXP</strong>. Gold buys weapons and Skill Tree upgrades. EXP fills your XP bar and levels you up.</p>
+                    <p>The HP bar color under each monster indicates its health:</p>
+                    <table class="docs-table">
+                        <tr><th>Color</th><th>HP Remaining</th></tr>
+                        <tr><td><span style="color:#00BC00">■ Green</span></td><td>&gt; 92%</td></tr>
+                        <tr><td><span style="color:#A0E000">■ Yellow-green</span></td><td>61 – 92%</td></tr>
+                        <tr><td><span style="color:#DCB400">■ Yellow</span></td><td>31 – 60%</td></tr>
+                        <tr><td><span style="color:#C86400">■ Orange</span></td><td>15 – 30%</td></tr>
+                        <tr><td><span style="color:#C80000">■ Red</span></td><td>4 – 14%</td></tr>
+                        <tr><td><span style="color:#960000">■ Dark red</span></td><td>&lt; 4%</td></tr>
+                    </table>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>🗡 Weapons</summary>
+                <div class="docs-body">
+                    <p>Weapons are purchased in order using Gold. Each weapon permanently replaces the previous one.</p>
+                    <table class="docs-table">
+                        <tr><th>Weapon</th><th>Damage</th><th>Cost</th></tr>
+                        <tr><td>Serpent Sword</td><td>5 – 15</td><td>Starting weapon</td></tr>
+                        <tr><td>Clerical Mace</td><td>10 – 20</td><td>500g</td></tr>
+                        <tr><td>Fire Sword</td><td>15 – 30</td><td>1,500g</td></tr>
+                        <tr><td>Warhammer</td><td>25 – 45</td><td>10,000g</td></tr>
+                        <tr><td>Stonecutter Axe</td><td>45 – 55</td><td>50,000g</td></tr>
+                    </table>
+                    <p><em>Damage bonuses from the Skill Tree are added on top of the weapon's base range.</em></p>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>🐛 Monsters</summary>
+                <div class="docs-body">
+                    <p>Up to <strong>10 monsters</strong> can be on screen at once (expandable via the Skill Tree). They respawn automatically.</p>
+                    <table class="docs-table">
+                        <tr><th>Monster</th><th>When</th><th>HP</th><th>EXP</th><th>Gold</th></tr>
+                        <tr><td>Rotworm</td><td>Pre-ascension</td><td>65</td><td>40</td><td>0 – 30</td></tr>
+                        <tr><td>Cyclops</td><td>Post-ascension</td><td>260</td><td>150</td><td>0 – 60</td></tr>
+                    </table>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>💀 Bosses</summary>
+                <div class="docs-body">
+                    <p>A boss spawns every <strong>50 worm kills</strong> by default (reduceable via the <em>More Bosses</em> skill). Only one boss can be on the field at a time.</p>
+                    <table class="docs-table">
+                        <tr><th>Boss</th><th>When</th><th>HP</th><th>EXP</th><th>Gold</th><th>Counts as</th></tr>
+                        <tr><td>Versperoth</td><td>Pre-ascension (normal)</td><td>1,000</td><td>600</td><td>1,000</td><td>10 kills</td></tr>
+                        <tr><td>Versperoth (Uber)</td><td>Pre-ascension, every 10 bosses*</td><td>2,000</td><td>1,200</td><td>2,000</td><td>20 kills</td></tr>
+                        <tr><td>Behemoth</td><td>Post-ascension (normal)</td><td>1,000</td><td>600</td><td>1,000</td><td>10 kills</td></tr>
+                        <tr><td>Behemoth (Uber)</td><td>Post-ascension, every 10 bosses*</td><td>2,000</td><td>1,200</td><td>2,000</td><td>20 kills</td></tr>
+                    </table>
+                    <p>* Uber bosses require the <strong>Uber Bosses</strong> skill to be unlocked (General Skill Tree). Annihilation has <em>no effect</em> on Uber bosses.</p>
+                    <p>The first boss of a session spawns earlier, after just 10 worm kills.</p>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>📈 Leveling &amp; Ascension</summary>
+                <div class="docs-body">
+                    <p>EXP required to reach each level follows the <strong>Tibia XP formula</strong>:<br>
+                    <code style="font-family:monospace;color:#f0d070">floor( 50 × (L³ − 6L² + 17L − 12) / 3 )</code></p>
+                    <table class="docs-table">
+                        <tr><th>Level</th><th>Total EXP needed</th></tr>
+                        <tr><td>2</td><td>100</td></tr>
+                        <tr><td>5</td><td>4,200</td></tr>
+                        <tr><td>10</td><td>45,000</td></tr>
+                        <tr><td>20</td><td>494,000</td></tr>
+                        <tr><td>30</td><td>2,248,000</td></tr>
+                        <tr><td>40</td><td>6,560,000</td></tr>
+                        <tr><td>50</td><td>15,250,000</td></tr>
+                    </table>
+                    <p>At <strong>level 30</strong> you can <strong>Ascend</strong> — a permanent, one-time choice between <strong>Knight</strong> and <strong>Sorcerer</strong>. This unlocks a class-specific Skill Tree and replaces Rotworms with Cyclops (harder, better loot).</p>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>🔥 Spells &amp; Abilities</summary>
+                <div class="docs-body">
+                    <table class="docs-table">
+                        <tr><th>Ability</th><th>Class</th><th>Unlock</th><th>Effects &amp; Cooldown</th></tr>
+                        <tr><td><strong>Fireball</strong></td><td>All</td><td>General Skill Tree (lv.3, 500g)</td><td>Deals 50% of mob max HP as AoE damage in a radius. Base cooldown: 10s.</td></tr>
+                        <tr><td><strong>Great Fireball</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.30, 5,000g)</td><td>Upgrades Fireball: instantly kills all non-boss enemies in range. Requires Fireball unlocked first.</td></tr>
+                        <tr><td><strong>Volatile Blast</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.35, 20,000g)</td><td>GFB also deals 50% of boss max HP when boss is in range.</td></tr>
+                        <tr><td><strong>Double Fireball</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.50, 50,000g)</td><td>Each Fireball cast fires a second one at the next best monster cluster.</td></tr>
+                        <tr><td><strong>Ultimate Explosion</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.40, 20,000g)</td><td>Instantly kills all non-boss enemies on screen. Cooldown: 5 minutes.</td></tr>
+                        <tr><td><strong>Power Stance</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.40, 10,000g)</td><td>+15 min &amp; max damage, +50% attack speed for 90 seconds. Cooldown: 6 minutes.</td></tr>
+                        <tr><td><strong>Annihilation</strong></td><td>Knight</td><td>Knight Skill Tree (lv.40, 20,000g)</td><td>Instantly slays the active boss (does not work on Uber bosses). Cooldown: 3 minutes.</td></tr>
+                    </table>
+                    <p><em>All cooldowns can be reduced via Skill Tree upgrades. The <strong>Cooldown Reset</strong> skill gives a 1% chance on every kill to instantly reset all active cooldowns.</em></p>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>🤖 Automation</summary>
+                <div class="docs-body">
+                    <p>Automation features run in the background so you don't have to click manually. Most unlock via the Skill Tree.</p>
+                    <table class="docs-table">
+                        <tr><th>Feature</th><th>Unlock</th><th>Description</th></tr>
+                        <tr><td>Auto Attack</td><td>General tree, lv.5</td><td>Attacks the lowest-HP monster once per second (fixed cooldown).</td></tr>
+                        <tr><td>Boss Focus</td><td>General tree, lv.10</td><td>Auto Attack always targets the boss when one is alive.</td></tr>
+                        <tr><td>Double Strike</td><td>General tree, lv.20</td><td>Auto Attack hits two monsters simultaneously per tick.</td></tr>
+                        <tr><td>Auto Fireball</td><td>General tree, lv.10</td><td>Automatically casts Fireball on the best target cluster whenever off cooldown.</td></tr>
+                        <tr><td>Auto UE</td><td>Sorcerer tree, lv.50</td><td>Automatically casts Ultimate Explosion whenever off cooldown.</td></tr>
+                        <tr><td>Auto Power Stance</td><td>Sorcerer tree, lv.50</td><td>Automatically activates Power Stance whenever off cooldown.</td></tr>
+                        <tr><td>Auto Annihilation</td><td>Knight tree, lv.50</td><td>Automatically casts Annihilation on the boss whenever off cooldown.</td></tr>
+                        <tr><td>Cooldown Reset</td><td>General tree, lv.15</td><td>1% chance per kill to reset all ability cooldowns instantly.</td></tr>
+                    </table>
+                    <p>Auto Attack targets the <strong>lowest-HP monster</strong> to finish kills quickly.</p>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>🌴 Offline Progress</summary>
+                <div class="docs-body">
+                    <p>If you have at least one automation active (Auto Attack, Auto Fireball, or Auto UE), the game simulates your progress while you're away — up to <strong>8 hours</strong>.</p>
+                    <p>When you return, a pop-up shows how much Gold, EXP, and kills you earned offline. The gains are added to your character automatically.</p>
+                    <p><em>Offline progress requires your character to be saved to the cloud (registered account).</em></p>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>🌳 General Skill Tree</summary>
+                <div class="docs-body">
+                    <p><strong>Column 1 — Automation</strong> <em>(placeholder for future skills)</em></p>
+                    <p><strong>Column 2 — Monster &amp; Boss</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>Requires</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>More Monsters</td><td>5</td><td>—</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>+1 max spawn cap per point (base: 10)</td></tr>
+                        <tr><td>More Bosses</td><td>5</td><td>More Monsters</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>Boss spawns every −2 kills per point (base: 50)</td></tr>
+                        <tr><td>Uber Bosses</td><td>1</td><td>More Bosses, lv.15</td><td>10,000g</td><td>Enables Uber Bosses (every 10 regular bosses)</td></tr>
+                    </table>
+                    <p><strong>Column 3 — Economy</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>Requires</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>More Gold</td><td>5</td><td>—</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>+10% gold per kill per point</td></tr>
+                        <tr><td>More EXP</td><td>5</td><td>More Gold</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>+10% EXP per kill per point</td></tr>
+                        <tr><td>Cooldown Reset</td><td>1</td><td>More EXP, lv.15</td><td>10,000g</td><td>1% chance on kill to reset all cooldowns</td></tr>
+                    </table>
+                    <p><strong>Column 4 — Fireball</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>Requires</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>Unlock Fireball</td><td>1</td><td>lv.3</td><td>500g</td><td>Unlocks Fireball spell</td></tr>
+                        <tr><td>Fireball CDR</td><td>5</td><td>Fireball</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>−10% Fireball cooldown per point</td></tr>
+                        <tr><td>Auto Fireball</td><td>1</td><td>Fireball CDR, lv.10</td><td>1,000g</td><td>Automatically casts Fireball on best cluster</td></tr>
+                    </table>
+                    <p><strong>Automation Column</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>Requires</th><th>Cost</th><th>Effect</th></tr>
+                        <tr><td>Auto Attack</td><td>1</td><td>lv.5</td><td>500g</td><td>Attack once per second automatically</td></tr>
+                        <tr><td>Boss Focus</td><td>1</td><td>Auto Attack, lv.10</td><td>2,000g</td><td>Auto Attack targets boss when present</td></tr>
+                        <tr><td>Double Strike</td><td>1</td><td>Boss Focus, lv.20</td><td>10,000g</td><td>Auto Attack hits two targets per tick</td></tr>
+                    </table>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>⚔ Knight Skill Tree <span style="color:#7a6030;font-size:10px;font-weight:normal;">(requires Ascension as Knight)</span></summary>
+                <div class="docs-body">
+                    <p><strong>Column 1 — Speed</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>Attack Speed</td><td>5</td><td>30</td><td>100 / 500 / 2,000 / 5,000 / 10,000g</td><td>−10% click cooldown per point (max −50%)</td></tr>
+                        <tr><td>Auto Speed</td><td>5</td><td>35</td><td>500 / 1,000 / 5,000 / 20,000 / 50,000g</td><td>−10% auto attack cooldown per point (max −50%)</td></tr>
+                        <tr><td>Extra Auto Target</td><td>1</td><td>50</td><td>50,000g</td><td>Auto Attack hits one additional target</td></tr>
+                    </table>
+                    <p><strong>Column 2 — Annihilation</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>Annihilation</td><td>1</td><td>40</td><td>20,000g</td><td>Unlock Annihilation (instant boss kill, 3 min CD)</td></tr>
+                        <tr><td>Auto Annihilation</td><td>1</td><td>50</td><td>50,000g</td><td>Auto-casts Annihilation whenever ready</td></tr>
+                        <tr><td>Anni CDR</td><td>5</td><td>60</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>−10% Annihilation cooldown per point</td></tr>
+                    </table>
+                    <p><strong>Column 3 — Damage</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>Max Damage</td><td>5</td><td>30</td><td>100 / 500 / 2,000 / 5,000 / 10,000g</td><td>+5 max damage per point</td></tr>
+                        <tr><td>Min Damage</td><td>5</td><td>40</td><td>500 / 1,000 / 5,000 / 20,000 / 50,000g</td><td>+5 min damage per point</td></tr>
+                        <tr><td>Power Surge</td><td>5</td><td>50</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>+5 min &amp; max damage per point</td></tr>
+                    </table>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>✦ Sorcerer Skill Tree <span style="color:#7a6030;font-size:10px;font-weight:normal;">(requires Ascension as Sorcerer)</span></summary>
+                <div class="docs-body">
+                    <p><strong>Column 1 — Great Fireball</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>Great Fireball</td><td>1</td><td>30</td><td>5,000g</td><td>Upgrades Fireball to GFB (instantly kills all non-boss in range)</td></tr>
+                        <tr><td>Volatile Blast</td><td>1</td><td>35</td><td>20,000g</td><td>GFB deals 50% boss HP bonus damage when boss is in range</td></tr>
+                        <tr><td>Double Fireball</td><td>1</td><td>50</td><td>50,000g</td><td>Each Fireball cast fires a second one at the next best cluster</td></tr>
+                    </table>
+                    <p><strong>Column 2 — Ultimate Explosion</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>Ultimate Explosion</td><td>1</td><td>40</td><td>20,000g</td><td>Unlock UE: wipes all non-boss mobs, 5 min CD</td></tr>
+                        <tr><td>Auto Ult. Explosion</td><td>1</td><td>50</td><td>50,000g</td><td>Auto-casts UE whenever off cooldown</td></tr>
+                        <tr><td>UE CDR</td><td>5</td><td>60</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>−10% UE cooldown per point</td></tr>
+                    </table>
+                    <p><strong>Column 3 — Damage</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>Max Damage</td><td>5</td><td>30</td><td>100 / 500 / 2,000 / 5,000 / 10,000g</td><td>+5 max damage per point</td></tr>
+                        <tr><td>Min Damage</td><td>5</td><td>40</td><td>500 / 1,000 / 5,000 / 20,000 / 50,000g</td><td>+5 min damage per point</td></tr>
+                        <tr><td>Power Surge</td><td>5</td><td>50</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>+5 min &amp; max damage per point</td></tr>
+                    </table>
+                    <p><strong>Column 4 — Power Stance</strong></p>
+                    <table class="docs-table">
+                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
+                        <tr><td>Power Stance</td><td>1</td><td>40</td><td>10,000g</td><td>+15 min/max dmg, +50% speed for 90s; 6 min CD</td></tr>
+                        <tr><td>Auto Power Stance</td><td>1</td><td>50</td><td>20,000g</td><td>Auto-activates Power Stance whenever off cooldown</td></tr>
+                        <tr><td>PS CDR</td><td>5</td><td>60</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>−10% Power Stance cooldown per point</td></tr>
+                    </table>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>☁ Accounts &amp; Scoreboard</summary>
+                <div class="docs-body">
+                    <p>Playing as a <strong>Guest</strong> saves progress only in your browser. To keep progress across devices and appear on the scoreboard, <strong>create a free account</strong>.</p>
+                    <p>The <strong>Top Killers</strong> scoreboard in the right panel shows the all-time top players by score. It refreshes every 60 seconds. Your rank is shown below the top 10 if you're not already in it.</p>
+                    <p>Visit the <a href="/stats.html">📊 Statistics</a> page for a full leaderboard with click counts.</p>
+                </div>
+            </details>
 
         </div>
     </div>
@@ -291,10 +532,12 @@
         document.getElementById('page-about').style.display   = page === 'about'   ? '' : 'none';
         document.getElementById('page-news').style.display    = page === 'news'    ? '' : 'none';
         document.getElementById('page-suggest').style.display = page === 'suggest' ? '' : 'none';
+        document.getElementById('page-docs').style.display    = page === 'docs'    ? '' : 'none';
         document.getElementById('nav-game-btn').classList.toggle('nav-active',    page === 'game');
         document.getElementById('nav-about-btn').classList.toggle('nav-active',   page === 'about');
         document.getElementById('nav-news-btn').classList.toggle('nav-active',    page === 'news');
         document.getElementById('nav-suggest-btn').classList.toggle('nav-active', page === 'suggest');
+        document.getElementById('nav-docs-btn').classList.toggle('nav-active',    page === 'docs');
     }
     async function submitSuggestion() {
         const msg     = document.getElementById('suggest-msg').value.trim();
