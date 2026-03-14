@@ -230,6 +230,7 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
                 headers={
                     'Authorization': f'Bearer {RESEND_API_KEY}',
                     'Content-Type':  'application/json',
+                    'User-Agent':    'RotwormKiller/1.0',
                 },
                 method='POST',
             )
