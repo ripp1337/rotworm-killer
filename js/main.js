@@ -439,7 +439,7 @@ const SORC_SKILLS = [
     { id: 202, col: 1, row: 2, name: 'Volatile Blast',     max: 1, reqLevel: 35, prereqs: [201],         costs: [20000],                              desc: 'GFB also deals 50% of boss max HP as bonus damage when boss is in range' },
     { id: 203, col: 1, row: 3, name: 'Double Fireball',     max: 1, reqLevel: 50, prereqs: [201, 202],    costs: [50000],                             desc: 'Each Fireball cast fires a second Fireball at the best remaining cluster' },
     // Column 2 — Ultimate Explosion
-    { id: 204, col: 2, row: 1, name: 'Ultimate Explosion',  max: 1, reqLevel: 40, prereqs: [203],         costs: [20000],                             desc: 'Unlock Ultimate Explosion: instantly kills all non-boss enemies (5 min CD)' },
+    { id: 204, col: 2, row: 1, name: 'Ultimate Explosion',  max: 1, reqLevel: 40, prereqs: [],            costs: [20000],                             desc: 'Unlock Ultimate Explosion: instantly kills all non-boss enemies (5 min CD)' },
     { id: 205, col: 2, row: 2, name: 'Auto Ult. Explosion', max: 1, reqLevel: 50, prereqs: [204],         costs: [50000],                             desc: 'Automatically casts Ultimate Explosion whenever off cooldown' },
     { id: 206, col: 2, row: 3, name: 'UE CDR',              max: 5, reqLevel: 60, prereqs: [204, 205],    costs: [1000, 2000, 5000, 20000, 100000],    desc: '-10% Ultimate Explosion cooldown per point (max -50%)' },
     // Column 3 — Damage
