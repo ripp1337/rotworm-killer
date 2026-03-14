@@ -259,6 +259,7 @@ function updateHUD() {
     document.getElementById('cd-ps-wrap').style.display           = isSorcerer ? '' : 'none';
 }
 
+let totalClicks = 0;   // lifetime successful click-attacks
 let fireballActive = false;
 let spawnPaused = false;
 let dmgNumbers = []; // floating damage numbers
@@ -718,6 +719,7 @@ function getProgress() {
         annihilationUnlocked,
         bossSpawnCounter,
         firstBossSpawned,
+        totalClicks,
         savedAt: Date.now(),
     };
 }
@@ -751,6 +753,7 @@ function loadProgress(state) {
         if (s.annihilationUnlocked  != null) annihilationUnlocked  = s.annihilationUnlocked;
         if (s.bossSpawnCounter      != null) bossSpawnCounter      = s.bossSpawnCounter;
         if (s.firstBossSpawned       != null) firstBossSpawned      = s.firstBossSpawned;
+        if (s.totalClicks             != null) totalClicks           = s.totalClicks;
     } catch (_) {}
 }
 
@@ -1418,6 +1421,7 @@ canvas.addEventListener('click', e => {
         const dx = boss.x - mx, dy = boss.y - my;
         if (Math.hypot(dx, dy) < boss.size) {
             lastBasicAttack = now;
+            totalClicks++;
             const dmg = rollBasicDmg();
             boss.hp -= dmg;
             spawnAttackEffect(boss.x, boss.y);
@@ -1435,6 +1439,7 @@ canvas.addEventListener('click', e => {
         }
         if (clickedWorm) {
             lastBasicAttack = now;
+            totalClicks++;
             const dmg = rollBasicDmg();
             clickedWorm.hp -= dmg;
             spawnAttackEffect(clickedWorm.x, clickedWorm.y);

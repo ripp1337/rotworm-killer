@@ -72,7 +72,8 @@ def init_db():
             level         INTEGER DEFAULT 1,
             state         TEXT    DEFAULT NULL,
             last_save_ms  INTEGER DEFAULT 0,
-            cheat_flags   INTEGER DEFAULT 0
+            cheat_flags   INTEGER DEFAULT 0,
+            total_clicks  INTEGER DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS sessions (
             token      TEXT    PRIMARY KEY,
@@ -88,6 +89,8 @@ def init_db():
         conn.execute('ALTER TABLE players ADD COLUMN last_save_ms INTEGER DEFAULT 0')
     if 'cheat_flags' not in existing_cols:
         conn.execute('ALTER TABLE players ADD COLUMN cheat_flags INTEGER DEFAULT 0')
+    if 'total_clicks' not in existing_cols:
+        conn.execute('ALTER TABLE players ADD COLUMN total_clicks INTEGER DEFAULT 0')
 
     conn.commit()
     conn.close()
@@ -123,7 +126,7 @@ def auth_player(token: str):
     ).fetchone()
 
 # ── State versioning ──────────────────────────────────────────────
-LATEST_STATE_VERSION = 1
+LATEST_STATE_VERSION = 2
 
 def _upgrade_state(state: dict) -> dict:
     """Bring any player state up to LATEST_STATE_VERSION, filling missing keys
@@ -159,10 +162,10 @@ def _upgrade_state(state: dict) -> dict:
         state.setdefault('firstBossSpawned', False)
         state['stateVersion'] = 1
 
-    # v2 example (uncomment and fill in when ready):
-    # if v < 2:
-    #     state.setdefault('newV2Key', <safe_default>)
-    #     state['stateVersion'] = 2
+    if v < 2:
+        # v2 adds totalClicks tracking.
+        state.setdefault('totalClicks', 0)
+        state['stateVersion'] = 2
 
     return state
 
@@ -261,6 +264,42 @@ class Handler(BaseHTTPRequestHandler):
 
             elif path == '/healthz':
                 self.send_json(200, {'ok': True})
+
+            elif path == '/api/stats':
+                conn  = db()
+                now_ms = int(time.time() * 1000)
+                ms_5min = now_ms - 5  * 60 * 1000
+                ms_1h   = now_ms - 60 * 60 * 1000
+                ms_24h  = now_ms - 24 * 60 * 60 * 1000
+
+                total    = conn.execute('SELECT COUNT(*) FROM players').fetchone()[0]
+                active5  = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_5min,)).fetchone()[0]
+                active1h = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_1h,)).fetchone()[0]
+                active24 = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_24h,)).fetchone()[0]
+
+                rows = conn.execute(
+                    'SELECT username,score,level,total_clicks FROM players '
+                    'ORDER BY score DESC, level DESC, username ASC'
+                ).fetchall()
+
+                players = [
+                    {
+                        'rank':        i + 1,
+                        'username':    r['username'],
+                        'score':       int(r['score'] or 0),
+                        'level':       int(r['level'] or 1),
+                        'totalClicks': int(r['total_clicks'] or 0),
+                    }
+                    for i, r in enumerate(rows)
+                ]
+
+                self.send_json(200, {
+                    'totalPlayers':   total,
+                    'activeLast5Min': active5,
+                    'activeLast1h':   active1h,
+                    'activeLast24h':  active24,
+                    'players':        players,
+                })
 
             elif path == '/api/scoreboard':
                 conn  = db()
@@ -539,8 +578,9 @@ class Handler(BaseHTTPRequestHandler):
                     state['level'] = level
 
                     conn.execute(
-                        'UPDATE players SET state=?,score=?,level=?,last_save_ms=?,cheat_flags=? WHERE id=?',
-                        (json.dumps(state), score, level, now_ms, cheat_flags, player['id'])
+                        'UPDATE players SET state=?,score=?,level=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
+                        (json.dumps(state), score, level, now_ms, cheat_flags,
+                         max(0, int(state.get('totalClicks') or 0)), player['id'])
                     )
                     conn.commit()
                 self.send_json(200, {'ok': True, 'score': score, 'level': level, 'flagged': suspicious})

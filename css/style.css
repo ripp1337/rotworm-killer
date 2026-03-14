@@ -44,6 +44,8 @@ body {
     font-size: 11px;
     font-family: Verdana, sans-serif;
     transition: background 0.1s;
+    text-decoration: none;
+    display: inline-block;
 }
 
 .nav-btn:hover {
