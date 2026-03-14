@@ -42,6 +42,7 @@ GAME_URL  = os.environ.get('GAME_URL', '')
 # Resend (https://resend.com) — preferred on Railway (no SMTP port blocking)
 RESEND_API_KEY = _normalize_token(os.environ.get('RESEND_API_KEY', ''))
 RESEND_FROM    = os.environ.get('RESEND_FROM', '')  # e.g. "Rotworm Killer <noreply@yourdomain.com>"
+NOTIFY_EMAIL   = os.environ.get('NOTIFY_EMAIL', '')  # where to send suggestion notifications
 
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
@@ -203,6 +204,42 @@ def _upgrade_state(state: dict) -> dict:
         state['stateVersion'] = 2
 
     return state
+
+def _send_suggest_notification(message: str, contact: str) -> None:
+    """Fire-and-forget email to NOTIFY_EMAIL when a suggestion arrives."""
+    if not (RESEND_API_KEY and RESEND_FROM and NOTIFY_EMAIL):
+        return
+    contact_line = f'<p><b>Contact:</b> {contact}</p>' if contact else '<p><i>Anonymous</i></p>'
+    html = (
+        '<h3>New Rotworm Killer Feedback</h3>'
+        f'{contact_line}'
+        f'<p><b>Message:</b></p><pre style="white-space:pre-wrap">{message}</pre>'
+    )
+    plain = f'Contact: {contact or "(anonymous)"} \n\nMessage:\n{message}'
+    try:
+        payload = json.dumps({
+            'from':    RESEND_FROM,
+            'to':      [NOTIFY_EMAIL],
+            'subject': 'Rotworm Killer \u2013 New Feedback',
+            'html':    html,
+            'text':    plain,
+        }).encode()
+        req = URLRequest(
+            'https://api.resend.com/emails',
+            data=payload,
+            headers={
+                'Authorization': f'Bearer {RESEND_API_KEY}',
+                'Content-Type':  'application/json',
+                'User-Agent':    'RotwormKiller/1.0',
+            },
+            method='POST',
+        )
+        with urlopen(req, timeout=10) as resp:
+            if resp.status not in (200, 201):
+                print(f'[suggest-notify] Resend HTTP {resp.status}')
+    except Exception as exc:
+        print(f'[suggest-notify] failed: {exc}')
+
 
 def _send_reset_email(to_email: str, reset_url: str) -> bool:
     """Send a password-reset email. Uses Resend HTTP API if configured (preferred
@@ -752,6 +789,7 @@ class Handler(BaseHTTPRequestHandler):
                     )
                     conn.commit()
                 print(f'[suggest] contact={contact!r} msg={message[:80]!r}')
+                threading.Thread(target=_send_suggest_notification, args=(message, contact), daemon=True).start()
                 self.send_json(200, {'ok': True})
 
             elif path == '/api/reset-password':
