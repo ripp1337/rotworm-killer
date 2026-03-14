@@ -41,7 +41,7 @@ GAME_URL  = os.environ.get('GAME_URL', '')
 
 # Resend (https://resend.com) — preferred on Railway (no SMTP port blocking)
 RESEND_API_KEY = _normalize_token(os.environ.get('RESEND_API_KEY', ''))
-RESEND_FROM    = os.environ.get('RESEND_FROM', 'Rotworm Killer <onboarding@resend.dev>')
+RESEND_FROM    = os.environ.get('RESEND_FROM', '')  # e.g. "Rotworm Killer <noreply@yourdomain.com>"
 
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
@@ -215,7 +215,7 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
     )
 
     # ── Resend HTTP API (works on Railway) ─────────────────────────
-    if RESEND_API_KEY:
+    if RESEND_API_KEY and RESEND_FROM:
         try:
             payload = json.dumps({
                 'from':    RESEND_FROM,
@@ -241,8 +241,7 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
                 print(f'[email] Resend returned HTTP {resp.status}: {body}')
                 return False
         except Exception as exc:
-            # Read error body if available (HTTPError from urllib)
-            body = getattr(exc, 'read', lambda: b'')() 
+            body = getattr(exc, 'read', lambda: b'')()
             if body:
                 body = body.decode(errors='replace')
                 print(f'[email] Resend failed: {exc} — {body}')
