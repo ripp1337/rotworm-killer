@@ -334,12 +334,12 @@ const GENERAL_SKILLS = [
     { id: 8, col: 1, row: 2, name: 'Boss Focus',        max: 1, reqLevel: 10, prereqs: [7],    desc: 'Auto attack prioritises the boss when alive' },
     { id: 9, col: 1, row: 3, name: 'Double Strike',     max: 1, reqLevel: 20, prereqs: [7, 8], desc: 'Auto attack hits two monsters simultaneously' },
     // Column 2 — Monster/Boss
-    { id: 1, col: 2, row: 1, name: 'More Monsters',  max: 5, reqLevel: 1,  prereqs: [],     desc: '+1 max spawn cap per point (base: 10)' },
-    { id: 2, col: 2, row: 2, name: 'More Bosses',    max: 5, reqLevel: 5,  prereqs: [1],    desc: 'Boss spawns every -2 kills per point (base: 50)' },
+    { id: 1, col: 2, row: 1, name: 'More Monsters',  max: 5, reqLevel: 1,  prereqs: [],     costs: [100, 500, 750, 1000, 2000], desc: '+1 max spawn cap per point (base: 10)' },
+    { id: 2, col: 2, row: 2, name: 'More Bosses',    max: 5, reqLevel: 5,  prereqs: [1],    costs: [100, 500, 750, 1000, 2000], desc: 'Boss spawns every -2 kills per point (base: 50)' },
     { id: 3, col: 2, row: 3, name: 'Uber Bosses',    max: 1, reqLevel: 15, prereqs: [1, 2], desc: 'Enables uber bosses (every 50 kills, unaffected by More Bosses)' },
     // Column 3 — Economy/CDR
-    { id: 4, col: 3, row: 1, name: 'More Gold',      max: 5, reqLevel: 1,  prereqs: [],     desc: '+10% gold per kill per point' },
-    { id: 5, col: 3, row: 2, name: 'More EXP',       max: 5, reqLevel: 5,  prereqs: [4],    desc: '+10% exp per kill per point' },
+    { id: 4, col: 3, row: 1, name: 'More Gold',      max: 5, reqLevel: 1,  prereqs: [],     costs: [100, 500, 750, 1000, 2000], desc: '+10% gold per kill per point' },
+    { id: 5, col: 3, row: 2, name: 'More EXP',       max: 5, reqLevel: 5,  prereqs: [4],    costs: [100, 500, 750, 1000, 2000], desc: '+10% exp per kill per point' },
     { id: 6, col: 3, row: 3, name: 'Cooldown Reset', max: 1, reqLevel: 15, prereqs: [4, 5], desc: '1% chance on kill to reset all cooldowns' },
     // Column 4 — Fireball
     { id: 10, col: 4, row: 1, name: 'Unlock Fireball', max: 1, reqLevel: 3,  prereqs: [],       cost: 500,  desc: 'Unlocks Fireball: 50% max HP AoE, 10s cooldown' },
