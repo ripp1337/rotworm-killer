@@ -1329,33 +1329,28 @@ canvas {
 }
 
 /* ── Live Chat Panel ─────────────────────────────────────────────── */
-#debug-panel {
-    width: 150px;
-    min-width: 150px;
-    height: 600px;
-    background: #160e03;
-    border: 2px solid #7a5818;
-    box-shadow:
-        inset 0 0 0 1px #3a2408,
-        inset 0 0 16px #00000070,
-        3px 3px 8px #00000099;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    padding: 8px 6px 6px;
-    gap: 6px;
-}
-.debug-btn {
-    width: 100%;
-    padding: 6px 4px;
-    background: #2a1a00;
-    border: 1px solid #7a5818;
-    color: #f5c842;
-    font-size: 0.8rem;
+.chat-header {
     cursor: pointer;
-    border-radius: 3px;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
-.debug-btn:hover { background: #3d2600; }
+
+#chat-toggle-arrow {
+    font-size: 9px;
+    opacity: 0.7;
+}
+
+#chat-panel.chat-collapsed {
+    height: auto;
+    min-height: 0;
+}
+
+#chat-panel.chat-collapsed #chat-messages,
+#chat-panel.chat-collapsed #chat-footer {
+    display: none !important;
+}
 
 #chat-panel {
     width: 210px;
