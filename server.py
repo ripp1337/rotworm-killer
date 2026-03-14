@@ -700,6 +700,7 @@ class Handler(BaseHTTPRequestHandler):
                     row = db().execute(
                         'SELECT id FROM players WHERE email=?', (email,)
                     ).fetchone()
+                    print(f'[forgot-password] email={email!r} found={row is not None}')
                     if row:
                         token = secrets.token_hex(32)
                         now_ms = int(time.time() * 1000)
