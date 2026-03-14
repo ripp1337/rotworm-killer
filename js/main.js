@@ -57,7 +57,7 @@ function syncSpriteLayer() {
 
 
 const BOSS_EVERY     = 50;   // spawn a boss every N worm kills
-const BOSS_HP        = 500;
+const BOSS_HP        = 1000;
 const BOSS_EXP       = 600;
 const BOSS_GOLD      = 1000;
 const BOSS_KILLS     = 10;   // counts as this many kills
