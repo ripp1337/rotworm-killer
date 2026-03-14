@@ -113,7 +113,8 @@ def init_db():
     if 'total_clicks' not in existing_cols:
         conn.execute('ALTER TABLE players ADD COLUMN total_clicks INTEGER DEFAULT 0')
     if 'email' not in existing_cols:
-        conn.execute('ALTER TABLE players ADD COLUMN email TEXT UNIQUE DEFAULT NULL')
+        conn.execute('ALTER TABLE players ADD COLUMN email TEXT DEFAULT NULL')
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_players_email ON players(email) WHERE email IS NOT NULL')
 
     conn.commit()
     conn.close()
