@@ -1899,3 +1899,24 @@ document.getElementById('chat-input').addEventListener('keydown', e => {
 
 // Start chat for anyone (history is visible to guests; input is locked until login)
 chatInit(!!authToken);
+
+// ── Debug helpers (test server only) ─────────────────────────────
+function debugAddExp() {
+    exp += 10000;
+    checkLevelUp();
+    updateHUD();
+}
+
+function debugAddGold() {
+    gold += 10000;
+    updateHUD();
+}
+
+(function initDebugPanel() {
+    const host = window.location.hostname;
+    const isProd = host === 'rotworm-killer.up.railway.app' || host === 'rotwormkiller.com' || host === 'www.rotwormkiller.com';
+    if (!isProd) {
+        const panel = document.getElementById('debug-panel');
+        if (panel) panel.style.display = '';
+    }
+})();
