@@ -253,6 +253,7 @@ function updateHUD() {
     document.getElementById('cd-ue-wrap').style.display           = isSorcerer ? '' : 'none';
     document.getElementById('annihilationBtn').style.display      = isKnight   ? '' : 'none';
     document.getElementById('cd-anni-wrap').style.display         = isKnight   ? '' : 'none';
+    document.getElementById('autoAnniBtn').style.display          = isKnight   ? '' : 'none';
     document.getElementById('autoUeBtn').style.display            = isSorcerer ? '' : 'none';
     document.getElementById('powerStanceBtn').style.display       = isSorcerer ? '' : 'none';
     document.getElementById('cd-ps-wrap').style.display           = isSorcerer ? '' : 'none';
@@ -290,6 +291,7 @@ const ANNIHILATION_UNLOCK_LEVEL = 40;
 const ANNIHILATION_COOLDOWN_MS  = 3 * 60 * 1000; // 3 min
 let annihilationUnlocked    = false;
 let annihilationCooldownEnd = 0;
+let autoAnniEnabled         = false;
 
 const AUTO_UNLOCK_LEVEL = 5;
 const AUTO_UNLOCK_GOLD  = 0;
@@ -422,6 +424,7 @@ function buyKnightSkill(id) {
     gold -= (skill.costs[kPts(skill.id)] ?? 0);
     knightSkillPts[id] = (knightSkillPts[id] || 0) + 1;
     if (id === 104) annihilationUnlocked = true;
+    if (id === 105) { autoAnniEnabled = true; }
     renderSkillTree();
 }
 
@@ -429,7 +432,7 @@ function buyKnightSkill(id) {
 function knightDmgMinBonus()     { return (kPts(108) + kPts(109)) * 5; }
 function knightDmgMaxBonus()     { return (kPts(107) + kPts(109)) * 5; }
 function knightExtraAutoTarget() { return kPts(103) >= 1; }
-function knightAutoAnniOn()      { return kPts(105) >= 1; }
+function knightAutoAnniOn()      { return kPts(105) >= 1 && autoAnniEnabled; }
 
 // ── Sorcerer skill tree ───────────────────────────────────────────
 // costs[] = gold cost per level [lvl1, lvl2, ...]
@@ -713,6 +716,7 @@ function getProgress() {
         autoUnlocked, autoEnabled,
         autoGfbUnlocked, autoGfbEnabled,
         autoUeUnlocked,  autoUeEnabled,
+        autoAnniEnabled,
         bossFocusUnlocked,
         ascended, ascendedClass,
         annihilationUnlocked,
@@ -746,6 +750,7 @@ function loadProgress(state) {
         if (s.autoGfbEnabled   != null) autoGfbEnabled   = s.autoGfbEnabled;
         if (s.autoUeUnlocked   != null) autoUeUnlocked   = s.autoUeUnlocked;
         if (s.autoUeEnabled    != null) autoUeEnabled    = s.autoUeEnabled;
+        if (s.autoAnniEnabled  != null) autoAnniEnabled  = s.autoAnniEnabled;
         if (s.bossFocusUnlocked!= null) bossFocusUnlocked= s.bossFocusUnlocked;
         if (s.ascended             != null) { ascended = s.ascended; applyMobConfig(); }
         if (s.ascendedClass         != null) ascendedClass         = s.ascendedClass;
@@ -1599,7 +1604,7 @@ function update() {
     if (ascendedClass === 'knight') {
         const anniRemaining = Math.max(0, annihilationCooldownEnd - Date.now());
         const anniBtnEl = document.getElementById('annihilationBtn');
-        const anniIcon = `<img src="Great_Fireball_Rune.gif" class="btn-icon">`;
+        const anniIcon = `<img src="annihilation.gif" class="btn-icon">`;
         if (!annihilationUnlocked) {
             anniBtnEl.innerHTML = `${anniIcon} Annihilation (unlock in Skill Tree)`;
             anniBtnEl.disabled = true;
@@ -1608,7 +1613,18 @@ function update() {
             anniBtnEl.disabled = true;
         } else {
             anniBtnEl.innerHTML = `${anniIcon} Annihilation`;
-            anniBtnEl.disabled = !boss;
+            anniBtnEl.disabled = !boss || boss.isUber;
+        }
+        // Auto Annihilation button
+        const autoAnniEl = document.getElementById('autoAnniBtn');
+        if (kPts(105) < 1) {
+            autoAnniEl.textContent = 'Auto Annihilation (unlock in Skill Tree)';
+            autoAnniEl.disabled = true;
+            autoAnniEl.classList.remove('auto-on');
+        } else {
+            autoAnniEl.textContent = autoAnniEnabled ? 'Auto Annihilation: ON' : 'Auto Annihilation: OFF';
+            autoAnniEl.disabled = false;
+            autoAnniEl.classList.toggle('auto-on', autoAnniEnabled);
         }
         document.getElementById('cd-anni-bar').style.width  = annihilationUnlocked && anniRemaining > 0 ? ((1 - anniRemaining / effectiveAnniCooldown()) * 100) + '%' : (annihilationUnlocked ? '100%' : '0%');
         document.getElementById('cd-anni-text').textContent = !annihilationUnlocked ? 'Locked' : (anniRemaining > 0 ? Math.ceil(anniRemaining / 1000) + 's' : (boss ? 'Ready' : 'No boss'));
@@ -1696,6 +1712,11 @@ document.getElementById('autoGfbBtn').addEventListener('click', () => {
 document.getElementById('autoUeBtn').addEventListener('click', () => {
     if (!autoUeUnlocked) return;
     autoUeEnabled = !autoUeEnabled;
+});
+
+document.getElementById('autoAnniBtn').addEventListener('click', () => {
+    if (kPts(105) < 1) return;
+    autoAnniEnabled = !autoAnniEnabled;
 });
 
 document.getElementById('powerStanceBtn').addEventListener('click', () => {
