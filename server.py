@@ -122,6 +122,50 @@ def auth_player(token: str):
         (row['player_id'],)
     ).fetchone()
 
+# ── State versioning ──────────────────────────────────────────────
+LATEST_STATE_VERSION = 1
+
+def _upgrade_state(state: dict) -> dict:
+    """Bring any player state up to LATEST_STATE_VERSION, filling missing keys
+    with safe defaults. Never overwrites existing values.
+    Add a new `if v < N` block here for every future version bump."""
+    v = int(state.get('stateVersion') or 0)
+
+    if v < 1:
+        # Baseline – stamp all the keys that exist in v1.
+        state.setdefault('score', 0)
+        state.setdefault('gold', 0)
+        state.setdefault('exp', 0)
+        state.setdefault('level', 1)
+        state.setdefault('weaponIndex', 0)
+        state.setdefault('skillPoints', 0)
+        state.setdefault('knightSkillPts', {})
+        state.setdefault('sorcSkillPts', {})
+        state.setdefault('gfbUnlocked', False)
+        state.setdefault('ueUnlocked', False)
+        state.setdefault('powerStanceUnlocked', False)
+        state.setdefault('powerStanceCooldownEnd', 0)
+        state.setdefault('autoUnlocked', False)
+        state.setdefault('autoEnabled', False)
+        state.setdefault('autoGfbUnlocked', False)
+        state.setdefault('autoGfbEnabled', False)
+        state.setdefault('autoUeUnlocked', False)
+        state.setdefault('autoUeEnabled', False)
+        state.setdefault('bossFocusUnlocked', False)
+        state.setdefault('ascended', False)
+        state.setdefault('ascendedClass', None)
+        state.setdefault('annihilationUnlocked', False)
+        state.setdefault('bossSpawnCounter', 0)
+        state.setdefault('firstBossSpawned', False)
+        state['stateVersion'] = 1
+
+    # v2 example (uncomment and fill in when ready):
+    # if v < 2:
+    #     state.setdefault('newV2Key', <safe_default>)
+    #     state['stateVersion'] = 2
+
+    return state
+
 def is_admin(request: BaseHTTPRequestHandler, body_token: str = '') -> bool:
     if not ADMIN_TOKEN:
         return False
@@ -411,6 +455,18 @@ class Handler(BaseHTTPRequestHandler):
                 with _write_lock:
                     conn = db()
                     conn.execute('INSERT INTO sessions (token,player_id) VALUES (?,?)', (token, row['id']))
+                    # Upgrade stored state on login so the client receives the latest shape.
+                    raw = row['state']
+                    try:
+                        stored_state = json.loads(raw) if raw else {}
+                    except Exception:
+                        stored_state = {}
+                    upgraded = _upgrade_state(stored_state)
+                    if upgraded.get('stateVersion', 0) != (stored_state.get('stateVersion') or 0):
+                        conn.execute(
+                            'UPDATE players SET state=? WHERE id=?',
+                            (json.dumps(upgraded), row['id'])
+                        )
                     conn.commit()
                 player = db().execute(
                     'SELECT id,username,score,level,state FROM players WHERE id=?', (row['id'],)
@@ -433,6 +489,7 @@ class Handler(BaseHTTPRequestHandler):
                 state = body.get('state')
                 if not isinstance(state, dict):
                     return self.send_json(400, {'error': 'Invalid state.'})
+                state = _upgrade_state(state)
 
                 reported_score = max(0, int(state.get('score') or 0))
                 reported_level = max(1, int(state.get('level') or 1))
