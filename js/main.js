@@ -36,7 +36,7 @@ function syncSpriteLayer() {
         let img = _sprites.get(boss._id);
         if (!img) {
             img = document.createElement('img');
-            img.src = 'Versperoth.gif';
+            img.src = ascended ? 'behemoth.gif' : 'Versperoth.gif';
             img.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;';
             layer.appendChild(img);
             _sprites.set(boss._id, img);
@@ -62,7 +62,9 @@ const BOSS_EXP       = 600;
 const BOSS_GOLD      = 1000;
 const BOSS_KILLS     = 10;   // counts as this many kills
 const BOSS_SIZE      = 32;   // half-width for hitbox/draw (64px sprite)
+const UBER_BOSS_EVERY = 10;  // spawn an uber boss every N boss kills
 let bossSpawnCounter = 0;    // increments with every worm/boss kill
+let bossKillCounter  = 0;    // increments with every boss kill; uber spawns every UBER_BOSS_EVERY
 let firstBossSpawned = false; // first boss spawns early at 10 kills
 
 // ── Auth & persistence ───────────────────────────────────────────
@@ -139,6 +141,7 @@ function doAscendAsClass(cls) {
     worms    = [];
     boss     = null;
     bossSpawnCounter = 0;
+    bossKillCounter  = 0;
     firstBossSpawned = false;
     ascendMsg = 240; // ~4s at 60fps
     applyMobConfig();
@@ -340,7 +343,7 @@ const GENERAL_SKILLS = [
     // Column 2 — Monster/Boss
     { id: 1, col: 2, row: 1, name: 'More Monsters',  max: 5, reqLevel: 1,  prereqs: [],     costs: [100, 500, 750, 1000, 2000], desc: '+1 max spawn cap per point (base: 10)' },
     { id: 2, col: 2, row: 2, name: 'More Bosses',    max: 5, reqLevel: 5,  prereqs: [1],    costs: [100, 500, 750, 1000, 2000], desc: 'Boss spawns every -2 kills per point (base: 50)' },
-    { id: 3, col: 2, row: 3, name: 'Uber Bosses',    max: 1, reqLevel: 15, prereqs: [1, 2], desc: 'Enables uber bosses (every 50 kills, unaffected by More Bosses)' },
+    { id: 3, col: 2, row: 3, name: 'Uber Bosses',    max: 1, reqLevel: 15, prereqs: [1, 2], desc: 'Enables uber bosses (every 10 normal bosses)' },
     // Column 3 — Economy/CDR
     { id: 4, col: 3, row: 1, name: 'More Gold',      max: 5, reqLevel: 1,  prereqs: [],     costs: [100, 500, 750, 1000, 2000], desc: '+10% gold per kill per point' },
     { id: 5, col: 3, row: 2, name: 'More EXP',       max: 5, reqLevel: 5,  prereqs: [4],    costs: [100, 500, 750, 1000, 2000], desc: '+10% exp per kill per point' },
@@ -725,6 +728,7 @@ function getProgress() {
         ascended, ascendedClass,
         annihilationUnlocked,
         bossSpawnCounter,
+        bossKillCounter,
         firstBossSpawned,
         totalClicks,
         savedAt: Date.now(),
@@ -761,6 +765,7 @@ function loadProgress(state) {
         if (s.ascendedClass         != null) ascendedClass         = s.ascendedClass;
         if (s.annihilationUnlocked  != null) annihilationUnlocked  = s.annihilationUnlocked;
         if (s.bossSpawnCounter      != null) bossSpawnCounter      = s.bossSpawnCounter;
+        if (s.bossKillCounter        != null) bossKillCounter        = s.bossKillCounter;
         if (s.firstBossSpawned       != null) firstBossSpawned      = s.firstBossSpawned;
         if (s.totalClicks             != null) totalClicks           = s.totalClicks;
     } catch (_) {}
@@ -1214,13 +1219,17 @@ function spawnWorm() {
 
 function spawnBoss() {
     if (boss) return;
-    const margin = BOSS_SIZE + 8;
+    const isUber = skillUberBossEnabled() && bossKillCounter > 0 && bossKillCounter % UBER_BOSS_EVERY === 0;
+    const sz     = isUber ? BOSS_SIZE * 2 : BOSS_SIZE;
+    const hp     = isUber ? BOSS_HP   * 2 : BOSS_HP;
+    const margin = sz + 8;
     boss = {
         x: margin + Math.random() * (canvas.width  - margin * 2),
         y: margin + Math.random() * (canvas.height - margin * 2),
-        size: BOSS_SIZE,
-        hp: BOSS_HP,
-        maxHp: BOSS_HP,
+        size: sz,
+        hp: hp,
+        maxHp: hp,
+        isUber: isUber,
         _id: ++_eid,
     };
 }
@@ -1253,13 +1262,15 @@ function killWorm(w) {
 
 function killBoss(b) {
     score += BOSS_KILLS;
-    const expGain  = Math.floor(BOSS_EXP  * skillExpMult());
-    const goldGain = Math.floor(BOSS_GOLD * skillGoldMult());
+    const rewardMult = b.isUber ? 2 : 1;
+    const expGain  = Math.floor(BOSS_EXP  * skillExpMult()  * rewardMult);
+    const goldGain = Math.floor(BOSS_GOLD * skillGoldMult() * rewardMult);
     exp  += expGain;
     gold += goldGain;
     checkLevelUp();
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 18, value: expGain, color: '#ffd700', life: 100 });
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 32, value: goldGain, color: '#f0c040', life: 100 });
+    bossKillCounter++;
     boss = null;
 }
 
@@ -1309,9 +1320,15 @@ function draw() {
         ctx.fillStyle = hpBarColor(bHpRatio);
         ctx.fillRect(bBarX, bBarY, bBarW * bHpRatio, bBarH);
         // boss label
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 10px Verdana, sans-serif';
-        ctx.fillText('BOSS', boss.x - 14, boss.y - boss.size - 13);
+        if (boss.isUber) {
+            ctx.fillStyle = '#ff4400';
+            ctx.font = 'bold 12px Verdana, sans-serif';
+            ctx.fillText('UBER BOSS', boss.x - 36, boss.y - boss.size - 13);
+        } else {
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 10px Verdana, sans-serif';
+            ctx.fillText('BOSS', boss.x - 14, boss.y - boss.size - 13);
+        }
     }
     // highlight auto-attack target
     if (autoEnabled && autoTarget && worms.includes(autoTarget)) {
