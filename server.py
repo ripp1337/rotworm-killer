@@ -44,6 +44,15 @@ RESEND_API_KEY = _normalize_token(os.environ.get('RESEND_API_KEY', ''))
 RESEND_FROM    = os.environ.get('RESEND_FROM', '')  # e.g. "Rotworm Killer <noreply@yourdomain.com>"
 NOTIFY_EMAIL   = os.environ.get('NOTIFY_EMAIL', '')  # where to send suggestion notifications
 
+# Turso (https://turso.tech) — persistent remote SQLite, survives Railway redeploys
+TURSO_URL        = os.environ.get('TURSO_URL', '')
+TURSO_AUTH_TOKEN = _normalize_token(os.environ.get('TURSO_AUTH_TOKEN', ''))
+_USE_TURSO       = bool(TURSO_URL and TURSO_AUTH_TOKEN)
+
+if _USE_TURSO:
+    import libsql_experimental as libsql
+    print('[startup] Using Turso remote database')
+
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
 EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
@@ -81,8 +90,12 @@ print(f'[startup] DB_PATH={DB_PATH}')
 
 # ── Database ───────────────────────────────────────────────────────
 def init_db():
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.executescript("""
+    if _USE_TURSO:
+        conn = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
+        conn.sync()
+    else:
+        conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS players (
             id            INTEGER PRIMARY KEY AUTOINCREMENT,
             username      TEXT    UNIQUE NOT NULL,
@@ -95,24 +108,31 @@ def init_db():
             last_save_ms  INTEGER DEFAULT 0,
             cheat_flags   INTEGER DEFAULT 0,
             total_clicks  INTEGER DEFAULT 0
-        );
+        )
+    """)
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             token      TEXT    PRIMARY KEY,
             player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE
-        );
+        )
+    """)
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
             token         TEXT    PRIMARY KEY,
             player_id     INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
             created_at_ms INTEGER NOT NULL,
             used          INTEGER DEFAULT 0
-        );
+        )
+    """)
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS suggestions (
             id            INTEGER PRIMARY KEY AUTOINCREMENT,
             message       TEXT    NOT NULL,
             contact       TEXT    DEFAULT NULL,
             created_at_ms INTEGER NOT NULL
-        );
+        )
     """)
+    conn.commit()
 
     # Backfill anti-cheat columns for older databases.
     existing_cols = {
@@ -139,10 +159,14 @@ _write_lock = threading.Lock()
 
 def db():
     if not hasattr(_tls, 'conn'):
-        _tls.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        if _USE_TURSO:
+            _tls.conn = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
+            _tls.conn.sync()
+        else:
+            _tls.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+            _tls.conn.execute('PRAGMA journal_mode=WAL')
+            _tls.conn.execute('PRAGMA foreign_keys=ON')
         _tls.conn.row_factory = sqlite3.Row
-        _tls.conn.execute('PRAGMA journal_mode=WAL')
-        _tls.conn.execute('PRAGMA foreign_keys=ON')
     return _tls.conn
 
 # ── Auth helpers ───────────────────────────────────────────────────
