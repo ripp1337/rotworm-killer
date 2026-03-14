@@ -205,8 +205,8 @@ _write_lock = threading.Lock()
 def db():
     if not hasattr(_tls, 'conn'):
         if _USE_TURSO:
+            # No sync() here — init_db() synced at startup; writes replicate automatically.
             raw = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
-            raw.sync()
             _tls.conn = _TursoConn(raw)
         else:
             _tls.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
@@ -406,6 +406,16 @@ MIME = {
     '.ico':  'image/x-icon',
     '.json': 'application/json',
 }
+
+# ── Server (suppress harmless Railway health-probe noise) ────────────
+class _Server(ThreadingHTTPServer):
+    import sys as _sys
+    def handle_error(self, request, client_address):
+        import sys
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (ConnectionResetError, BrokenPipeError, ConnectionAbortedError)):
+            return  # Railway TCP health probes — harmless, not worth logging
+        super().handle_error(request, client_address)
 
 # ── Request handler ────────────────────────────────────────────────
 class Handler(BaseHTTPRequestHandler):
@@ -905,7 +915,7 @@ class Handler(BaseHTTPRequestHandler):
 
 # ── Main ───────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    server = ThreadingHTTPServer(('', PORT), Handler)
+    server = _Server(('', PORT), Handler)
     print(f'Rotworm Killer  →  http://localhost:{PORT}')
     print('Press Ctrl+C to stop.\n')
     try:
