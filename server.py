@@ -12,6 +12,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import urlopen, Request as URLRequest
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -37,6 +38,10 @@ SMTP_USER = os.environ.get('SMTP_USER', '')
 SMTP_PASS = os.environ.get('SMTP_PASS', '')
 SMTP_FROM = os.environ.get('SMTP_FROM', '') or SMTP_USER
 GAME_URL  = os.environ.get('GAME_URL', '')
+
+# Resend (https://resend.com) — preferred on Railway (no SMTP port blocking)
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM    = os.environ.get('RESEND_FROM', 'Rotworm Killer <noreply@resend.dev>')
 
 RESET_TOKEN_EXPIRY_MS = 3600 * 1000  # 1 hour
 
@@ -194,7 +199,50 @@ def _upgrade_state(state: dict) -> dict:
     return state
 
 def _send_reset_email(to_email: str, reset_url: str) -> bool:
-    """Send a password-reset email via SMTP. Returns True on success."""
+    """Send a password-reset email. Uses Resend HTTP API if configured (preferred
+    on Railway), otherwise falls back to SMTP."""
+    plain = (
+        'Click the link below to reset your Rotworm Killer password:\n\n'
+        f'{reset_url}\n\n'
+        'This link expires in 1 hour.\n'
+        'If you did not request a password reset, please ignore this email.'
+    )
+    html = (
+        '<p>Click the link below to reset your <b>Rotworm Killer</b> password:</p>'
+        f'<p><a href="{reset_url}">{reset_url}</a></p>'
+        '<p>This link expires in <b>1 hour</b>.</p>'
+        '<p><small>If you did not request a password reset, please ignore this email.</small></p>'
+    )
+
+    # ── Resend HTTP API (works on Railway) ─────────────────────────
+    if RESEND_API_KEY:
+        try:
+            payload = json.dumps({
+                'from':    RESEND_FROM,
+                'to':      [to_email],
+                'subject': 'Rotworm Killer \u2013 Password Reset',
+                'html':    html,
+                'text':    plain,
+            }).encode()
+            req = URLRequest(
+                'https://api.resend.com/emails',
+                data=payload,
+                headers={
+                    'Authorization': f'Bearer {RESEND_API_KEY}',
+                    'Content-Type':  'application/json',
+                },
+                method='POST',
+            )
+            with urlopen(req, timeout=10) as resp:
+                if resp.status in (200, 201):
+                    return True
+                print(f'[email] Resend returned HTTP {resp.status}')
+                return False
+        except Exception as exc:
+            print(f'[email] Resend failed: {exc}')
+            return False
+
+    # ── SMTP fallback (may be blocked on Railway) ──────────────────
     if not SMTP_HOST:
         return False
     try:
@@ -202,18 +250,6 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
         msg['Subject'] = 'Rotworm Killer \u2013 Password Reset'
         msg['From']    = SMTP_FROM
         msg['To']      = to_email
-        plain = (
-            'Click the link below to reset your Rotworm Killer password:\n\n'
-            f'{reset_url}\n\n'
-            'This link expires in 1 hour.\n'
-            'If you did not request a password reset, please ignore this email.'
-        )
-        html = (
-            '<p>Click the link below to reset your <b>Rotworm Killer</b> password:</p>'
-            f'<p><a href="{reset_url}">{reset_url}</a></p>'
-            '<p>This link expires in <b>1 hour</b>.</p>'
-            '<p><small>If you did not request a password reset, please ignore this email.</small></p>'
-        )
         msg.attach(MIMEText(plain, 'plain'))
         msg.attach(MIMEText(html,  'html'))
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as s:
@@ -224,7 +260,7 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
             s.sendmail(SMTP_FROM, [to_email], msg.as_string())
         return True
     except Exception as exc:
-        print(f'[email] Failed to send reset email: {exc}')
+        print(f'[email] SMTP failed: {exc}')
         return False
 
 
