@@ -775,7 +775,7 @@ class Handler(BaseHTTPRequestHandler):
                     conn = db()
                     rows = conn.execute(
                         f'SELECT id,username FROM players WHERE username IN ({placeholders}) ORDER BY username',
-                        cleaned,
+                        tuple(cleaned),
                     ).fetchall()
 
                     if not rows:
