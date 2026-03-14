@@ -1247,6 +1247,7 @@ function killWorm(w) {
         gfbCooldownEnd  = 0;
         ueCooldownEnd   = 0;
         annihilationCooldownEnd = 0;
+        powerStanceCooldownEnd  = 0;
     }
 }
 
