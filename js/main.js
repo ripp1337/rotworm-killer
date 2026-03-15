@@ -10,6 +10,7 @@ function syncSpriteLayer() {
     const layer = document.getElementById('sprite-layer');
     if (!layer) return;
     const activeIds = new Set();
+    const area = getCurrentArea();
 
     worms.forEach(w => {
         activeIds.add(w._id);
@@ -20,7 +21,7 @@ function syncSpriteLayer() {
             layer.appendChild(img);
             _sprites.set(w._id, img);
         }
-        const src = ascended ? 'Cyclops.gif' : 'Rotworm.gif';
+        const src = area.mobSprite;
         if (!img.getAttribute('data-src') || img.getAttribute('data-src') !== src) {
             img.src = src;
             img.setAttribute('data-src', src);
@@ -36,7 +37,7 @@ function syncSpriteLayer() {
         let img = _sprites.get(boss._id);
         if (!img) {
             img = document.createElement('img');
-            img.src = ascended ? 'Behemoth.gif' : 'Versperoth.gif';
+            img.src = (area.bossSprite || 'Versperoth.gif');
             img.style.cssText = 'position:absolute;pointer-events:none;image-rendering:pixelated;';
             layer.appendChild(img);
             _sprites.set(boss._id, img);
@@ -66,6 +67,175 @@ const UBER_BOSS_EVERY = 10;  // spawn an uber boss every N boss kills
 let bossSpawnCounter = 0;    // increments with every worm/boss kill
 let bossKillCounter  = 0;    // increments with every boss kill; uber spawns every UBER_BOSS_EVERY
 let firstBossSpawned = false; // first boss spawns early at 10 kills
+
+// ── Area progression ───────────────────────────────────────────────
+const AREAS = [
+    {
+        id: 'Rookgaard',
+        name: 'Rookgaard',
+        levelReq: 1,
+        goldCost: 0,
+        floor: 'Lush_Grass.gif',
+        mobSprite: 'Rat.gif',
+        mobHp: 15,
+        mobExp: 10,
+        mobGoldMin: 2,
+        mobGoldMax: 4,
+        bossSprite: 'Cave_Rat.gif',
+    },
+    {
+        id: 'Rotworm Cave',
+        name: 'Rotworm Cave',
+        levelReq: 8,
+        goldCost: 100,
+        floor: 'Muddy_Floor_(Dark).gif',
+        mobSprite: 'Rotworm.gif',
+        mobHp: 60,
+        mobExp: 40,
+        mobGoldMin: 5,
+        mobGoldMax: 15,
+        bossSprite: 'Vesperoth.gif',
+    },
+    {
+        id: 'Cyclopolis',
+        name: 'Cyclopolis',
+        levelReq: 30,
+        goldCost: 5000,
+        floor: 'Gravel.gif',
+        mobSprite: 'Cyclops.gif',
+        mobHp: 260,
+        mobExp: 150,
+        mobGoldMin: 10,
+        mobGoldMax: 30,
+        bossSprite: 'Behemoth.gif',
+    },
+    {
+        id: 'Hell Gate',
+        name: 'Hell Gate',
+        levelReq: 50,
+        goldCost: 50000,
+        floor: 'Stone_Floor_(Grey).gif',
+        mobSprite: 'Demon_Skeleton.gif',
+        mobHp: 400,
+        mobExp: 240,
+        mobGoldMin: 20,
+        mobGoldMax: 50,
+        bossSprite: 'Bonebeast.gif',
+    },
+    {
+        id: 'Dragon Lair',
+        name: 'Dragon Lair',
+        levelReq: 70,
+        goldCost: 100000,
+        floor: 'Earth_Ground.gif',
+        mobSprite: 'Dragon.gif',
+        mobHp: 1000,
+        mobExp: 700,
+        mobGoldMin: 30,
+        mobGoldMax: 60,
+        bossSprite: 'Dragon_Lord.gif',
+    },
+    {
+        id: 'Plains of Havoc',
+        name: 'Plains of Havoc',
+        levelReq: 100,
+        goldCost: 200000,
+        floor: 'Grass_(Tile).gif',
+        mobSprite: 'Giant_Spider.gif',
+        mobHp: 1300,
+        mobExp: 900,
+        mobGoldMin: 40,
+        mobGoldMax: 80,
+        bossSprite: 'Unwanted.gif',
+    },
+    {
+        id: 'Demona',
+        name: 'Demona',
+        levelReq: 130,
+        goldCost: 1000000,
+        floor: 'Black_Marble_Floor.gif',
+        mobSprite: 'Warlock.gif',
+        mobHp: 4000,
+        mobExp: 3000,
+        mobGoldMin: 50,
+        mobGoldMax: 100,
+        bossSprite: 'Infernalist.gif',
+    },
+    {
+        id: 'Goroma',
+        name: 'Goroma',
+        levelReq: 175,
+        goldCost: 5000000,
+        floor: 'Strange_Sand.gif',
+        mobSprite: 'Demon.gif',
+        mobHp: 8000,
+        mobExp: 6000,
+        mobGoldMin: 75,
+        mobGoldMax: 125,
+        bossSprite: 'Weakened_Demon.gif',
+    },
+    {
+        id: 'Formogar Mines',
+        name: 'Formogar Mines',
+        levelReq: 200,
+        goldCost: 10000000,
+        floor: 'Ice_Stone_Floor.gif',
+        mobSprite: 'Juggernaut.gif',
+        mobHp: 12000,
+        mobExp: 9000,
+        mobGoldMin: 100,
+        mobGoldMax: 150,
+        bossSprite: 'Arbaziloth.gif',
+    },
+    {
+        id: 'Roshamuul',
+        name: 'Roshamuul',
+        levelReq: 250,
+        goldCost: 50000000,
+        floor: 'Dry_Earth_(Zao).gif',
+        mobSprite: 'Guzzlemaw.gif',
+        mobHp: 18000,
+        mobExp: 14000,
+        mobGoldMin: 200,
+        mobGoldMax: 300,
+        bossSprite: 'Sight_of_Surrender.gif',
+    },
+    {
+        id: 'The Void',
+        name: 'The Void',
+        levelReq: 300,
+        goldCost: 100000000,
+        floor: 'Void_(Tile).gif',
+        mobSprite: 'The_Unarmored_Voidborn.gif',
+        mobHp: 30000,
+        mobExp: 20000,
+        mobGoldMin: 300,
+        mobGoldMax: 500,
+        bossSprite: 'Devovorga.gif',
+    },
+];
+let currentArea = 'Rookgaard';
+let unlockedAreas = ['Rookgaard'];
+
+function getAreaById(id) {
+    return AREAS.find(a => a.id === id) || AREAS[0];
+}
+
+function getCurrentArea() {
+    return getAreaById(currentArea);
+}
+
+function getNextArea() {
+    const idx = AREAS.findIndex(a => a.id === currentArea);
+    if (idx < 0 || idx + 1 >= AREAS.length) return null;
+    return AREAS[idx + 1];
+}
+
+function canUnlockNextArea() {
+    const next = getNextArea();
+    if (!next) return false;
+    return level >= next.levelReq && gold >= next.goldCost;
+}
 
 // ── Auth & persistence ───────────────────────────────────────────
 let authToken    = localStorage.getItem('rk_token');
@@ -109,22 +279,26 @@ let ascendedClass = null; // 'knight' | 'sorcerer'
 let MOB_MAXHP  = 65;
 let MOB_EXP    = 40;
 let MOB_KILLS  = 1;   // score contribution per kill
-let MOB_GOLD_MAX = 39; // random gold [0, MOB_GOLD_MAX]
+let MOB_GOLD_MIN = 0;
+let MOB_GOLD_MAX = 39; // random gold [MOB_GOLD_MIN, MOB_GOLD_MAX]
 let MOB_SIZE   = 20;
 
 function applyMobConfig() {
+    const area = getCurrentArea();
+    MOB_MAXHP  = area.mobHp;
+    MOB_EXP    = area.mobExp;
+    MOB_KILLS  = 1; // per-kill score multiplier
+    MOB_GOLD_MIN = area.mobGoldMin;
+    MOB_GOLD_MAX = area.mobGoldMax;
+    MOB_SIZE   = area.mobSize || 20;
+    floorImg.src = area.floor;
+
+    // Ascension gives a class bonus (skills, etc.) but does not change area.
     if (ascended) {
-        MOB_MAXHP  = 260;
-        MOB_EXP    = 150;
-        MOB_KILLS  = 5;
-        MOB_GOLD_MAX = 60;
-        MOB_SIZE   = 40;
-    } else {
-        MOB_MAXHP  = 65;
-        MOB_EXP    = 40;
-        MOB_KILLS  = 1;
-        MOB_GOLD_MAX = 30;
-        MOB_SIZE   = 20;
+        // Small buff vs. pre-ascension stats
+        MOB_MAXHP  = Math.floor(MOB_MAXHP * 1.2);
+        MOB_EXP    = Math.floor(MOB_EXP * 1.2);
+        MOB_GOLD_MAX = Math.floor(MOB_GOLD_MAX * 1.2);
     }
 }
 
@@ -211,6 +385,19 @@ function updateHUD() {
     document.getElementById('hud-xpbar').style.width = (Math.min(progress, 1) * 100) + '%';
     document.getElementById('hud-score').textContent = score;
     document.getElementById('hud-gold').textContent = gold;
+    const area = getCurrentArea();
+    document.getElementById('hud-area').textContent = area.name;
+    const next = getNextArea();
+    const unlockBtn = document.getElementById('areaUnlockBtn');
+    const infoEl = document.getElementById('hud-area-info');
+    if (next) {
+        const canUnlock = canUnlockNextArea();
+        unlockBtn.disabled = !canUnlock;
+        infoEl.textContent = `Next: ${next.name} (Lv ${next.levelReq}, ${next.goldCost.toLocaleString()}g)`;
+    } else {
+        unlockBtn.disabled = true;
+        infoEl.textContent = 'Max area reached';
+    }
     document.getElementById('hud-dmg-basic').textContent = `${basicDmgMin()}–${basicDmgMax()}`;
     // weapon
     const nextWeapon = WEAPONS[weaponIndex + 1];
@@ -972,6 +1159,7 @@ function getProgress() {
         potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
         potionMedWealthEnd, potionMedWisdomEnd, potionMedSwiftnessEnd,
         potionMadnessEnd, potionDangerEnd,
+        currentArea, unlockedAreas,
         savedAt: Date.now(),
     };
 }
@@ -1024,7 +1212,10 @@ function loadProgress(state) {
         if (s.potionMedSwiftnessEnd != null) potionMedSwiftnessEnd = s.potionMedSwiftnessEnd;
         if (s.potionMadnessEnd      != null) potionMadnessEnd      = s.potionMadnessEnd;
         if (s.potionDangerEnd       != null) potionDangerEnd       = s.potionDangerEnd;
+        if (s.currentArea           != null) currentArea           = s.currentArea;
+        if (s.unlockedAreas         != null) unlockedAreas         = Array.isArray(s.unlockedAreas) ? s.unlockedAreas : ['Rookgaard'];
     } catch (_) {}
+    applyMobConfig();
 }
 
 async function saveProgress() {
@@ -1245,6 +1436,7 @@ function startGame(stateRaw) {
         catch (_) {}
     }
     loadProgress(parsedState);
+    applyMobConfig();
 
     // Migration: existing ascended saves without a class choice
     if (ascended && !ascendedClass) {
@@ -1494,7 +1686,8 @@ function spawnBoss() {
 function killWorm(w) {
     score += MOB_KILLS;
     const expGain  = Math.floor(MOB_EXP  * skillExpMult() * potionExpMult());
-    const goldGain = Math.floor(Math.random() * (MOB_GOLD_MAX + 1) * skillGoldMult() * potionGoldMult());
+    const goldBase = MOB_GOLD_MIN + Math.floor(Math.random() * (MOB_GOLD_MAX - MOB_GOLD_MIN + 1));
+    const goldGain = Math.floor(goldBase * skillGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
     checkLevelUp();
@@ -1544,8 +1737,8 @@ function killBoss(b) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // draw tiled floor (stone after ascension, muddy before)
-    const activeFloor = ascended ? stoneFloorImg : floorImg;
+    // draw tiled floor (changes with current area)
+    const activeFloor = floorImg;
     if (activeFloor.complete && activeFloor.naturalWidth > 0) {
         for (let row = 0; row < TILE_ROWS; row++) {
             for (let col = 0; col < TILE_COLS; col++) {
@@ -1969,6 +2162,21 @@ weaponUpgradeBtn.addEventListener('click', () => {
     gold -= next.cost;
     weaponIndex++;
 });
+
+// Area unlock button
+const areaUnlockBtn = document.getElementById('areaUnlockBtn');
+if (areaUnlockBtn) {
+    areaUnlockBtn.addEventListener('click', () => {
+        const next = getNextArea();
+        if (!next) return;
+        if (!canUnlockNextArea()) return;
+        gold -= next.goldCost;
+        currentArea = next.id;
+        if (!unlockedAreas.includes(next.id)) unlockedAreas.push(next.id);
+        applyMobConfig();
+        saveProgress();
+    });
+}
 
 // Fireball / Great Fireball button (all classes when fireball unlocked)
 document.getElementById('fireballBtn').addEventListener('click', () => {

@@ -322,7 +322,7 @@ def auth_player(token: str):
     return row
 
 # ── State versioning ──────────────────────────────────────────────
-LATEST_STATE_VERSION = 4
+LATEST_STATE_VERSION = 5
 
 def _upgrade_state(state: dict) -> dict:
     """Bring any player state up to LATEST_STATE_VERSION, filling missing keys
@@ -377,6 +377,12 @@ def _upgrade_state(state: dict) -> dict:
         old_idx = int(state.get('weaponIndex') or 0)
         state['weaponIndex'] = _WEAPON_MIGRATION.get(old_idx, old_idx)
         state['stateVersion'] = 4
+
+    if v < 5:
+        # v5 adds location progression state (current area + unlocked areas).
+        state.setdefault('currentArea', 'Rookgaard')
+        state.setdefault('unlockedAreas', ['Rookgaard'])
+        state['stateVersion'] = 5
 
     return state
 
