@@ -69,7 +69,8 @@ const UBER_BOSS_EVERY = 10;  // spawn an uber boss every N boss kills
 const MONSTER_SCALE = 2;  // enlarge monsters by this factor
 let bossSpawnCounter = 0;    // increments with every worm/boss kill
 let bossKillCounter  = 0;    // increments with every boss kill; uber spawns every UBER_BOSS_EVERY
-let firstBossSpawned = false; // first boss spawns early at 10 kills
+// boss spawning is handled by bossSpawnCounter + skillBossInterval()
+let firstBossSpawned = false; // (legacy) no longer used
 
 // ── Area progression ───────────────────────────────────────────────
 const AREAS = [
@@ -85,8 +86,10 @@ const AREAS = [
         mobExp: 10,
         mobGoldMin: 2,
         mobGoldMax: 4,
+        mobSize: 28,
         bossName: 'Cave Rat',
         bossSprite: 'Cave_Rat.gif',
+        hpBarOffset: 6,
     },
     {
         id: 'Rotworm Cave',
@@ -100,6 +103,7 @@ const AREAS = [
         mobExp: 40,
         mobGoldMin: 5,
         mobGoldMax: 15,
+        mobSize: 30,
         bossName: 'Vesperoth',
         bossSprite: 'Vesperoth.gif',
     },
@@ -115,6 +119,7 @@ const AREAS = [
         mobExp: 150,
         mobGoldMin: 10,
         mobGoldMax: 30,
+        mobSize: 52,
         bossName: 'Behemoth',
         bossSprite: 'Behemoth.gif',
     },
@@ -130,6 +135,8 @@ const AREAS = [
         mobExp: 240,
         mobGoldMin: 20,
         mobGoldMax: 50,
+        mobSize: 58,
+        hpBarOffset: 18,
         bossName: 'Bonebeast',
         bossSprite: 'Bonebeast.gif',
     },
@@ -145,6 +152,7 @@ const AREAS = [
         mobExp: 700,
         mobGoldMin: 30,
         mobGoldMax: 60,
+        mobSize: 64,
         bossName: 'Dragon Lord',
         bossSprite: 'Dragon_Lord.gif',
     },
@@ -341,7 +349,6 @@ function doAscendAsClass(cls) {
     boss     = null;
     bossSpawnCounter = 0;
     bossKillCounter  = 0;
-    firstBossSpawned = false;
     ascendMsg = 240; // ~4s at 60fps
     applyMobConfig();
     document.getElementById('class-modal').style.display = 'none';
@@ -1178,7 +1185,7 @@ function getProgress() {
         annihilationUnlocked,
         bossSpawnCounter,
         bossKillCounter,
-        firstBossSpawned,
+        // firstBossSpawned (legacy) 
         totalClicks,
         inventory,
         potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
@@ -1226,7 +1233,7 @@ function loadProgress(state) {
         if (s.annihilationUnlocked  != null) annihilationUnlocked  = s.annihilationUnlocked;
         if (s.bossSpawnCounter      != null) bossSpawnCounter      = s.bossSpawnCounter;
         if (s.bossKillCounter        != null) bossKillCounter        = s.bossKillCounter;
-        if (s.firstBossSpawned       != null) firstBossSpawned      = s.firstBossSpawned;
+        // legacy: firstBossSpawned is no longer used
         if (s.totalClicks             != null) totalClicks           = s.totalClicks;
         if (s.inventory        != null) inventory        = Object.assign({}, inventory, s.inventory);
         if (s.potionWealthEnd       != null) potionWealthEnd       = s.potionWealthEnd;
@@ -1724,11 +1731,9 @@ function killWorm(w) {
     _wd.forEach(({ k, qty }) => { inventory[k] = (inventory[k] || 0) + qty; _wq += qty; });
     if (_wq > 0) dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 46, value: '+' + _wq, color: '#5599ff', life: 80 });
     bossSpawnCounter++;
-    if (!firstBossSpawned && bossSpawnCounter >= 10) {
-        firstBossSpawned = true;
+    // Spawn boss once per interval (based on kill count). Reset counter when boss appears.
+    if (!boss && bossSpawnCounter >= skillBossInterval()) {
         bossSpawnCounter = 0;
-        spawnBoss();
-    } else if (firstBossSpawned && bossSpawnCounter % skillBossInterval() === 0) {
         spawnBoss();
     }
     // Cooldown reset proc (skill 6)
@@ -1785,7 +1790,8 @@ function draw() {
         const barW = 40;
         const barH = 4;
         const barX = w.x - 20;
-        const barY = w.y - w.size - 8;
+        const barOffset = area.hpBarOffset || 8;
+        const barY = w.y - w.size - barOffset;
         const hpRatio = w.hp / MOB_MAXHP;
         ctx.fillStyle = '#1a0000';
         ctx.fillRect(barX, barY, barW, barH);
@@ -1807,7 +1813,8 @@ function draw() {
         const bBarW = boss.size * 2;
         const bBarH = 6;
         const bBarX = boss.x - boss.size;
-        const bBarY = boss.y - boss.size - 10;
+        const bBarOffset = area.bossBarOffset != null ? area.bossBarOffset : 10;
+        const bBarY = boss.y - boss.size - bBarOffset;
         const bHpRatio = boss.hp / boss.maxHp;
         ctx.fillStyle = '#1a0000';
         ctx.fillRect(bBarX, bBarY, bBarW, bBarH);
@@ -1819,7 +1826,7 @@ function draw() {
         ctx.textAlign = 'center';
         ctx.fillStyle = hpBarColor(bHpRatio);
         const bossLabel = boss.isUber ? `UBER ${area.bossName || 'BOSS'}` : (area.bossName || 'BOSS');
-        ctx.fillText(bossLabel, boss.x, boss.y - boss.size - 13);
+        ctx.fillText(bossLabel, boss.x, bBarY - 4);
         ctx.restore();
     }
     // highlight auto-attack target
@@ -2210,7 +2217,6 @@ if (areaUnlockBtn) {
         boss = null;
         bossSpawnCounter = 0;
         bossKillCounter = 0;
-        firstBossSpawned = false;
         applyMobConfig();
         saveProgress();
     });
