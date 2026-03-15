@@ -378,7 +378,7 @@ function fmtCost(n) {
 // ── Dev helpers (only active on non-production hostnames) ───────────────────────
 function _isDevEnv() {
     const h = location.hostname;
-    return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.railway.app');
+    return h === 'localhost' || h === '127.0.0.1';
 }
 function devFillMaterials() {
     ITEM_DEFS.forEach(def => { inventory[def.key] = (inventory[def.key] || 0) + 100; });
