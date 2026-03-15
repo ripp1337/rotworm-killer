@@ -492,15 +492,18 @@ function renderInventory(filterKey) {
         </div>`;
     }).join('');
     // Add event listeners for click/touch, prevent double firing
-    const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent);
+    // Debounce handler to prevent double firing
     Array.from(body.getElementsByClassName('inv-item-clickable')).forEach(el => {
         const key = el.getAttribute('data-key');
-        const handler = () => openCraftingFromItem(key);
-        if (isMobile) {
-            el.addEventListener('touchend', handler);
-        } else {
-            el.addEventListener('click', handler);
-        }
+        let fired = false;
+        const handler = (e) => {
+            if (fired) return;
+            fired = true;
+            setTimeout(() => { fired = false; }, 300);
+            openCraftingFromItem(key);
+        };
+        el.addEventListener('click', handler);
+        el.addEventListener('touchend', handler);
     });
 }
 function openCraftingFromItem(key) {
