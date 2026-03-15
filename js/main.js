@@ -2606,8 +2606,16 @@ function debugAddGold() {
             devTools.style.display = '';
             const addGoldBtn = document.getElementById('dev-add-gold');
             const addExpBtn  = document.getElementById('dev-add-exp');
+            const addMatsBtn = document.getElementById('dev-add-mats');
             if (addGoldBtn) addGoldBtn.addEventListener('click', () => { gold += 1000000000; updateHUD(); });
             if (addExpBtn)  addExpBtn.addEventListener('click', () => { exp += 1000000000; checkLevelUp(); updateHUD(); });
+            if (addMatsBtn) addMatsBtn.addEventListener('click', () => {
+                ['blueEssence','greenEssence','redEssence','yellowEssence'].forEach(k => {
+                    inventory[k] = (inventory[k] || 0) + 1000;
+                });
+                renderInventory();
+                renderCrafting();
+            });
         }
     }
 })();
