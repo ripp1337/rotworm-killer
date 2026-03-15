@@ -419,6 +419,8 @@ const CRAFTING_RECIPES = [
 
 const CRAFTING_UNLOCK_LEVEL = 20;
 
+// Maps each potion id to the opposite-tier counterpart (no stacking allowed).
+const _POTION_COUNTERPART = { wealth: 'medWealth', medWealth: 'wealth', wisdom: 'medWisdom', medWisdom: 'wisdom', swiftness: 'medSwiftness', medSwiftness: 'swiftness' };
 function rollDrops(pool, isUber, isBoss) {
     if (isUber) return pool.map(k => ({ k, qty: 2 }));
     if (isBoss) {
@@ -524,8 +526,6 @@ function renderCrafting(filterKey) {
         </div>`;
     }).join('');
 }
-// Maps each potion id to the opposite-tier counterpart that must be cancelled.
-const _POTION_COUNTERPART = { wealth: 'medWealth', medWealth: 'wealth', wisdom: 'medWisdom', medWisdom: 'wisdom', swiftness: 'medSwiftness', medSwiftness: 'swiftness' };
 
 function craftPotion(id) {
     const r = CRAFTING_RECIPES.find(r => r.id === id);
@@ -533,8 +533,8 @@ function craftPotion(id) {
     if (gold < r.goldCost) return;
     if (!Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v)) return;
     if (Date.now() < _getPotionEnd(id)) return;
-    // Cancel the opposite tier of the same type (no stacking)
     const counterpart = _POTION_COUNTERPART[id];
+    if (counterpart && Date.now() < _getPotionEnd(counterpart)) return; // block stacking
     if (counterpart) _setPotionEnd(counterpart, 0);
     gold -= r.goldCost;
     Object.entries(r.ingredients).forEach(([k, v]) => { inventory[k] -= v; });
