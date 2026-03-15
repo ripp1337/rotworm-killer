@@ -11,18 +11,17 @@
     <!-- ── Announcement Modal ────────────────────────────────── -->
     <div id="announcement-overlay">
         <div id="announcement-modal">
-            <h2 id="announcement-title">📢 ANNOUNCEMENT!</h2>
+            <h2 id="announcement-title">📢 Update — 14 March 2026</h2>
             <div id="announcement-body">
-                <p>Dear Players,</p>
-                <p>Please be advised that Rotworm Killer is in its very early stage of development. Multiple changes (security, QoL, mechanics, content) are coming up in the next few days, even hours.</p>
-                <p>I am doing my very best to make this game an enjoyable experience for all of you but since I am not a game developer or any kind of IT professional, many mistakes can occur.</p>
-                <p>Please stay tuned — if something breaks, come back in a few hours — it will be back&nbsp;:&nbsp;)</p>
-                <p>If you lose your account, I am terribly sorry. At the moment I iterate a lot and it is possible. After shipping main new features, there will be an official reset and new ladder.</p>
-                <p>I'd like to warmly thank you for checking out my little project. I am very excited to see people playing the game I created.</p>
-                <p>Best regards<br>ripp1337</p>
-                <p>PS. Write to me at <a href="mailto:ripp1337@gmail.com">ripp1337@gmail.com</a> or /u&nbsp;ripp1337 at Reddit if you want to give me feedback or have a chat.</p>
+                <p>A big update just landed! Here's a quick summary:</p>
+                <p><strong>🔧 Bug fixes</strong> — External database integrated (no more progress loss on reboot), Fireball kills in 2 hits as intended, Power Stance CD fixed, Uber Bosses fixed, Cyclops boss fixed, Cooldown Reset now works on all abilities, and more.</p>
+                <p><strong>👤 Accounts</strong> — Registration is now required to save progress. No personal data needed — just a username and password. Optional email for password recovery.</p>
+                <p><strong>🌐 New home</strong> — The game now lives at <a href="https://rotwormkiller.xyz/" target="_blank" rel="noopener noreferrer">rotwormkiller.xyz</a>. Join us on <a href="https://discord.gg/d8rE8qSk" target="_blank" rel="noopener noreferrer">Discord</a>!</p>
+                <p><strong>📖 New tabs</strong> — Documentation, Announcements, Feedback box, and live chat (hideable).</p>
+                <p>See the <strong>📢 Announcements</strong> tab for the full changelog.</p>
+                <p style="margin-top:12px;font-size:10px;color:#7a6030">— ripp1337 &nbsp;|&nbsp; <a href="mailto:ripp1337@gmail.com">ripp1337@gmail.com</a></p>
             </div>
-            <button id="announcement-close-btn" onclick="closeAnnouncement()">I understand — close</button>
+            <button id="announcement-close-btn" onclick="closeAnnouncement()">Got it — let me play!</button>
         </div>
     </div>
 
@@ -121,6 +120,12 @@
                 <hr>
                 <button id="ascendBtn" disabled>&#9734; Ascend (need lvl 30)</button>
                 <button id="skillTreeBtn" onclick="openSkillTree()">&#9643; Skill Tree</button>
+                <button id="backpackBtn" onclick="openInventory()">&#127890; Backpack</button>
+                <button id="craftingBtn" onclick="openCrafting()" disabled>&#9879; Crafting (lv.20)</button>
+                <div id="hud-potions-section" style="display:none">
+                    <div class="hud-section" style="margin-top:4px">Active Potions</div>
+                    <div id="hud-potions"></div>
+                </div>
                 <hr>
                 <div class="hud-section sb-header">
                     Top Killers
@@ -618,6 +623,27 @@
                 </button>
             </div>
             <p class="class-choice-warn">⚠ This choice is permanent and cannot be reversed.</p>
+        </div>
+    </div>
+    <!-- Inventory modal -->
+    <div id="inventory-modal" style="display:none">
+        <div class="st-modal-box inv-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">&#127890; Backpack</span>
+                <button class="st-close-btn" onclick="document.getElementById('inventory-modal').style.display='none'">&#x2715;</button>
+            </div>
+            <p class="inv-hint">Gold-bordered items have crafting recipes &mdash; click to open Crafting.</p>
+            <div id="inv-body" class="inv-grid"></div>
+        </div>
+    </div>
+    <!-- Crafting modal -->
+    <div id="crafting-modal" style="display:none">
+        <div class="st-modal-box craft-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">&#9879; Crafting</span>
+                <button class="st-close-btn" onclick="document.getElementById('crafting-modal').style.display='none'">&#x2715;</button>
+            </div>
+            <div id="craft-body" class="craft-body"></div>
         </div>
     </div>
     <script src="js/main.js"></script>

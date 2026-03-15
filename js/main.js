@@ -261,6 +261,28 @@ function updateHUD() {
     document.getElementById('autoPsBtn').style.display             = isSorcerer ? '' : 'none';
     document.getElementById('powerStanceBtn').style.display       = isSorcerer ? '' : 'none';
     document.getElementById('cd-ps-wrap').style.display           = isSorcerer ? '' : 'none';
+    // Crafting button state
+    const _cb = document.getElementById('craftingBtn');
+    if (_cb) {
+        if (level >= CRAFTING_UNLOCK_LEVEL) {
+            _cb.textContent = '\u2697 Crafting';
+            _cb.disabled = false;
+        } else {
+            _cb.textContent = '\u2697 Crafting (lv.' + CRAFTING_UNLOCK_LEVEL + ')';
+            _cb.disabled = true;
+        }
+    }
+    // Active potions section
+    const _pn = Date.now();
+    const _fp = ms => Math.floor(ms / 60000) + ':' + String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+    const _pl = [];
+    if (_pn < potionWealthEnd)    _pl.push('<div class="hud-row"><span>\uD83D\uDCB0 Wealth</span><span class="potion-timer">'    + _fp(potionWealthEnd    - _pn) + '</span></div>');
+    if (_pn < potionWisdomEnd)    _pl.push('<div class="hud-row"><span>\uD83D\uDCDA Wisdom</span><span class="potion-timer">'    + _fp(potionWisdomEnd    - _pn) + '</span></div>');
+    if (_pn < potionSwiftnessEnd) _pl.push('<div class="hud-row"><span>\u26A1 Swiftness</span><span class="potion-timer">' + _fp(potionSwiftnessEnd - _pn) + '</span></div>');
+    const _ps = document.getElementById('hud-potions-section');
+    if (_ps) _ps.style.display = _pl.length ? '' : 'none';
+    const _pe = document.getElementById('hud-potions');
+    if (_pe) _pe.innerHTML = _pl.join('');
 }
 
 let totalClicks = 0;   // lifetime successful click-attacks
@@ -298,6 +320,14 @@ let annihilationUnlocked    = false;
 let annihilationCooldownEnd = 0;
 let autoAnniEnabled         = false;
 
+// ── Inventory & crafting ─────────────────────────────────────────
+let inventory = { lumpOfDirt: 0, rotwormFang: 0, worm: 0, gland: 0,
+                   cyclopsToe: 0, wolfToothChain: 0, cyclopsEye: 0, battleStone: 0 };
+let potionWealthEnd    = 0;   // ms timestamp when Potion of Wealth buff expires
+let potionWisdomEnd    = 0;   // ms timestamp when Potion of Wisdom buff expires
+let potionSwiftnessEnd = 0;   // ms timestamp when Potion of Swiftness buff expires
+let _lastCraftRenderSec = -1;
+
 const AUTO_UNLOCK_LEVEL = 5;
 const AUTO_UNLOCK_GOLD  = 0;
 const AUTO_COOLDOWN_MS  = 1000; // fixed 1s, unaffected by upgrades
@@ -333,6 +363,131 @@ function fmtCost(n) {
     if (n >= 1e6)  return (n/1e6).toFixed(0)  + 'M';
     if (n >= 1e3)  return (n/1e3).toFixed(0)  + 'K';
     return n.toString();
+}
+
+// ── Drop tables & crafting ─────────────────────────────────────────────────────
+const ROTWORM_DROPS      = ['lumpOfDirt', 'rotwormFang', 'worm'];
+const ROTWORM_BOSS_DROPS = ['lumpOfDirt', 'rotwormFang', 'worm', 'gland'];
+const CYCLOPS_DROPS      = ['cyclopsToe', 'wolfToothChain', 'cyclopsEye'];
+const CYCLOPS_BOSS_DROPS = ['cyclopsToe', 'wolfToothChain', 'cyclopsEye', 'battleStone'];
+
+const ITEM_DEFS = [
+    { key: 'lumpOfDirt',     name: 'Lump of Dirt',     icon: '🪨' },
+    { key: 'rotwormFang',    name: 'Rotworm Fang',     icon: '🦷' },
+    { key: 'worm',           name: 'Worm',             icon: '🪱' },
+    { key: 'gland',          name: 'Gland',            icon: '💧' },
+    { key: 'cyclopsToe',     name: 'Cyclops Toe',      icon: '🦶' },
+    { key: 'wolfToothChain', name: 'Wolf Tooth Chain', icon: '⛓'  },
+    { key: 'cyclopsEye',     name: 'Cyclops Eye',      icon: '👁'  },
+    { key: 'battleStone',    name: 'Battle Stone',     icon: '💎' },
+];
+
+const CRAFTING_RECIPES = [
+    { id: 'wealth',    name: 'Potion of Wealth',    icon: '💰', desc: '+100% gold gain for 5 minutes',       goldCost: 10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5 }               },
+    { id: 'wisdom',    name: 'Potion of Wisdom',    icon: '📚', desc: '+100% experience gain for 5 minutes', goldCost: 10000, ingredients: { rotwormFang: 5, worm: 5 }               },
+    { id: 'swiftness', name: 'Potion of Swiftness', icon: '⚡', desc: '-50% all cooldowns for 5 minutes',   goldCost: 10000, ingredients: { lumpOfDirt: 10, rotwormFang: 10, worm: 10 } },
+];
+
+const CRAFTING_UNLOCK_LEVEL = 20;
+
+function rollDrops(pool, isUber, isBoss) {
+    if (isUber) return pool.map(k => ({ k, qty: 2 }));
+    if (isBoss) {
+        if (Math.random() >= 0.5) return [];
+        const sh = [...pool].sort(() => Math.random() - 0.5);
+        return sh.slice(0, 2).map(k => ({ k, qty: 2 }));
+    }
+    if (Math.random() >= 0.25) return [];
+    return [{ k: pool[Math.floor(Math.random() * pool.length)], qty: 1 }];
+}
+
+function potionGoldMult()  { return Date.now() < potionWealthEnd    ? 2.0 : 1.0; }
+function potionExpMult()   { return Date.now() < potionWisdomEnd    ? 2.0 : 1.0; }
+function potionCdrMult()   { return Date.now() < potionSwiftnessEnd ? 0.5 : 1.0; }
+
+function _getPotionEnd(id) {
+    if (id === 'wealth')    return potionWealthEnd;
+    if (id === 'wisdom')    return potionWisdomEnd;
+    if (id === 'swiftness') return potionSwiftnessEnd;
+    return 0;
+}
+function _setPotionEnd(id, val) {
+    if (id === 'wealth')         potionWealthEnd    = val;
+    else if (id === 'wisdom')    potionWisdomEnd    = val;
+    else if (id === 'swiftness') potionSwiftnessEnd = val;
+}
+
+function openInventory() {
+    document.getElementById('inventory-modal').style.display = 'flex';
+    renderInventory();
+}
+function renderInventory(filterKey) {
+    const body = document.getElementById('inv-body');
+    if (!body) return;
+    const used = new Set(CRAFTING_RECIPES.flatMap(r => Object.keys(r.ingredients)));
+    body.innerHTML = ITEM_DEFS.map(def => {
+        const qty       = inventory[def.key] || 0;
+        const clickable = used.has(def.key) && qty > 0;
+        let cls = 'inv-item' +
+                  (qty === 0         ? ' inv-item-empty'     : '') +
+                  (clickable         ? ' inv-item-clickable' : '') +
+                  (filterKey === def.key ? ' inv-item-highlight' : '');
+        const oc = clickable ? `onclick="openCraftingFromItem('${def.key}')"` : '';
+        return `<div class="${cls}" ${oc} title="${def.name}${clickable ? ' \u2014 click to see recipes' : ''}">
+            <div class="inv-icon">${def.icon}</div>
+            <div class="inv-qty">${qty}</div>
+            <div class="inv-name">${def.name}</div>
+        </div>`;
+    }).join('');
+}
+function openCraftingFromItem(key) {
+    document.getElementById('inventory-modal').style.display = 'none';
+    openCrafting(key);
+}
+function openCrafting(filterKey) {
+    if (level < CRAFTING_UNLOCK_LEVEL) return;
+    document.getElementById('crafting-modal').style.display = 'flex';
+    renderCrafting(filterKey);
+}
+function renderCrafting(filterKey) {
+    const body = document.getElementById('craft-body');
+    if (!body) return;
+    const now   = Date.now();
+    const fmtMs = ms => Math.floor(ms / 60000) + ':' + String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+    body.innerHTML = CRAFTING_RECIPES.map(r => {
+        const active   = now < _getPotionEnd(r.id);
+        const ingOk    = Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v);
+        const goldOk   = gold >= r.goldCost;
+        const canCraft = !active && ingOk && goldOk;
+        const hi       = filterKey != null && r.ingredients[filterKey] != null;
+        const ingsHtml = Object.entries(r.ingredients).map(([k, need]) => {
+            const have = inventory[k] || 0;
+            const d    = ITEM_DEFS.find(d => d.key === k);
+            return `<span class="craft-ing${have >= need ? '' : ' craft-ing-miss'}">${d ? d.icon : ''} ${d ? d.name : k}: ${have}/${need}</span>`;
+        }).join('');
+        const statusHtml = active
+            ? `<div class="craft-active">\u2713 ACTIVE \u2014 ${fmtMs(_getPotionEnd(r.id) - now)}</div>`
+            : '';
+        return `<div class="craft-card${hi ? ' craft-card-highlight' : ''}">
+            <div class="craft-header"><span class="craft-icon">${r.icon}</span><span class="craft-name">${r.name}</span></div>
+            <div class="craft-desc">${r.desc}</div>
+            <div class="craft-ings">${ingsHtml}</div>
+            <div class="craft-cost${goldOk ? '' : ' craft-cost-miss'}">\uD83D\uDCB0 ${r.goldCost.toLocaleString()} gold</div>
+            ${statusHtml}
+            <button class="craft-btn" onclick="craftPotion('${r.id}')" ${canCraft ? '' : 'disabled'}>${active ? 'Already active' : 'Craft'}</button>
+        </div>`;
+    }).join('');
+}
+function craftPotion(id) {
+    const r = CRAFTING_RECIPES.find(r => r.id === id);
+    if (!r || level < CRAFTING_UNLOCK_LEVEL) return;
+    if (gold < r.goldCost) return;
+    if (!Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v)) return;
+    if (Date.now() < _getPotionEnd(id)) return;
+    gold -= r.goldCost;
+    Object.entries(r.ingredients).forEach(([k, v]) => { inventory[k] -= v; });
+    _setPotionEnd(id, Date.now() + 5 * 60 * 1000);
+    renderCrafting();
 }
 
 // ── Skill Tree ────────────────────────────────────────────────────────────────
@@ -711,13 +866,13 @@ function renderSorcPane() {
     pane.innerHTML = html;
 }
 
-function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS * (ascendedClass === 'knight' ? (1 - kPts(101) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1); }
-function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS  * (ascendedClass === 'knight' ? (1 - kPts(102) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1); }
-function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS * (1 - skillPts(11) * 0.1); }
+function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS * (ascendedClass === 'knight' ? (1 - kPts(101) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1) * potionCdrMult(); }
+function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS  * (ascendedClass === 'knight' ? (1 - kPts(102) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1) * potionCdrMult(); }
+function effectiveGfbCooldown()   { return GFB_COOLDOWN_MS * (1 - skillPts(11) * 0.1) * potionCdrMult(); }
 function sorcVolatileBlast()      { return sPts(202) >= 1; }
-function effectiveUeCooldown()    { return UE_COOLDOWN_MS * (1 - sPts(206) * 0.1); }
-function effectivePsCooldown()    { return POWER_STANCE_COOLDOWN_MS * (1 - sPts(212) * 0.1); }
-function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * (1 - kPts(106) * 0.1); }
+function effectiveUeCooldown()    { return UE_COOLDOWN_MS * (1 - sPts(206) * 0.1) * potionCdrMult(); }
+function effectivePsCooldown()    { return POWER_STANCE_COOLDOWN_MS * (1 - sPts(212) * 0.1) * potionCdrMult(); }
+function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * (1 - kPts(106) * 0.1) * potionCdrMult(); }
 
 // ── Progress save / load ─────────────────────────────────────────
 function getProgress() {
@@ -738,6 +893,8 @@ function getProgress() {
         bossKillCounter,
         firstBossSpawned,
         totalClicks,
+        inventory,
+        potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
         savedAt: Date.now(),
     };
 }
@@ -775,6 +932,10 @@ function loadProgress(state) {
         if (s.bossKillCounter        != null) bossKillCounter        = s.bossKillCounter;
         if (s.firstBossSpawned       != null) firstBossSpawned      = s.firstBossSpawned;
         if (s.totalClicks             != null) totalClicks           = s.totalClicks;
+        if (s.inventory        != null) inventory        = Object.assign({}, inventory, s.inventory);
+        if (s.potionWealthEnd    != null) potionWealthEnd    = s.potionWealthEnd;
+        if (s.potionWisdomEnd    != null) potionWisdomEnd    = s.potionWisdomEnd;
+        if (s.potionSwiftnessEnd != null) potionSwiftnessEnd = s.potionSwiftnessEnd;
     } catch (_) {}
 }
 
@@ -1244,13 +1405,18 @@ function spawnBoss() {
 
 function killWorm(w) {
     score += MOB_KILLS;
-    const expGain  = Math.floor(MOB_EXP  * skillExpMult());
-    const goldGain = Math.floor(Math.random() * (MOB_GOLD_MAX + 1) * skillGoldMult());
+    const expGain  = Math.floor(MOB_EXP  * skillExpMult() * potionExpMult());
+    const goldGain = Math.floor(Math.random() * (MOB_GOLD_MAX + 1) * skillGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
     checkLevelUp();
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: expGain, color: 'white', life: 80 });
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 32, value: goldGain, color: '#f0c040', life: 80 });
+    // Loot drop
+    const _wd = rollDrops(ascended ? CYCLOPS_DROPS : ROTWORM_DROPS, false, false);
+    let _wq = 0;
+    _wd.forEach(({ k, qty }) => { inventory[k] = (inventory[k] || 0) + qty; _wq += qty; });
+    if (_wq > 0) dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 46, value: '+' + _wq, color: '#5599ff', life: 80 });
     bossSpawnCounter++;
     if (!firstBossSpawned && bossSpawnCounter >= 10) {
         firstBossSpawned = true;
@@ -1271,13 +1437,18 @@ function killWorm(w) {
 function killBoss(b) {
     score += BOSS_KILLS;
     const rewardMult = b.isUber ? 2 : 1;
-    const expGain  = Math.floor(BOSS_EXP  * skillExpMult()  * rewardMult);
-    const goldGain = Math.floor(BOSS_GOLD * skillGoldMult() * rewardMult);
+    const expGain  = Math.floor(BOSS_EXP  * skillExpMult()  * rewardMult * potionExpMult());
+    const goldGain = Math.floor(BOSS_GOLD * skillGoldMult() * rewardMult * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
     checkLevelUp();
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 18, value: expGain, color: '#ffd700', life: 100 });
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 32, value: goldGain, color: '#f0c040', life: 100 });
+    // Loot drop
+    const _bd = rollDrops(ascended ? CYCLOPS_BOSS_DROPS : ROTWORM_BOSS_DROPS, b.isUber, true);
+    let _bq = 0;
+    _bd.forEach(({ k, qty }) => { inventory[k] = (inventory[k] || 0) + qty; _bq += qty; });
+    if (_bq > 0) dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 46, value: '+' + _bq, color: '#5599ff', life: 100 });
     bossKillCounter++;
     boss = null;
 }
@@ -1696,6 +1867,11 @@ function update() {
             ascendBtn.disabled = true;
         }
     }
+    // Refresh crafting modal once per second while open
+    if (document.getElementById('crafting-modal').style.display !== 'none') {
+        const _cs = Math.floor(Date.now() / 1000);
+        if (_cs !== _lastCraftRenderSec) { _lastCraftRenderSec = _cs; renderCrafting(); }
+    }
 }
 // weapon upgrade button
 const weaponUpgradeBtn = document.getElementById('weaponUpgradeBtn');
@@ -1886,14 +2062,14 @@ initAuth();
 
 // ── Announcement ─────────────────────────────────────────────
 (function () {
-    const VERSION = '2026-03-14-v1';
+    const VERSION = '2026-03-15-v1';
     if (localStorage.getItem('announcementDismissed') !== VERSION) {
         document.getElementById('announcement-overlay').classList.add('visible');
     }
 })();
 
 function closeAnnouncement() {
-    localStorage.setItem('announcementDismissed', '2026-03-14-v1');
+    localStorage.setItem('announcementDismissed', '2026-03-15-v1');
     document.getElementById('announcement-overlay').classList.remove('visible');
 }
 
