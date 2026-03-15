@@ -521,6 +521,9 @@ function updateHUD() {
     if (_pn < potionMedWealthEnd)    _pl.push('<div class="hud-row"><span>\uD83D\uDCB0 Med. Wealth</span><span class="potion-timer">'  + _fp(potionMedWealthEnd    - _pn) + '</span></div>');
     if (_pn < potionMedWisdomEnd)    _pl.push('<div class="hud-row"><span>\uD83D\uDCDA Med. Wisdom</span><span class="potion-timer">'  + _fp(potionMedWisdomEnd    - _pn) + '</span></div>');
     if (_pn < potionMedSwiftnessEnd) _pl.push('<div class="hud-row"><span>\u26A1 Med. Swift</span><span class="potion-timer">'         + _fp(potionMedSwiftnessEnd - _pn) + '</span></div>');
+    if (_pn < potionLargeWealthEnd)  _pl.push('<div class="hud-row"><span>\uD83D\uDCB0 Lg. Wealth</span><span class="potion-timer">'  + _fp(potionLargeWealthEnd  - _pn) + '</span></div>');
+    if (_pn < potionLargeWisdomEnd)  _pl.push('<div class="hud-row"><span>\uD83D\uDCDA Lg. Wisdom</span><span class="potion-timer">'  + _fp(potionLargeWisdomEnd  - _pn) + '</span></div>');
+    if (_pn < potionLargeSwiftnessEnd) _pl.push('<div class="hud-row"><span>\u26A1 Lg. Swift</span><span class="potion-timer">'      + _fp(potionLargeSwiftnessEnd - _pn) + '</span></div>');
     if (_pn < potionMadnessEnd)      _pl.push('<div class="hud-row"><span>\uD83C\uDF00 Madness</span><span class="potion-timer">'      + _fp(potionMadnessEnd      - _pn) + '</span></div>');
     if (_pn < potionDangerEnd)       _pl.push('<div class="hud-row"><span>\uD83D\uDC80 Danger</span><span class="potion-timer">'       + _fp(potionDangerEnd       - _pn) + '</span></div>');
     const _ps = document.getElementById('hud-potions-section');
@@ -573,6 +576,9 @@ let potionSwiftnessEnd    = 0;   // ms timestamp when Small Potion of Swiftness 
 let potionMedWealthEnd    = 0;   // Medium Potion of Wealth
 let potionMedWisdomEnd    = 0;   // Medium Potion of Wisdom
 let potionMedSwiftnessEnd = 0;   // Medium Potion of Swiftness
+let potionLargeWealthEnd  = 0;   // Large Potion of Wealth
+let potionLargeWisdomEnd  = 0;   // Large Potion of Wisdom
+let potionLargeSwiftnessEnd = 0; // Large Potion of Swiftness
 let potionMadnessEnd      = 0;   // Potion of Madness
 let potionDangerEnd       = 0;   // Potion of Danger
 let _lastCraftRenderSec = -1;
@@ -714,11 +720,18 @@ const CRAFTING_RECIPES = [
 const CRAFTING_UNLOCK_LEVEL = 20;
 
 // Maps each potion id to the opposite-tier counterpart (no stacking allowed).
-const _POTION_COUNTERPART = {
-    small_gold: 'medium_gold', medium_gold: 'small_gold',
-    small_exp: 'medium_exp', medium_exp: 'small_exp',
-    small_cooldowns: 'medium_cooldowns', medium_cooldowns: 'small_cooldowns',
+const POTION_TIERS = {
+    gold: ['small_gold', 'medium_gold', 'large_gold'],
+    exp:  ['small_exp',  'medium_exp',  'large_exp'],
+    cooldowns: ['small_cooldowns', 'medium_cooldowns', 'large_cooldowns'],
 };
+function _getPotionGroup(id) {
+    for (const group of Object.values(POTION_TIERS)) {
+        if (group.includes(id)) return group;
+    }
+    return [id];
+}
+
 function rollDrops(pool, isUber, isBoss) {
     if (isUber) return pool.map(k => ({ k, qty: 2 }));
     if (isBoss) {
@@ -757,10 +770,13 @@ function potionDangerActive()  { return Date.now() < potionDangerEnd; }
 function _getPotionEnd(id) {
     if (id === 'small_gold')        return potionWealthEnd;
     if (id === 'medium_gold')       return potionMedWealthEnd;
+    if (id === 'large_gold')        return potionLargeWealthEnd;
     if (id === 'small_exp')         return potionWisdomEnd;
     if (id === 'medium_exp')        return potionMedWisdomEnd;
+    if (id === 'large_exp')         return potionLargeWisdomEnd;
     if (id === 'small_cooldowns')   return potionSwiftnessEnd;
     if (id === 'medium_cooldowns')  return potionMedSwiftnessEnd;
+    if (id === 'large_cooldowns')   return potionLargeSwiftnessEnd;
     if (id === 'potion_of_madness') return potionMadnessEnd;
     if (id === 'potion_of_danger')  return potionDangerEnd;
     return 0;
@@ -768,10 +784,13 @@ function _getPotionEnd(id) {
 function _setPotionEnd(id, val) {
     if      (id === 'small_gold')        potionWealthEnd       = val;
     else if (id === 'medium_gold')       potionMedWealthEnd    = val;
+    else if (id === 'large_gold')        potionLargeWealthEnd  = val;
     else if (id === 'small_exp')         potionWisdomEnd       = val;
     else if (id === 'medium_exp')        potionMedWisdomEnd    = val;
+    else if (id === 'large_exp')         potionLargeWisdomEnd  = val;
     else if (id === 'small_cooldowns')   potionSwiftnessEnd    = val;
     else if (id === 'medium_cooldowns')  potionMedSwiftnessEnd = val;
+    else if (id === 'large_cooldowns')   potionLargeSwiftnessEnd = val;
     else if (id === 'potion_of_madness') potionMadnessEnd      = val;
     else if (id === 'potion_of_danger')  potionDangerEnd       = val;
 }
@@ -828,8 +847,9 @@ function renderCrafting(filterKey) {
     const fmtMs = ms => Math.floor(ms / 60000) + ':' + String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
     body.innerHTML = CRAFTING_RECIPES.filter(r => !r.ascendedOnly || ascended).map(r => {
         const active        = now < _getPotionEnd(r.id);
-        const counterpart   = _POTION_COUNTERPART[r.id];
-        const counterActive = counterpart ? now < _getPotionEnd(counterpart) : false;
+        const group = _getPotionGroup(r.id);
+        const activeOther = group.find(other => other !== r.id && now < _getPotionEnd(other));
+        const counterActive = Boolean(activeOther);
         const ingOk    = Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v);
         const goldOk   = gold >= r.goldCost;
         const canCraft = !counterActive && ingOk && goldOk && level >= (r.levelReq || CRAFTING_UNLOCK_LEVEL);
@@ -842,7 +862,7 @@ function renderCrafting(filterKey) {
     const statusHtml = active
         ? `<div class="craft-active">\u2713 ACTIVE \u2014 ${fmtMs(_getPotionEnd(r.id) - now)}</div>`
         : counterActive
-            ? `<div class="craft-active" style="border-color:#8a6a2a;color:#c08040;">\u26A0 ${CRAFTING_RECIPES.find(x=>x.id===counterpart)?.name} active</div>`
+            ? `<div class="craft-active" style="border-color:#8a6a2a;color:#c08040;">\u26A0 ${CRAFTING_RECIPES.find(x=>x.id===activeOther)?.name} active</div>`
             : '';
     const levelNote = level < (r.levelReq || CRAFTING_UNLOCK_LEVEL)
         ? `<div class="craft-active" style="border-color:#777;color:#999;">Requires level ${r.levelReq || CRAFTING_UNLOCK_LEVEL}</div>`
@@ -866,9 +886,9 @@ function craftPotion(id) {
     if (gold < r.goldCost) return;
     if (!Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v)) return;
 
-    const counterpart = _POTION_COUNTERPART[id];
-    if (counterpart && Date.now() < _getPotionEnd(counterpart)) return; // block stacking across tiers
-    if (counterpart) _setPotionEnd(counterpart, 0);
+    const group = _getPotionGroup(id);
+    const activeOther = group.find(other => other !== id && Date.now() < _getPotionEnd(other));
+    if (activeOther) return; // block crafting other tier while one is active
 
     gold -= r.goldCost;
     Object.entries(r.ingredients).forEach(([k, v]) => { inventory[k] -= v; });
@@ -1288,6 +1308,7 @@ function getProgress() {
         inventory,
         potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
         potionMedWealthEnd, potionMedWisdomEnd, potionMedSwiftnessEnd,
+        potionLargeWealthEnd, potionLargeWisdomEnd, potionLargeSwiftnessEnd,
         potionMadnessEnd, potionDangerEnd,
         currentArea, unlockedAreas,
         savedAt: Date.now(),
@@ -1340,6 +1361,9 @@ function loadProgress(state) {
         if (s.potionMedWealthEnd    != null) potionMedWealthEnd    = s.potionMedWealthEnd;
         if (s.potionMedWisdomEnd    != null) potionMedWisdomEnd    = s.potionMedWisdomEnd;
         if (s.potionMedSwiftnessEnd != null) potionMedSwiftnessEnd = s.potionMedSwiftnessEnd;
+        if (s.potionLargeWealthEnd  != null) potionLargeWealthEnd  = s.potionLargeWealthEnd;
+        if (s.potionLargeWisdomEnd  != null) potionLargeWisdomEnd  = s.potionLargeWisdomEnd;
+        if (s.potionLargeSwiftnessEnd != null) potionLargeSwiftnessEnd = s.potionLargeSwiftnessEnd;
         if (s.potionMadnessEnd      != null) potionMadnessEnd      = s.potionMadnessEnd;
         if (s.potionDangerEnd       != null) potionDangerEnd       = s.potionDangerEnd;
         if (s.currentArea           != null) currentArea           = s.currentArea;
