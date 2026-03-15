@@ -397,14 +397,7 @@ function _isDevEnv() {
     const h = location.hostname;
     return h === 'localhost' || h === '127.0.0.1';
 }
-function devFillMaterials() {
-    ITEM_DEFS.forEach(def => { inventory[def.key] = (inventory[def.key] || 0) + 100; });
-    renderInventory();
-}
-if (_isDevEnv()) {
-    const btn = document.getElementById('devFillMatsBtn');
-    if (btn) btn.style.display = '';
-}
+// Removed devFillMaterials and devFillMatsBtn for production
 
 // ── Drop tables & crafting ─────────────────────────────────────────────────────
 const ROTWORM_DROPS      = ['lumpOfDirt', 'rotwormFang', 'worm'];

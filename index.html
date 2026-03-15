@@ -122,7 +122,7 @@
                 <button id="skillTreeBtn" onclick="openSkillTree()">&#9643; Skill Tree</button>
                 <button id="backpackBtn" onclick="openInventory()">&#127890; Backpack</button>
                 <button id="craftingBtn" onclick="openCrafting()" disabled>&#9879; Crafting (lv.20)</button>
-                <button id="devFillMatsBtn" onclick="devFillMaterials()" style="display:none;background:#1a0a1a!important;color:#c060e0!important;border-color:#6a2a8a!important;">&#128296; [DEV] +100 All Materials</button>
+                <!-- Removed devFillMatsBtn for production -->
                 <div id="hud-potions-section" style="display:none">
                     <div class="hud-section" style="margin-top:4px">Active Potions</div>
                     <div id="hud-potions"></div>
@@ -136,11 +136,7 @@
             </div>
 
             <!-- Debug panel (test server only) -->
-            <div id="debug-panel" style="display:none">
-                <div class="hud-section">🛠 Debug</div>
-                <button class="debug-btn" onclick="debugAddExp()">+10 000 EXP</button>
-                <button class="debug-btn" onclick="debugAddGold()">+10 000 Gold</button>
-            </div>
+            <!-- Removed debug panel for production -->
 
             <!-- Chat panel -->
             <div id="chat-panel">
