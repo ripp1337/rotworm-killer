@@ -383,9 +383,9 @@ const ITEM_DEFS = [
 ];
 
 const CRAFTING_RECIPES = [
-    { id: 'wealth',    name: 'Potion of Wealth',    icon: '💰', desc: '+100% gold gain for 5 minutes',       goldCost: 10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5 }               },
-    { id: 'wisdom',    name: 'Potion of Wisdom',    icon: '📚', desc: '+100% experience gain for 5 minutes', goldCost: 10000, ingredients: { rotwormFang: 5, worm: 5 }               },
-    { id: 'swiftness', name: 'Potion of Swiftness', icon: '⚡', desc: '-50% all cooldowns for 5 minutes',   goldCost: 10000, ingredients: { lumpOfDirt: 10, rotwormFang: 10, worm: 10 } },
+    { id: 'wealth',    name: 'Small Potion of Wealth',    icon: '💰', desc: '+50% gold gain for 5 minutes',      goldCost: 10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
+    { id: 'wisdom',    name: 'Small Potion of Wisdom',    icon: '📚', desc: '+50% experience gain for 5 minutes', goldCost: 10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
+    { id: 'swiftness', name: 'Small Potion of Swiftness', icon: '⚡', desc: '-20% all cooldowns for 5 minutes',  goldCost: 10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
 ];
 
 const CRAFTING_UNLOCK_LEVEL = 20;
@@ -401,9 +401,9 @@ function rollDrops(pool, isUber, isBoss) {
     return [{ k: pool[Math.floor(Math.random() * pool.length)], qty: 1 }];
 }
 
-function potionGoldMult()  { return Date.now() < potionWealthEnd    ? 2.0 : 1.0; }
-function potionExpMult()   { return Date.now() < potionWisdomEnd    ? 2.0 : 1.0; }
-function potionCdrMult()   { return Date.now() < potionSwiftnessEnd ? 0.5 : 1.0; }
+function potionGoldMult()  { return Date.now() < potionWealthEnd    ? 1.5 : 1.0; }
+function potionExpMult()   { return Date.now() < potionWisdomEnd    ? 1.5 : 1.0; }
+function potionCdrMult()   { return Date.now() < potionSwiftnessEnd ? 0.8 : 1.0; }
 
 function _getPotionEnd(id) {
     if (id === 'wealth')    return potionWealthEnd;
