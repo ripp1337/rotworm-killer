@@ -491,12 +491,16 @@ function renderInventory(filterKey) {
             <div class="inv-name">${def.name}</div>
         </div>`;
     }).join('');
-    // Add event listeners for click and touchend
+    // Add event listeners for click/touch, prevent double firing
+    const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|Mobile/i.test(navigator.userAgent);
     Array.from(body.getElementsByClassName('inv-item-clickable')).forEach(el => {
         const key = el.getAttribute('data-key');
         const handler = () => openCraftingFromItem(key);
-        el.addEventListener('click', handler);
-        el.addEventListener('touchend', handler);
+        if (isMobile) {
+            el.addEventListener('touchend', handler);
+        } else {
+            el.addEventListener('click', handler);
+        }
     });
 }
 function openCraftingFromItem(key) {
