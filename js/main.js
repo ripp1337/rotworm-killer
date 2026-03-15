@@ -701,20 +701,20 @@ function rollEssenceDrops(isBoss, isUber) {
 }
 
 const CRAFTING_RECIPES = [
-    { id: 'small_gold',          name: 'Small Potion of Wealth',    icon: '💰', desc: '+15% gold gain',         levelReq: 20, goldCost: 100,  durationMinutes: 2, ingredients: { blueEssence: 6, greenEssence: 1, redEssence: 0, yellowEssence: 0 } },
-    { id: 'small_exp',           name: 'Small Potion of Wisdom',    icon: '📚', desc: '+15% experience gain',    levelReq: 20, goldCost: 120,  durationMinutes: 2, ingredients: { blueEssence: 5, greenEssence: 2, redEssence: 0, yellowEssence: 0 } },
-    { id: 'small_cooldowns',     name: 'Small Potion of Swiftness', icon: '⚡', desc: '-10% cooldowns',          levelReq: 20, goldCost: 150,  durationMinutes: 1.5, ingredients: { blueEssence: 4, greenEssence: 2, redEssence: 1, yellowEssence: 0 } },
+    { id: 'small_gold',          name: 'Small Potion of Wealth',    icon: '💰', desc: '+15% gold gain',         levelReq: 20, goldCost: 1000, durationMinutes: 2, ingredients: { blueEssence: 6, greenEssence: 1, redEssence: 0, yellowEssence: 0 } },
+    { id: 'small_exp',           name: 'Small Potion of Wisdom',    icon: '📚', desc: '+15% experience gain',    levelReq: 20, goldCost: 1000, durationMinutes: 2, ingredients: { blueEssence: 5, greenEssence: 2, redEssence: 0, yellowEssence: 0 } },
+    { id: 'small_cooldowns',     name: 'Small Potion of Swiftness', icon: '⚡', desc: '-10% cooldowns',          levelReq: 20, goldCost: 1000, durationMinutes: 1.5, ingredients: { blueEssence: 4, greenEssence: 2, redEssence: 1, yellowEssence: 0 } },
 
-    { id: 'medium_gold',         name: 'Medium Potion of Wealth',   icon: '💰', desc: '+25% gold gain',         levelReq: 40, goldCost: 300,  durationMinutes: 4, ingredients: { blueEssence: 8, greenEssence: 4, redEssence: 2, yellowEssence: 0 } },
-    { id: 'medium_exp',          name: 'Medium Potion of Wisdom',   icon: '📚', desc: '+25% experience gain',    levelReq: 40, goldCost: 350,  durationMinutes: 4, ingredients: { blueEssence: 6, greenEssence: 5, redEssence: 2, yellowEssence: 0 } },
-    { id: 'medium_cooldowns',    name: 'Medium Potion of Swiftness',icon: '⚡', desc: '-15% cooldowns',          levelReq: 40, goldCost: 400,  durationMinutes: 3, ingredients: { blueEssence: 4, greenEssence: 4, redEssence: 3, yellowEssence: 0 } },
+    { id: 'medium_gold',         name: 'Medium Potion of Wealth',   icon: '💰', desc: '+25% gold gain',         levelReq: 40, goldCost: 5000, durationMinutes: 4, ingredients: { blueEssence: 8, greenEssence: 4, redEssence: 2, yellowEssence: 0 } },
+    { id: 'medium_exp',          name: 'Medium Potion of Wisdom',   icon: '📚', desc: '+25% experience gain',    levelReq: 40, goldCost: 5000, durationMinutes: 4, ingredients: { blueEssence: 6, greenEssence: 5, redEssence: 2, yellowEssence: 0 } },
+    { id: 'medium_cooldowns',    name: 'Medium Potion of Swiftness',icon: '⚡', desc: '-15% cooldowns',          levelReq: 40, goldCost: 5000, durationMinutes: 3, ingredients: { blueEssence: 4, greenEssence: 4, redEssence: 3, yellowEssence: 0 } },
 
-    { id: 'large_gold',          name: 'Large Potion of Wealth',    icon: '💰', desc: '+50% gold gain',        levelReq: 50, goldCost: 900,  durationMinutes: 8, ingredients: { blueEssence: 0, greenEssence: 6, redEssence: 4, yellowEssence: 1 } },
-    { id: 'large_exp',           name: 'Large Potion of Wisdom',    icon: '📚', desc: '+50% experience gain',   levelReq: 50, goldCost: 1000, durationMinutes: 8, ingredients: { blueEssence: 0, greenEssence: 5, redEssence: 5, yellowEssence: 1 } },
-    { id: 'large_cooldowns',     name: 'Large Potion of Swiftness', icon: '⚡', desc: '-25% cooldowns',          levelReq: 50, goldCost: 1100, durationMinutes: 6, ingredients: { blueEssence: 0, greenEssence: 4, redEssence: 6, yellowEssence: 1 } },
+    { id: 'large_gold',          name: 'Large Potion of Wealth',    icon: '💰', desc: '+50% gold gain',        levelReq: 50, goldCost: 10000, durationMinutes: 8, ingredients: { blueEssence: 0, greenEssence: 6, redEssence: 4, yellowEssence: 1 } },
+    { id: 'large_exp',           name: 'Large Potion of Wisdom',    icon: '📚', desc: '+50% experience gain',   levelReq: 50, goldCost: 10000, durationMinutes: 8, ingredients: { blueEssence: 0, greenEssence: 5, redEssence: 5, yellowEssence: 1 } },
+    { id: 'large_cooldowns',     name: 'Large Potion of Swiftness', icon: '⚡', desc: '-25% cooldowns',          levelReq: 50, goldCost: 10000, durationMinutes: 6, ingredients: { blueEssence: 0, greenEssence: 4, redEssence: 6, yellowEssence: 1 } },
 
-    { id: 'potion_of_danger',    name: 'Potion of Danger',          icon: '💀', desc: 'Reduces boss requirement by 25%', levelReq: 60, goldCost: 2000, durationMinutes: 10, ingredients: { blueEssence: 0, greenEssence: 3, redEssence: 6, yellowEssence: 3 }, ascendedOnly: true },
-    { id: 'potion_of_madness',   name: 'Potion of Madness',         icon: '🌀', desc: '+10 max spawn & x10 spawn rate', levelReq: 70, goldCost: 5000, durationMinutes: 15, ingredients: { blueEssence: 0, greenEssence: 10, redEssence: 4, yellowEssence: 6 }, ascendedOnly: true },
+    { id: 'potion_of_danger',    name: 'Potion of Danger',          icon: '💀', desc: 'Reduces boss requirement by 25%', levelReq: 60, goldCost: 25000, durationMinutes: 10, ingredients: { blueEssence: 0, greenEssence: 3, redEssence: 6, yellowEssence: 3 }, ascendedOnly: true },
+    { id: 'potion_of_madness',   name: 'Potion of Madness',         icon: '🌀', desc: '+10 max spawn & x10 spawn rate', levelReq: 70, goldCost: 50000, durationMinutes: 15, ingredients: { blueEssence: 0, greenEssence: 10, redEssence: 4, yellowEssence: 6 }, ascendedOnly: true },
 ];
 
 const CRAFTING_UNLOCK_LEVEL = 20;
