@@ -400,9 +400,6 @@ def _upgrade_state(state: dict) -> dict:
         state.setdefault('autoUeUnlocked', False)
         state.setdefault('autoUeEnabled', False)
         state.setdefault('bossFocusUnlocked', False)
-            # Area progression fields
-            state.setdefault('currentArea', 'Rookgaard')
-            state.setdefault('unlockedAreas', ['Rookgaard'])
         state.setdefault('annihilationUnlocked', False)
         state.setdefault('bossSpawnCounter', 0)
         state.setdefault('firstBossSpawned', False)
