@@ -1561,15 +1561,20 @@ canvas {
 #inventory-modal,
 #crafting-modal {
     position: fixed;
-    inset: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     background: rgba(0,0,0,0.88);
     z-index: 1001;
     display: none;
     justify-content: center;
     align-items: center;
+    overflow-y: auto;
+    padding: 16px 0;
 }
 
-.inv-modal-box  { width: 520px; max-width: 96vw; }
+.inv-modal-box  { width: 520px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
 .craft-modal-box { width: 540px; max-width: 96vw; }
 
 .inv-hint {
