@@ -1,3 +1,52 @@
+# ── Area progression CSV parsing ────────────────────────────────
+import csv
+
+AREAS_CSV_PATH = STATIC / 'Areas and monsters progression - Arkusz1.csv'
+AREAS_DATA = []
+
+def load_areas_csv():
+    global AREAS_DATA
+    with open(AREAS_CSV_PATH, encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        AREAS_DATA = []
+        for row in reader:
+            # Convert gold min/max to int
+            row['Monster gold min'] = int(row.get('Monster gold min', 0))
+            row['Monster gold max'] = int(row.get('Monster gold max', 0))
+            AREAS_DATA.append(row)
+
+def get_area_by_name(name):
+    for area in AREAS_DATA:
+        if area['Area'] == name:
+            return area
+    return None
+
+def get_area_gold_range(area_name):
+    area = get_area_by_name(area_name)
+    if area:
+        return area['Monster gold min'], area['Monster gold max']
+    return 0, 0
+
+def get_next_area(current_area):
+    for i, area in enumerate(AREAS_DATA):
+        if area['Area'] == current_area and i + 1 < len(AREAS_DATA):
+            return AREAS_DATA[i + 1]
+    return None
+
+def can_unlock_next_area(state):
+    current_area = state.get('currentArea', 'Rookgaard')
+    next_area = get_next_area(current_area)
+    if not next_area:
+        return False, None
+    level_req = int(next_area['Level required'].split()[0])
+    gold_req = int(next_area['Pay to go there'].split()[0])
+    player_level = int(state.get('level', 1))
+    player_gold = int(state.get('gold', 0))
+    eligible = player_level >= level_req and player_gold >= gold_req
+    return eligible, next_area
+
+# Load areas CSV at startup
+load_areas_csv()
 #!/usr/bin/env python3
 """Rotworm Killer – backend server (Python 3 stdlib only, no pip needed)"""
 
@@ -351,8 +400,9 @@ def _upgrade_state(state: dict) -> dict:
         state.setdefault('autoUeUnlocked', False)
         state.setdefault('autoUeEnabled', False)
         state.setdefault('bossFocusUnlocked', False)
-        state.setdefault('ascended', False)
-        state.setdefault('ascendedClass', None)
+            # Area progression fields
+            state.setdefault('currentArea', 'Rookgaard')
+            state.setdefault('unlockedAreas', ['Rookgaard'])
         state.setdefault('annihilationUnlocked', False)
         state.setdefault('bossSpawnCounter', 0)
         state.setdefault('firstBossSpawned', False)
@@ -984,6 +1034,19 @@ class Handler(BaseHTTPRequestHandler):
                 state['score'] = score
                 state['level'] = level
                 new_total_clicks = max(0, int(state.get('totalClicks') or 0))
+
+                # Area progression: auto-unlock next area if eligible
+                eligible, next_area = can_unlock_next_area(state)
+                if eligible and next_area:
+                    next_area_name = next_area['Area']
+                    gold_fee = int(next_area['Pay to go there'].split()[0])
+                    # Deduct gold and unlock area
+                    state['gold'] = int(state.get('gold', 0)) - gold_fee
+                    state['currentArea'] = next_area_name
+                    unlocked = set(state.get('unlockedAreas', []))
+                    unlocked.add(next_area_name)
+                    state['unlockedAreas'] = list(unlocked)
+
                 state_json = json.dumps(state)
 
                 # Update player cache immediately so next request sees fresh anti-cheat state.
@@ -1011,7 +1074,7 @@ class Handler(BaseHTTPRequestHandler):
                         print(f'[save-async] player={_un} error: {exc}')
                 threading.Thread(target=_do_save, daemon=True).start()
 
-                self.send_json(200, {'ok': True, 'score': score, 'level': level, 'flagged': suspicious})
+                self.send_json(200, {'ok': True, 'score': score, 'level': level, 'flagged': suspicious, 'currentArea': state.get('currentArea'), 'nextArea': next_area['Area'] if next_area else None, 'canUnlockNext': eligible})
 
             elif path == '/api/forgot-password':
                 email = (body.get('email') or '').strip().lower()
