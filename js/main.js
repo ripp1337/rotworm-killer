@@ -53,7 +53,7 @@ function syncSpriteLayer() {
             _sprites.delete(id);
         }
     }
-// ...existing code...
+}
 
 
 const BOSS_EVERY     = 50;   // spawn a boss every N worm kills
@@ -109,8 +109,7 @@ let ascendedClass = null; // 'knight' | 'sorcerer'
 let MOB_MAXHP  = 65;
 let MOB_EXP    = 40;
 let MOB_KILLS  = 1;   // score contribution per kill
-let MOB_GOLD_MIN = 0;
-let MOB_GOLD_MAX = 39; // random gold [MOB_GOLD_MIN, MOB_GOLD_MAX]
+let MOB_GOLD_MAX = 39; // random gold [0, MOB_GOLD_MAX]
 let MOB_SIZE   = 20;
 
 function applyMobConfig() {
@@ -118,15 +117,13 @@ function applyMobConfig() {
         MOB_MAXHP  = 260;
         MOB_EXP    = 150;
         MOB_KILLS  = 5;
-        MOB_GOLD_MIN = areaGoldMin || 0;
-        MOB_GOLD_MAX = areaGoldMax || 60;
+        MOB_GOLD_MAX = 60;
         MOB_SIZE   = 40;
     } else {
         MOB_MAXHP  = 65;
         MOB_EXP    = 40;
         MOB_KILLS  = 1;
-        MOB_GOLD_MIN = areaGoldMin || 0;
-        MOB_GOLD_MAX = areaGoldMax || 30;
+        MOB_GOLD_MAX = 30;
         MOB_SIZE   = 20;
     }
 }
@@ -953,11 +950,6 @@ function effectivePsCooldown()    { return POWER_STANCE_COOLDOWN_MS * (1 - sPts(
 function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * (1 - kPts(106) * 0.1) * potionCdrMult(); }
 
 // ── Progress save / load ─────────────────────────────────────────
-let currentArea = 'Rookgaard';
-let unlockedAreas = ['Rookgaard'];
-let nextArea = null;
-let canUnlockNext = false;
-
 function getProgress() {
     return {
         score, gold, exp, level, weaponIndex,
@@ -970,6 +962,7 @@ function getProgress() {
         autoPsEnabled,
         autoAnniEnabled,
         bossFocusUnlocked,
+        ascended, ascendedClass,
         annihilationUnlocked,
         bossSpawnCounter,
         bossKillCounter,
@@ -979,8 +972,6 @@ function getProgress() {
         potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
         potionMedWealthEnd, potionMedWisdomEnd, potionMedSwiftnessEnd,
         potionMadnessEnd, potionDangerEnd,
-        currentArea,
-        unlockedAreas,
         savedAt: Date.now(),
     };
 }
@@ -1039,7 +1030,7 @@ function loadProgress(state) {
 async function saveProgress() {
     if (!authToken) return;
     try {
-        const res = await fetch('/api/save', {
+        await fetch('/api/save', {
             method: 'POST',
             keepalive: true,
             headers: {
@@ -1048,11 +1039,6 @@ async function saveProgress() {
             },
             body: JSON.stringify({ state: getProgress() }),
         });
-        const data = await res.json();
-        if (data.currentArea) currentArea = data.currentArea;
-        if (data.nextArea) nextArea = data.nextArea;
-        canUnlockNext = !!data.canUnlockNext;
-        updateAreaUI();
     } catch (_) {}
 }
 
@@ -1075,67 +1061,103 @@ function simulateOffline(offlineSec, s) {
     const anyAuto = s.autoEnabled ||
                     (s.autoGfbEnabled && s.gfbUnlocked) ||
                     (s.autoUeEnabled  && s.ueUnlocked);
-    if (!state) return;
-    try {
-        const s = typeof state === 'string' ? JSON.parse(state) : state;
-        if (s.score            != null) score            = s.score;
-        if (s.gold             != null) gold             = s.gold;
-        if (s.exp              != null) exp              = s.exp;
-        if (s.level            != null) level            = s.level;
-        if (s.weaponIndex      != null) {
-            const _WPN_MIGRATE = [2, 4, 7, 11, 12];
-            let wi = s.weaponIndex;
-            if ((s.stateVersion || 0) < 4 && wi < _WPN_MIGRATE.length) wi = _WPN_MIGRATE[wi];
-            weaponIndex = Math.min(wi, WEAPONS.length - 1);
-        }
-        if (s.skillPoints      != null) skillPoints      = s.skillPoints;
-        if (s.knightSkillPts       != null) knightSkillPts       = s.knightSkillPts;
-        if (s.sorcSkillPts         != null) sorcSkillPts         = s.sorcSkillPts;
-        if (s.powerStanceUnlocked  != null) powerStanceUnlocked  = s.powerStanceUnlocked;
-        if (s.powerStanceCooldownEnd != null) powerStanceCooldownEnd = s.powerStanceCooldownEnd;
-        if (s.gfbUnlocked      != null) gfbUnlocked      = s.gfbUnlocked;
-        if (s.ueUnlocked       != null) ueUnlocked       = s.ueUnlocked;
-        if (s.autoUnlocked     != null) autoUnlocked     = s.autoUnlocked;
-        if (s.autoEnabled      != null) autoEnabled      = s.autoEnabled;
-        if (s.autoGfbUnlocked  != null) autoGfbUnlocked  = s.autoGfbUnlocked;
-        if (s.autoGfbEnabled   != null) autoGfbEnabled   = s.autoGfbEnabled;
-        if (s.autoUeUnlocked   != null) autoUeUnlocked   = s.autoUeUnlocked;
-        if (s.autoUeEnabled    != null) autoUeEnabled    = s.autoUeEnabled;
-        if (s.autoPsEnabled    != null) autoPsEnabled    = s.autoPsEnabled;
-        if (s.autoAnniEnabled  != null) autoAnniEnabled  = s.autoAnniEnabled;
-        if (s.bossFocusUnlocked!= null) bossFocusUnlocked= s.bossFocusUnlocked;
-        if (s.annihilationUnlocked  != null) annihilationUnlocked  = s.annihilationUnlocked;
-        if (s.bossSpawnCounter      != null) bossSpawnCounter      = s.bossSpawnCounter;
-        if (s.bossKillCounter        != null) bossKillCounter        = s.bossKillCounter;
-        if (s.firstBossSpawned       != null) firstBossSpawned      = s.firstBossSpawned;
-        if (s.totalClicks             != null) totalClicks           = s.totalClicks;
-        if (s.inventory        != null) inventory        = Object.assign({}, inventory, s.inventory);
-        if (s.potionWealthEnd       != null) potionWealthEnd       = s.potionWealthEnd;
-        if (s.potionWisdomEnd       != null) potionWisdomEnd       = s.potionWisdomEnd;
-        if (s.potionSwiftnessEnd    != null) potionSwiftnessEnd    = s.potionSwiftnessEnd;
-        if (s.potionMedWealthEnd    != null) potionMedWealthEnd    = s.potionMedWealthEnd;
-        if (s.potionMedWisdomEnd    != null) potionMedWisdomEnd    = s.potionMedWisdomEnd;
-        if (s.potionMedSwiftnessEnd != null) potionMedSwiftnessEnd = s.potionMedSwiftnessEnd;
-        if (s.potionMadnessEnd      != null) potionMadnessEnd      = s.potionMadnessEnd;
-        if (s.potionDangerEnd       != null) potionDangerEnd       = s.potionDangerEnd;
-        if (s.currentArea           != null) currentArea           = s.currentArea;
-        if (s.unlockedAreas         != null) unlockedAreas         = s.unlockedAreas;
-        if (s.nextArea              != null) nextArea              = s.nextArea;
-        if (s.canUnlockNext         != null) canUnlockNext         = s.canUnlockNext;
-        updateAreaUI();
-    } catch (_) {}
-}
+    if (!anyAuto) return null;
 
-function updateAreaUI() {
-    const areaInfo = document.getElementById('area-info');
-    const areaBtn = document.getElementById('area-unlock-btn');
-    if (!areaInfo || !areaBtn) return;
-    areaInfo.innerHTML = `<b>Current Area:</b> ${currentArea}` + (nextArea ? `<br><b>Next Area:</b> ${nextArea}` : '');
-    areaBtn.disabled = !canUnlockNext;
-    areaBtn.className = canUnlockNext ? 'area-btn-eligible' : 'area-btn-disabled';
-    areaBtn.textContent = canUnlockNext ? `Unlock ${nextArea}` : (nextArea ? `Need more level/gold for ${nextArea}` : 'No further areas');
-}
-    // ...existing code...
+    const wIdx       = Math.min(s.weaponIndex || 0, WEAPONS.length - 1);
+    const lvlBon     = Math.floor((s.level || 1) / 5);
+    const avgDmg     = (WEAPONS[wIdx].min + WEAPONS[wIdx].max) / 2 + lvlBon;
+    const gfbCoolSec = Math.max(1, Math.floor(GFB_COOLDOWN_MS * Math.pow(0.9, s.gfbCdUpgrades || 0) / 1000));
+    const ueCoolSec  = Math.max(1, Math.floor(UE_COOLDOWN_MS  * Math.pow(0.9, s.ueCdUpgrades  || 0) / 1000));
+
+    let wormsOnField  = 5;
+    let wormHp        = MOB_MAXHP;
+    let bossAlive     = false;
+    let bossCurrentHp = BOSS_HP;
+    let killCounter   = s.bossSpawnCounter || 0;
+    let gold          = s.gold || 0;
+    let gfbCd         = 0;
+    let ueCd          = 0;
+
+    let gainKills     = 0;
+    let gainBossKills = 0;
+    let gainExp       = 0;
+    let gainGold      = 0;
+
+    const doKillWorm = () => {
+        gainKills++;
+        killCounter++;
+        gainExp  += MOB_EXP;
+        const avgGold = MOB_GOLD_MAX / 2;
+        gainGold += avgGold;
+        gold     += avgGold;
+        if (!bossAlive && killCounter % BOSS_EVERY === 0) {
+            bossAlive     = true;
+            bossCurrentHp = BOSS_HP;
+        }
+    };
+
+    const doKillBoss = () => {
+        bossAlive      = false;
+        gainBossKills++;
+        gainExp  += BOSS_EXP;
+        gainGold += BOSS_GOLD;
+        gold     += BOSS_GOLD;
+    };
+
+    for (let t = 0; t < simSec; t++) {
+        // Worm spawning: ~1/sec, capped at 10
+        if (wormsOnField < 10 && !bossAlive) wormsOnField++;
+
+        // Auto UE — clears all worms, boss immune
+        if (s.autoUeEnabled && s.ueUnlocked) {
+            if (ueCd <= 0) {
+                ueCd = ueCoolSec;
+                const n = wormsOnField;
+                for (let i = 0; i < n; i++) doKillWorm();
+                wormsOnField = 0;
+                wormHp       = MOB_MAXHP;
+            } else ueCd--;
+        }
+
+        // Auto GFB — clears all worms in radius (effectively all), costs gold
+        if (s.autoGfbEnabled && s.gfbUnlocked) {
+            if (gfbCd <= 0 && wormsOnField > 0 && gold >= GFB_GOLD_COST) {
+                gfbCd     = gfbCoolSec;
+                gold     -= GFB_GOLD_COST;
+                gainGold -= GFB_GOLD_COST;
+                const n = wormsOnField;
+                for (let i = 0; i < n; i++) doKillWorm();
+                wormsOnField = 0;
+                wormHp       = MOB_MAXHP;
+            } else if (gfbCd > 0) gfbCd--;
+        }
+
+        // Auto attack — 1 hit/sec
+        if (s.autoEnabled) {
+            if (bossAlive) {
+                bossCurrentHp -= avgDmg;
+                if (bossCurrentHp <= 0) doKillBoss();
+            } else if (wormsOnField > 0) {
+                wormHp -= avgDmg;
+                if (wormHp <= 0) {
+                    doKillWorm();
+                    wormsOnField--;
+                    wormHp = MOB_MAXHP;
+                }
+            }
+        }
+    }
+
+    if (gainKills === 0 && gainBossKills === 0) return null;
+
+    return {
+        simSec,
+        wormKills:         gainKills,
+        bossKills:         gainBossKills,
+        expGained:         gainExp,
+        goldGained:        Math.max(0, gainGold),
+        finalKillCounter:  killCounter,
+    };
 }
 
 function applyOfflineGains(gains) {
@@ -1472,11 +1494,7 @@ function spawnBoss() {
 function killWorm(w) {
     score += MOB_KILLS;
     const expGain  = Math.floor(MOB_EXP  * skillExpMult() * potionExpMult());
-    // Use area-specific gold min/max
-    const minGold = typeof MOB_GOLD_MIN === 'number' ? MOB_GOLD_MIN : 0;
-    const maxGold = typeof MOB_GOLD_MAX === 'number' ? MOB_GOLD_MAX : 39;
-    const goldBase = minGold + Math.floor(Math.random() * (maxGold - minGold + 1));
-    const goldGain = Math.floor(goldBase * skillGoldMult() * potionGoldMult());
+    const goldGain = Math.floor(Math.random() * (MOB_GOLD_MAX + 1) * skillGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
     checkLevelUp();
