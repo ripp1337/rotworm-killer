@@ -234,7 +234,7 @@ const AREAS = [
         name: 'The Void',
         levelReq: 300,
         goldCost: 100000000,
-        floor: 'Void_(Tile).gif',
+        floor: 'Void.gif',
         mobName: 'Void Emissary',
         mobSprite: 'The_Unarmored_Voidborn.gif',
         mobHp: 30000,
