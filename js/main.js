@@ -695,20 +695,30 @@ function rollEssenceDrops(isBoss, isUber) {
 }
 
 const CRAFTING_RECIPES = [
-    { id: 'wealth',       name: 'Small Potion of Wealth',    icon: '💰', desc: '+50% gold gain for 5 minutes',                               goldCost:  10000, ingredients: { blueEssence: 5, greenEssence: 5, redEssence: 5, yellowEssence: 1 } },
-    { id: 'wisdom',       name: 'Small Potion of Wisdom',    icon: '📚', desc: '+50% experience gain for 5 minutes',                         goldCost:  10000, ingredients: { blueEssence: 5, greenEssence: 5, redEssence: 5, yellowEssence: 1 } },
-    { id: 'swiftness',    name: 'Small Potion of Swiftness', icon: '⚡', desc: '-20% all cooldowns for 5 minutes',                           goldCost:  10000, ingredients: { blueEssence: 5, greenEssence: 5, redEssence: 5, yellowEssence: 1 } },
-    { id: 'medWealth',    name: 'Medium Potion of Wealth',   icon: '💰', desc: '+75% gold gain for 5 minutes',                              goldCost:  20000, ingredients: { blueEssence: 10, greenEssence: 10, redEssence: 10, yellowEssence: 2 }, ascendedOnly: true },
-    { id: 'medWisdom',    name: 'Medium Potion of Wisdom',   icon: '📚', desc: '+75% experience gain for 5 minutes',                        goldCost:  20000, ingredients: { blueEssence: 10, greenEssence: 10, redEssence: 10, yellowEssence: 2 }, ascendedOnly: true },
-    { id: 'medSwiftness', name: 'Medium Potion of Swiftness',icon: '⚡', desc: '-50% all cooldowns for 5 minutes',                          goldCost:  20000, ingredients: { blueEssence: 10, greenEssence: 10, redEssence: 10, yellowEssence: 2 }, ascendedOnly: true },
-    { id: 'madness',      name: 'Potion of Madness',         icon: '🌀', desc: '+10 max spawn cap & 10× spawn rate for 5 minutes',          goldCost:  50000, ingredients: { blueEssence: 15, greenEssence: 15, redEssence: 15, yellowEssence: 3 }, ascendedOnly: true },
-    { id: 'danger',       name: 'Potion of Danger',          icon: '💀', desc: 'Reduces kills required for boss by 25% for 5 minutes',        goldCost:  50000, ingredients: { blueEssence: 15, greenEssence: 15, redEssence: 15, yellowEssence: 3 }, ascendedOnly: true },
+    { id: 'small_gold',          name: 'Small Potion of Wealth',    icon: '💰', desc: '+50% gold gain',         levelReq: 20, goldCost: 100,  durationMinutes: 2, ingredients: { blueEssence: 6, greenEssence: 1, redEssence: 0, yellowEssence: 0 } },
+    { id: 'small_exp',           name: 'Small Potion of Wisdom',    icon: '📚', desc: '+50% experience gain',    levelReq: 20, goldCost: 120,  durationMinutes: 2, ingredients: { blueEssence: 5, greenEssence: 2, redEssence: 0, yellowEssence: 0 } },
+    { id: 'small_cooldowns',     name: 'Small Potion of Swiftness', icon: '⚡', desc: '-20% cooldowns',          levelReq: 20, goldCost: 150,  durationMinutes: 1.5, ingredients: { blueEssence: 4, greenEssence: 2, redEssence: 1, yellowEssence: 0 } },
+
+    { id: 'medium_gold',         name: 'Medium Potion of Wealth',   icon: '💰', desc: '+75% gold gain',         levelReq: 40, goldCost: 300,  durationMinutes: 4, ingredients: { blueEssence: 8, greenEssence: 4, redEssence: 2, yellowEssence: 0 }, ascendedOnly: true },
+    { id: 'medium_exp',          name: 'Medium Potion of Wisdom',   icon: '📚', desc: '+75% experience gain',    levelReq: 40, goldCost: 350,  durationMinutes: 4, ingredients: { blueEssence: 6, greenEssence: 5, redEssence: 2, yellowEssence: 0 }, ascendedOnly: true },
+    { id: 'medium_cooldowns',    name: 'Medium Potion of Swiftness',icon: '⚡', desc: '-50% cooldowns',          levelReq: 40, goldCost: 400,  durationMinutes: 3, ingredients: { blueEssence: 4, greenEssence: 4, redEssence: 3, yellowEssence: 0 }, ascendedOnly: true },
+
+    { id: 'large_gold',          name: 'Large Potion of Wealth',    icon: '💰', desc: '+100% gold gain',        levelReq: 50, goldCost: 900,  durationMinutes: 8, ingredients: { blueEssence: 0, greenEssence: 6, redEssence: 4, yellowEssence: 1 }, ascendedOnly: true },
+    { id: 'large_exp',           name: 'Large Potion of Wisdom',    icon: '📚', desc: '+100% experience gain',   levelReq: 50, goldCost: 1000, durationMinutes: 8, ingredients: { blueEssence: 0, greenEssence: 5, redEssence: 5, yellowEssence: 1 }, ascendedOnly: true },
+    { id: 'large_cooldowns',     name: 'Large Potion of Swiftness', icon: '⚡', desc: '-70% cooldowns',          levelReq: 50, goldCost: 1100, durationMinutes: 6, ingredients: { blueEssence: 0, greenEssence: 4, redEssence: 6, yellowEssence: 1 }, ascendedOnly: true },
+
+    { id: 'potion_of_danger',    name: 'Potion of Danger',          icon: '💀', desc: 'Reduces boss requirement by 25%', levelReq: 60, goldCost: 2000, durationMinutes: 10, ingredients: { blueEssence: 0, greenEssence: 3, redEssence: 6, yellowEssence: 3 }, ascendedOnly: true },
+    { id: 'potion_of_madness',   name: 'Potion of Madness',         icon: '🌀', desc: '+10 max spawn & x10 spawn rate', levelReq: 70, goldCost: 5000, durationMinutes: 15, ingredients: { blueEssence: 0, greenEssence: 10, redEssence: 4, yellowEssence: 6 }, ascendedOnly: true },
 ];
 
 const CRAFTING_UNLOCK_LEVEL = 20;
 
 // Maps each potion id to the opposite-tier counterpart (no stacking allowed).
-const _POTION_COUNTERPART = { wealth: 'medWealth', medWealth: 'wealth', wisdom: 'medWisdom', medWisdom: 'wisdom', swiftness: 'medSwiftness', medSwiftness: 'swiftness' };
+const _POTION_COUNTERPART = {
+    small_gold: 'medium_gold', medium_gold: 'small_gold',
+    small_exp: 'medium_exp', medium_exp: 'small_exp',
+    small_cooldowns: 'medium_cooldowns', medium_cooldowns: 'small_cooldowns',
+};
 function rollDrops(pool, isUber, isBoss) {
     if (isUber) return pool.map(k => ({ k, qty: 2 }));
     if (isBoss) {
@@ -727,25 +737,25 @@ function potionMadnessActive() { return Date.now() < potionMadnessEnd; }
 function potionDangerActive()  { return Date.now() < potionDangerEnd; }
 
 function _getPotionEnd(id) {
-    if (id === 'wealth')       return potionWealthEnd;
-    if (id === 'wisdom')       return potionWisdomEnd;
-    if (id === 'swiftness')    return potionSwiftnessEnd;
-    if (id === 'medWealth')    return potionMedWealthEnd;
-    if (id === 'medWisdom')    return potionMedWisdomEnd;
-    if (id === 'medSwiftness') return potionMedSwiftnessEnd;
-    if (id === 'madness')      return potionMadnessEnd;
-    if (id === 'danger')       return potionDangerEnd;
+    if (id === 'small_gold')        return potionWealthEnd;
+    if (id === 'medium_gold')       return potionMedWealthEnd;
+    if (id === 'small_exp')         return potionWisdomEnd;
+    if (id === 'medium_exp')        return potionMedWisdomEnd;
+    if (id === 'small_cooldowns')   return potionSwiftnessEnd;
+    if (id === 'medium_cooldowns')  return potionMedSwiftnessEnd;
+    if (id === 'potion_of_madness') return potionMadnessEnd;
+    if (id === 'potion_of_danger')  return potionDangerEnd;
     return 0;
 }
 function _setPotionEnd(id, val) {
-    if      (id === 'wealth')       potionWealthEnd       = val;
-    else if (id === 'wisdom')       potionWisdomEnd       = val;
-    else if (id === 'swiftness')    potionSwiftnessEnd    = val;
-    else if (id === 'medWealth')    potionMedWealthEnd    = val;
-    else if (id === 'medWisdom')    potionMedWisdomEnd    = val;
-    else if (id === 'medSwiftness') potionMedSwiftnessEnd = val;
-    else if (id === 'madness')      potionMadnessEnd      = val;
-    else if (id === 'danger')       potionDangerEnd       = val;
+    if      (id === 'small_gold')        potionWealthEnd       = val;
+    else if (id === 'medium_gold')       potionMedWealthEnd    = val;
+    else if (id === 'small_exp')         potionWisdomEnd       = val;
+    else if (id === 'medium_exp')        potionMedWisdomEnd    = val;
+    else if (id === 'small_cooldowns')   potionSwiftnessEnd    = val;
+    else if (id === 'medium_cooldowns')  potionMedSwiftnessEnd = val;
+    else if (id === 'potion_of_madness') potionMadnessEnd      = val;
+    else if (id === 'potion_of_danger')  potionDangerEnd       = val;
 }
 
 function openInventory() {
@@ -804,24 +814,28 @@ function renderCrafting(filterKey) {
         const counterActive = counterpart ? now < _getPotionEnd(counterpart) : false;
         const ingOk    = Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v);
         const goldOk   = gold >= r.goldCost;
-        const canCraft = !active && !counterActive && ingOk && goldOk;
-        const hi       = filterKey != null && r.ingredients[filterKey] != null;
-        const ingsHtml = Object.entries(r.ingredients).map(([k, need]) => {
-            const have = inventory[k] || 0;
-            const d    = ITEM_DEFS.find(d => d.key === k);
-            return `<span class="craft-ing${have >= need ? '' : ' craft-ing-miss'}">${d ? d.icon : ''} ${d ? d.name : k}: ${have}/${need}</span>`;
-        }).join('');
-        const statusHtml = active
-            ? `<div class="craft-active">\u2713 ACTIVE \u2014 ${fmtMs(_getPotionEnd(r.id) - now)}</div>`
-            : counterActive
-                ? `<div class="craft-active" style="border-color:#8a6a2a;color:#c08040;">\u26A0 ${CRAFTING_RECIPES.find(x=>x.id===counterpart)?.name} active</div>`
-                : '';
-        const btnLabel = active ? 'Already active' : counterActive ? 'Other tier active' : 'Craft';
-        return `<div class="craft-card${hi ? ' craft-card-highlight' : ''}">
-            <div class="craft-header"><span class="craft-icon">${r.icon}</span><span class="craft-name">${r.name}</span></div>
-            <div class="craft-desc">${r.desc}</div>
-            <div class="craft-ings">${ingsHtml}</div>
-            <div class="craft-cost${goldOk ? '' : ' craft-cost-miss'}">\uD83D\uDCB0 ${r.goldCost.toLocaleString()} gold</div>
+const canCraft = !active && !counterActive && ingOk && goldOk && level >= (r.levelReq || CRAFTING_UNLOCK_LEVEL);
+    const hi       = filterKey != null && r.ingredients[filterKey] != null;
+    const ingsHtml = Object.entries(r.ingredients).map(([k, need]) => {
+        const have = inventory[k] || 0;
+        const d    = ITEM_DEFS.find(d => d.key === k);
+        return `<span class="craft-ing${have >= need ? '' : ' craft-ing-miss'}">${d ? d.icon : ''} ${d ? d.name : k}: ${have}/${need}</span>`;
+    }).join('');
+    const statusHtml = active
+        ? `<div class="craft-active">\u2713 ACTIVE \u2014 ${fmtMs(_getPotionEnd(r.id) - now)}</div>`
+        : counterActive
+            ? `<div class="craft-active" style="border-color:#8a6a2a;color:#c08040;">\u26A0 ${CRAFTING_RECIPES.find(x=>x.id===counterpart)?.name} active</div>`
+            : '';
+    const levelNote = level < (r.levelReq || CRAFTING_UNLOCK_LEVEL)
+        ? `<div class="craft-active" style="border-color:#777;color:#999;">Requires level ${r.levelReq || CRAFTING_UNLOCK_LEVEL}</div>`
+        : '';
+    const btnLabel = active ? 'Already active' : counterActive ? 'Other tier active' : 'Craft';
+    return `<div class="craft-card${hi ? ' craft-card-highlight' : ''}">
+        <div class="craft-header"><span class="craft-icon">${r.icon}</span><span class="craft-name">${r.name}</span></div>
+        <div class="craft-desc">${r.desc}</div>
+        <div class="craft-ings">${ingsHtml}</div>
+        <div class="craft-cost${goldOk ? '' : ' craft-cost-miss'}">\uD83D\uDCB0 ${r.goldCost.toLocaleString()} gold</div>
+        ${levelNote}
             ${statusHtml}
             <button class="craft-btn" onclick="craftPotion('${r.id}')" ${canCraft ? '' : 'disabled'}>${btnLabel}</button>
         </div>`;
@@ -830,7 +844,7 @@ function renderCrafting(filterKey) {
 
 function craftPotion(id) {
     const r = CRAFTING_RECIPES.find(r => r.id === id);
-    if (!r || level < CRAFTING_UNLOCK_LEVEL) return;
+    if (!r || level < (r.levelReq || CRAFTING_UNLOCK_LEVEL)) return;
     if (gold < r.goldCost) return;
     if (!Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v)) return;
     if (Date.now() < _getPotionEnd(id)) return;
@@ -839,7 +853,8 @@ function craftPotion(id) {
     if (counterpart) _setPotionEnd(counterpart, 0);
     gold -= r.goldCost;
     Object.entries(r.ingredients).forEach(([k, v]) => { inventory[k] -= v; });
-    _setPotionEnd(id, Date.now() + 5 * 60 * 1000);
+    const duration = (r.durationMinutes || 5) * 60 * 1000;
+    _setPotionEnd(id, Date.now() + duration);
     renderCrafting();
 }
 
