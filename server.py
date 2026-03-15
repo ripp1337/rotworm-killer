@@ -322,7 +322,7 @@ def auth_player(token: str):
     return row
 
 # ── State versioning ──────────────────────────────────────────────
-LATEST_STATE_VERSION = 5
+LATEST_STATE_VERSION = 6
 
 def _upgrade_state(state: dict) -> dict:
     """Bring any player state up to LATEST_STATE_VERSION, filling missing keys
@@ -383,6 +383,13 @@ def _upgrade_state(state: dict) -> dict:
         state.setdefault('currentArea', 'Rookgaard')
         state.setdefault('unlockedAreas', ['Rookgaard'])
         state['stateVersion'] = 5
+
+    if v < 6:
+        # v6 replaces general skill system (old IDs 1-12 → new IDs 11-34).
+        # Reset skillPoints so all players rebuild with the new tree.
+        state['skillPoints'] = {}
+        state.setdefault('firestormCharges', 0)
+        state['stateVersion'] = 6
 
     return state
 
