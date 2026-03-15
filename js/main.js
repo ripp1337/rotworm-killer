@@ -430,9 +430,9 @@ function rollDrops(pool, isUber, isBoss) {
     return [{ k: pool[Math.floor(Math.random() * pool.length)], qty: 1 }];
 }
 
-function potionGoldMult()  { let m = 1.0; if (Date.now() < potionWealthEnd) m *= 1.5; if (Date.now() < potionMedWealthEnd) m *= 1.75; return m; }
-function potionExpMult()   { let m = 1.0; if (Date.now() < potionWisdomEnd)  m *= 1.5; if (Date.now() < potionMedWisdomEnd)  m *= 1.75; return m; }
-function potionCdrMult()   { let m = 1.0; if (Date.now() < potionSwiftnessEnd) m *= 0.8; if (Date.now() < potionMedSwiftnessEnd) m *= 0.5; return m; }
+function potionGoldMult()  { const now = Date.now(); if (now < potionMedWealthEnd) return 1.75; if (now < potionWealthEnd) return 1.5; return 1.0; }
+function potionExpMult()   { const now = Date.now(); if (now < potionMedWisdomEnd)  return 1.75; if (now < potionWisdomEnd)  return 1.5; return 1.0; }
+function potionCdrMult()   { const now = Date.now(); if (now < potionMedSwiftnessEnd) return 0.5; if (now < potionSwiftnessEnd) return 0.8; return 1.0; }
 function potionMadnessActive() { return Date.now() < potionMadnessEnd; }
 function potionDangerActive()  { return Date.now() < potionDangerEnd; }
 
@@ -496,10 +496,12 @@ function renderCrafting(filterKey) {
     const now   = Date.now();
     const fmtMs = ms => Math.floor(ms / 60000) + ':' + String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
     body.innerHTML = CRAFTING_RECIPES.filter(r => !r.ascendedOnly || ascended).map(r => {
-        const active   = now < _getPotionEnd(r.id);
+        const active        = now < _getPotionEnd(r.id);
+        const counterpart   = _POTION_COUNTERPART[r.id];
+        const counterActive = counterpart ? now < _getPotionEnd(counterpart) : false;
         const ingOk    = Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v);
         const goldOk   = gold >= r.goldCost;
-        const canCraft = !active && ingOk && goldOk;
+        const canCraft = !active && !counterActive && ingOk && goldOk;
         const hi       = filterKey != null && r.ingredients[filterKey] != null;
         const ingsHtml = Object.entries(r.ingredients).map(([k, need]) => {
             const have = inventory[k] || 0;
@@ -508,23 +510,32 @@ function renderCrafting(filterKey) {
         }).join('');
         const statusHtml = active
             ? `<div class="craft-active">\u2713 ACTIVE \u2014 ${fmtMs(_getPotionEnd(r.id) - now)}</div>`
-            : '';
+            : counterActive
+                ? `<div class="craft-active" style="border-color:#8a6a2a;color:#c08040;">\u26A0 ${CRAFTING_RECIPES.find(x=>x.id===counterpart)?.name} active</div>`
+                : '';
+        const btnLabel = active ? 'Already active' : counterActive ? 'Other tier active' : 'Craft';
         return `<div class="craft-card${hi ? ' craft-card-highlight' : ''}">
             <div class="craft-header"><span class="craft-icon">${r.icon}</span><span class="craft-name">${r.name}</span></div>
             <div class="craft-desc">${r.desc}</div>
             <div class="craft-ings">${ingsHtml}</div>
             <div class="craft-cost${goldOk ? '' : ' craft-cost-miss'}">\uD83D\uDCB0 ${r.goldCost.toLocaleString()} gold</div>
             ${statusHtml}
-            <button class="craft-btn" onclick="craftPotion('${r.id}')" ${canCraft ? '' : 'disabled'}>${active ? 'Already active' : 'Craft'}</button>
+            <button class="craft-btn" onclick="craftPotion('${r.id}')" ${canCraft ? '' : 'disabled'}>${btnLabel}</button>
         </div>`;
     }).join('');
 }
+// Maps each potion id to the opposite-tier counterpart that must be cancelled.
+const _POTION_COUNTERPART = { wealth: 'medWealth', medWealth: 'wealth', wisdom: 'medWisdom', medWisdom: 'wisdom', swiftness: 'medSwiftness', medSwiftness: 'swiftness' };
+
 function craftPotion(id) {
     const r = CRAFTING_RECIPES.find(r => r.id === id);
     if (!r || level < CRAFTING_UNLOCK_LEVEL) return;
     if (gold < r.goldCost) return;
     if (!Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v)) return;
     if (Date.now() < _getPotionEnd(id)) return;
+    // Cancel the opposite tier of the same type (no stacking)
+    const counterpart = _POTION_COUNTERPART[id];
+    if (counterpart) _setPotionEnd(counterpart, 0);
     gold -= r.goldCost;
     Object.entries(r.ingredients).forEach(([k, v]) => { inventory[k] -= v; });
     _setPotionEnd(id, Date.now() + 5 * 60 * 1000);
