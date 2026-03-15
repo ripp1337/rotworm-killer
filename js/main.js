@@ -845,35 +845,43 @@ function renderCrafting(filterKey) {
     if (!body) return;
     const now   = Date.now();
     const fmtMs = ms => Math.floor(ms / 60000) + ':' + String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
-    body.innerHTML = CRAFTING_RECIPES.filter(r => !r.ascendedOnly || ascended).map(r => {
+    body.innerHTML = CRAFTING_RECIPES.map(r => {
         const active        = now < _getPotionEnd(r.id);
         const group = _getPotionGroup(r.id);
         const activeOther = group.find(other => other !== r.id && now < _getPotionEnd(other));
         const counterActive = Boolean(activeOther);
         const ingOk    = Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v);
         const goldOk   = gold >= r.goldCost;
-        const canCraft = !counterActive && ingOk && goldOk && level >= (r.levelReq || CRAFTING_UNLOCK_LEVEL);
-    const hi       = filterKey != null && r.ingredients[filterKey] != null;
-    const ingsHtml = Object.entries(r.ingredients).map(([k, need]) => {
-        const have = inventory[k] || 0;
-        const d    = ITEM_DEFS.find(d => d.key === k);
-        return `<span class="craft-ing${have >= need ? '' : ' craft-ing-miss'}">${d ? d.icon : ''} ${d ? d.name : k}: ${have}/${need}</span>`;
-    }).join('');
-    const statusHtml = active
-        ? `<div class="craft-active">\u2713 ACTIVE \u2014 ${fmtMs(_getPotionEnd(r.id) - now)}</div>`
-        : counterActive
-            ? `<div class="craft-active" style="border-color:#8a6a2a;color:#c08040;">\u26A0 ${CRAFTING_RECIPES.find(x=>x.id===activeOther)?.name} active</div>`
+        const needsAscension = r.ascendedOnly && !ascended;
+        const needsLevel = level < (r.levelReq || CRAFTING_UNLOCK_LEVEL);
+        const canCraft = !counterActive && ingOk && goldOk && !needsAscension && !needsLevel;
+        const hi       = filterKey != null && r.ingredients[filterKey] != null;
+        const ingsHtml = Object.entries(r.ingredients).map(([k, need]) => {
+            const have = inventory[k] || 0;
+            const d    = ITEM_DEFS.find(d => d.key === k);
+            return `<span class="craft-ing${have >= need ? '' : ' craft-ing-miss'}">${d ? d.icon : ''} ${d ? d.name : k}: ${have}/${need}</span>`;
+        }).join('');
+        const statusHtml = active
+            ? `<div class="craft-active">\u2713 ACTIVE \u2014 ${fmtMs(_getPotionEnd(r.id) - now)}</div>`
+            : counterActive
+                ? `<div class="craft-active" style="border-color:#8a6a2a;color:#c08040;">\u26A0 ${CRAFTING_RECIPES.find(x=>x.id===activeOther)?.name} active</div>`
+                : '';
+        const levelNote = needsLevel
+            ? `<div class="craft-active" style="border-color:#777;color:#999;">Requires level ${r.levelReq || CRAFTING_UNLOCK_LEVEL}</div>`
             : '';
-    const levelNote = level < (r.levelReq || CRAFTING_UNLOCK_LEVEL)
-        ? `<div class="craft-active" style="border-color:#777;color:#999;">Requires level ${r.levelReq || CRAFTING_UNLOCK_LEVEL}</div>`
-        : '';
-    const btnLabel = counterActive ? 'Other tier active' : 'Craft';
-    return `<div class="craft-card${hi ? ' craft-card-highlight' : ''}">
-        <div class="craft-header"><span class="craft-icon">${r.icon}</span><span class="craft-name">${r.name}</span></div>
-        <div class="craft-desc">${r.desc}</div>
-        <div class="craft-ings">${ingsHtml}</div>
-        <div class="craft-cost${goldOk ? '' : ' craft-cost-miss'}">\uD83D\uDCB0 ${r.goldCost.toLocaleString()} gold</div>
-        ${levelNote}
+        const ascensionNote = needsAscension
+            ? `<div class="craft-active" style="border-color:#833;color:#c08040;">Requires ascension</div>`
+            : '';
+        const badgeLabel = needsAscension ? 'Ascension' : needsLevel ? `Lv ${r.levelReq || CRAFTING_UNLOCK_LEVEL}` : '';
+        const badgeHtml = badgeLabel ? `<span class="craft-badge">${badgeLabel}</span>` : '';
+        const btnLabel = needsAscension ? 'Requires ascension' : counterActive ? 'Other tier active' : 'Craft';
+        return `<div class="craft-card${hi ? ' craft-card-highlight' : ''}">
+            <div class="craft-header"><span class="craft-icon">${r.icon}</span><span class="craft-name">${r.name}</span>${badgeHtml}</div>
+            <div class="craft-desc">${r.desc}</div>
+            <div class="craft-ings">${ingsHtml}</div>
+            <div class="craft-cost${goldOk ? '' : ' craft-cost-miss'}">\uD83D\uDCB0 ${r.goldCost.toLocaleString()} gold</div>
+            ${levelNote}
+            ${ascensionNote}
             ${statusHtml}
             <button class="craft-btn" onclick="craftPotion('${r.id}')" ${canCraft ? '' : 'disabled'}>${btnLabel}</button>
         </div>`;
