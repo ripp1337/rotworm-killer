@@ -276,9 +276,14 @@ function updateHUD() {
     const _pn = Date.now();
     const _fp = ms => Math.floor(ms / 60000) + ':' + String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
     const _pl = [];
-    if (_pn < potionWealthEnd)    _pl.push('<div class="hud-row"><span>\uD83D\uDCB0 Wealth</span><span class="potion-timer">'    + _fp(potionWealthEnd    - _pn) + '</span></div>');
-    if (_pn < potionWisdomEnd)    _pl.push('<div class="hud-row"><span>\uD83D\uDCDA Wisdom</span><span class="potion-timer">'    + _fp(potionWisdomEnd    - _pn) + '</span></div>');
-    if (_pn < potionSwiftnessEnd) _pl.push('<div class="hud-row"><span>\u26A1 Swiftness</span><span class="potion-timer">' + _fp(potionSwiftnessEnd - _pn) + '</span></div>');
+    if (_pn < potionWealthEnd)       _pl.push('<div class="hud-row"><span>\uD83D\uDCB0 Sm. Wealth</span><span class="potion-timer">'    + _fp(potionWealthEnd       - _pn) + '</span></div>');
+    if (_pn < potionWisdomEnd)       _pl.push('<div class="hud-row"><span>\uD83D\uDCDA Sm. Wisdom</span><span class="potion-timer">'    + _fp(potionWisdomEnd       - _pn) + '</span></div>');
+    if (_pn < potionSwiftnessEnd)    _pl.push('<div class="hud-row"><span>\u26A1 Sm. Swift</span><span class="potion-timer">'          + _fp(potionSwiftnessEnd    - _pn) + '</span></div>');
+    if (_pn < potionMedWealthEnd)    _pl.push('<div class="hud-row"><span>\uD83D\uDCB0 Med. Wealth</span><span class="potion-timer">'  + _fp(potionMedWealthEnd    - _pn) + '</span></div>');
+    if (_pn < potionMedWisdomEnd)    _pl.push('<div class="hud-row"><span>\uD83D\uDCDA Med. Wisdom</span><span class="potion-timer">'  + _fp(potionMedWisdomEnd    - _pn) + '</span></div>');
+    if (_pn < potionMedSwiftnessEnd) _pl.push('<div class="hud-row"><span>\u26A1 Med. Swift</span><span class="potion-timer">'         + _fp(potionMedSwiftnessEnd - _pn) + '</span></div>');
+    if (_pn < potionMadnessEnd)      _pl.push('<div class="hud-row"><span>\uD83C\uDF00 Madness</span><span class="potion-timer">'      + _fp(potionMadnessEnd      - _pn) + '</span></div>');
+    if (_pn < potionDangerEnd)       _pl.push('<div class="hud-row"><span>\uD83D\uDC80 Danger</span><span class="potion-timer">'       + _fp(potionDangerEnd       - _pn) + '</span></div>');
     const _ps = document.getElementById('hud-potions-section');
     if (_ps) _ps.style.display = _pl.length ? '' : 'none';
     const _pe = document.getElementById('hud-potions');
@@ -323,9 +328,14 @@ let autoAnniEnabled         = false;
 // ── Inventory & crafting ─────────────────────────────────────────
 let inventory = { lumpOfDirt: 0, rotwormFang: 0, worm: 0, gland: 0,
                    cyclopsToe: 0, wolfToothChain: 0, cyclopsEye: 0, battleStone: 0 };
-let potionWealthEnd    = 0;   // ms timestamp when Potion of Wealth buff expires
-let potionWisdomEnd    = 0;   // ms timestamp when Potion of Wisdom buff expires
-let potionSwiftnessEnd = 0;   // ms timestamp when Potion of Swiftness buff expires
+let potionWealthEnd       = 0;   // ms timestamp when Small Potion of Wealth buff expires
+let potionWisdomEnd       = 0;   // ms timestamp when Small Potion of Wisdom buff expires
+let potionSwiftnessEnd    = 0;   // ms timestamp when Small Potion of Swiftness buff expires
+let potionMedWealthEnd    = 0;   // Medium Potion of Wealth
+let potionMedWisdomEnd    = 0;   // Medium Potion of Wisdom
+let potionMedSwiftnessEnd = 0;   // Medium Potion of Swiftness
+let potionMadnessEnd      = 0;   // Potion of Madness
+let potionDangerEnd       = 0;   // Potion of Danger
 let _lastCraftRenderSec = -1;
 
 const AUTO_UNLOCK_LEVEL = 5;
@@ -368,8 +378,8 @@ function fmtCost(n) {
 // ── Drop tables & crafting ─────────────────────────────────────────────────────
 const ROTWORM_DROPS      = ['lumpOfDirt', 'rotwormFang', 'worm'];
 const ROTWORM_BOSS_DROPS = ['lumpOfDirt', 'rotwormFang', 'worm', 'gland'];
-const CYCLOPS_DROPS      = ['cyclopsToe', 'wolfToothChain', 'cyclopsEye'];
-const CYCLOPS_BOSS_DROPS = ['cyclopsToe', 'wolfToothChain', 'cyclopsEye', 'battleStone'];
+const CYCLOPS_DROPS      = ['lumpOfDirt', 'rotwormFang', 'worm', 'cyclopsToe', 'wolfToothChain', 'cyclopsEye'];
+const CYCLOPS_BOSS_DROPS = ['lumpOfDirt', 'rotwormFang', 'worm', 'gland', 'cyclopsToe', 'wolfToothChain', 'cyclopsEye', 'battleStone'];
 
 const ITEM_DEFS = [
     { key: 'lumpOfDirt',     name: 'Lump of Dirt',     icon: '🪨' },
@@ -383,9 +393,14 @@ const ITEM_DEFS = [
 ];
 
 const CRAFTING_RECIPES = [
-    { id: 'wealth',    name: 'Small Potion of Wealth',    icon: '💰', desc: '+50% gold gain for 5 minutes',      goldCost: 10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
-    { id: 'wisdom',    name: 'Small Potion of Wisdom',    icon: '📚', desc: '+50% experience gain for 5 minutes', goldCost: 10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
-    { id: 'swiftness', name: 'Small Potion of Swiftness', icon: '⚡', desc: '-20% all cooldowns for 5 minutes',  goldCost: 10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
+    { id: 'wealth',       name: 'Small Potion of Wealth',    icon: '💰', desc: '+50% gold gain for 5 minutes',                                  goldCost:  10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
+    { id: 'wisdom',       name: 'Small Potion of Wisdom',    icon: '📚', desc: '+50% experience gain for 5 minutes',                              goldCost:  10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
+    { id: 'swiftness',    name: 'Small Potion of Swiftness', icon: '⚡', desc: '-20% all cooldowns for 5 minutes',                                goldCost:  10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
+    { id: 'medWealth',    name: 'Medium Potion of Wealth',   icon: '💰', desc: '+75% gold gain for 5 minutes',                                   goldCost:  20000, ingredients: { cyclopsToe: 5, wolfToothChain: 5, cyclopsEye: 5, battleStone: 1 }, ascendedOnly: true },
+    { id: 'medWisdom',    name: 'Medium Potion of Wisdom',   icon: '📚', desc: '+75% experience gain for 5 minutes',                             goldCost:  20000, ingredients: { cyclopsToe: 5, wolfToothChain: 5, cyclopsEye: 5, battleStone: 1 }, ascendedOnly: true },
+    { id: 'medSwiftness', name: 'Medium Potion of Swiftness',icon: '⚡', desc: '-50% all cooldowns for 5 minutes',                               goldCost:  20000, ingredients: { cyclopsToe: 5, wolfToothChain: 5, cyclopsEye: 5, battleStone: 1 }, ascendedOnly: true },
+    { id: 'madness',      name: 'Potion of Madness',         icon: '🌀', desc: '+10 max spawn cap & 10× spawn rate for 5 minutes',               goldCost:  50000, ingredients: { cyclopsToe: 10, wolfToothChain: 10, cyclopsEye: 10, battleStone: 2 }, ascendedOnly: true },
+    { id: 'danger',       name: 'Potion of Danger',          icon: '💀', desc: 'Reduces kills required for boss by 25% for 5 minutes',           goldCost:  50000, ingredients: { cyclopsToe: 10, wolfToothChain: 10, cyclopsEye: 10, battleStone: 2 }, ascendedOnly: true },
 ];
 
 const CRAFTING_UNLOCK_LEVEL = 20;
@@ -401,20 +416,32 @@ function rollDrops(pool, isUber, isBoss) {
     return [{ k: pool[Math.floor(Math.random() * pool.length)], qty: 1 }];
 }
 
-function potionGoldMult()  { return Date.now() < potionWealthEnd    ? 1.5 : 1.0; }
-function potionExpMult()   { return Date.now() < potionWisdomEnd    ? 1.5 : 1.0; }
-function potionCdrMult()   { return Date.now() < potionSwiftnessEnd ? 0.8 : 1.0; }
+function potionGoldMult()  { let m = 1.0; if (Date.now() < potionWealthEnd) m *= 1.5; if (Date.now() < potionMedWealthEnd) m *= 1.75; return m; }
+function potionExpMult()   { let m = 1.0; if (Date.now() < potionWisdomEnd)  m *= 1.5; if (Date.now() < potionMedWisdomEnd)  m *= 1.75; return m; }
+function potionCdrMult()   { let m = 1.0; if (Date.now() < potionSwiftnessEnd) m *= 0.8; if (Date.now() < potionMedSwiftnessEnd) m *= 0.5; return m; }
+function potionMadnessActive() { return Date.now() < potionMadnessEnd; }
+function potionDangerActive()  { return Date.now() < potionDangerEnd; }
 
 function _getPotionEnd(id) {
-    if (id === 'wealth')    return potionWealthEnd;
-    if (id === 'wisdom')    return potionWisdomEnd;
-    if (id === 'swiftness') return potionSwiftnessEnd;
+    if (id === 'wealth')       return potionWealthEnd;
+    if (id === 'wisdom')       return potionWisdomEnd;
+    if (id === 'swiftness')    return potionSwiftnessEnd;
+    if (id === 'medWealth')    return potionMedWealthEnd;
+    if (id === 'medWisdom')    return potionMedWisdomEnd;
+    if (id === 'medSwiftness') return potionMedSwiftnessEnd;
+    if (id === 'madness')      return potionMadnessEnd;
+    if (id === 'danger')       return potionDangerEnd;
     return 0;
 }
 function _setPotionEnd(id, val) {
-    if (id === 'wealth')         potionWealthEnd    = val;
-    else if (id === 'wisdom')    potionWisdomEnd    = val;
-    else if (id === 'swiftness') potionSwiftnessEnd = val;
+    if      (id === 'wealth')       potionWealthEnd       = val;
+    else if (id === 'wisdom')       potionWisdomEnd       = val;
+    else if (id === 'swiftness')    potionSwiftnessEnd    = val;
+    else if (id === 'medWealth')    potionMedWealthEnd    = val;
+    else if (id === 'medWisdom')    potionMedWisdomEnd    = val;
+    else if (id === 'medSwiftness') potionMedSwiftnessEnd = val;
+    else if (id === 'madness')      potionMadnessEnd      = val;
+    else if (id === 'danger')       potionDangerEnd       = val;
 }
 
 function openInventory() {
@@ -454,7 +481,7 @@ function renderCrafting(filterKey) {
     if (!body) return;
     const now   = Date.now();
     const fmtMs = ms => Math.floor(ms / 60000) + ':' + String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
-    body.innerHTML = CRAFTING_RECIPES.map(r => {
+    body.innerHTML = CRAFTING_RECIPES.filter(r => !r.ascendedOnly || ascended).map(r => {
         const active   = now < _getPotionEnd(r.id);
         const ingOk    = Object.entries(r.ingredients).every(([k, v]) => (inventory[k] || 0) >= v);
         const goldOk   = gold >= r.goldCost;
@@ -549,8 +576,8 @@ function buySkill(id) {
 }
 
 // ── Skill effect helpers ──────────────────────────────────────────
-function skillMonsterCap()     { return 10 + skillPts(1); }
-function skillBossInterval()   { return Math.max(20, BOSS_EVERY - skillPts(2) * 2); }
+function skillMonsterCap()     { return 10 + skillPts(1) + (potionMadnessActive() ? 10 : 0); }
+function skillBossInterval()   { return Math.max(5, Math.floor((Math.max(20, BOSS_EVERY - skillPts(2) * 2)) * (potionDangerActive() ? 0.75 : 1.0))); }
 function skillGoldMult()       { return 1 + skillPts(4) * 0.1; }
 function skillExpMult()        { return 1 + skillPts(5) * 0.1; }
 function skillCdResetEnabled() { return skillPts(6) >= 1; }
@@ -895,6 +922,8 @@ function getProgress() {
         totalClicks,
         inventory,
         potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
+        potionMedWealthEnd, potionMedWisdomEnd, potionMedSwiftnessEnd,
+        potionMadnessEnd, potionDangerEnd,
         savedAt: Date.now(),
     };
 }
@@ -933,9 +962,14 @@ function loadProgress(state) {
         if (s.firstBossSpawned       != null) firstBossSpawned      = s.firstBossSpawned;
         if (s.totalClicks             != null) totalClicks           = s.totalClicks;
         if (s.inventory        != null) inventory        = Object.assign({}, inventory, s.inventory);
-        if (s.potionWealthEnd    != null) potionWealthEnd    = s.potionWealthEnd;
-        if (s.potionWisdomEnd    != null) potionWisdomEnd    = s.potionWisdomEnd;
-        if (s.potionSwiftnessEnd != null) potionSwiftnessEnd = s.potionSwiftnessEnd;
+        if (s.potionWealthEnd       != null) potionWealthEnd       = s.potionWealthEnd;
+        if (s.potionWisdomEnd       != null) potionWisdomEnd       = s.potionWisdomEnd;
+        if (s.potionSwiftnessEnd    != null) potionSwiftnessEnd    = s.potionSwiftnessEnd;
+        if (s.potionMedWealthEnd    != null) potionMedWealthEnd    = s.potionMedWealthEnd;
+        if (s.potionMedWisdomEnd    != null) potionMedWisdomEnd    = s.potionMedWisdomEnd;
+        if (s.potionMedSwiftnessEnd != null) potionMedSwiftnessEnd = s.potionMedSwiftnessEnd;
+        if (s.potionMadnessEnd      != null) potionMadnessEnd      = s.potionMadnessEnd;
+        if (s.potionDangerEnd       != null) potionDangerEnd       = s.potionDangerEnd;
     } catch (_) {}
 }
 
@@ -1633,7 +1667,7 @@ canvas.addEventListener('click', e => {
 });
 
 function update() {
-    if (!spawnPaused && Math.random() < 0.02) spawnWorm();
+    if (!spawnPaused && Math.random() < (potionMadnessActive() ? 0.2 : 0.02)) spawnWorm();
     // auto attack logic — merged worm + boss targeting
     if (autoEnabled) {
         const now = Date.now();
