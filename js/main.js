@@ -628,25 +628,81 @@ const CYCLOPS_DROPS      = ['lumpOfDirt', 'rotwormFang', 'worm', 'cyclopsToe', '
 const CYCLOPS_BOSS_DROPS = ['lumpOfDirt', 'rotwormFang', 'worm', 'gland', 'cyclopsToe', 'wolfToothChain', 'cyclopsEye', 'battleStone'];
 
 const ITEM_DEFS = [
-    { key: 'lumpOfDirt',     name: 'Lump of Dirt',     icon: '🪨' },
-    { key: 'rotwormFang',    name: 'Rotworm Fang',     icon: '🦷' },
-    { key: 'worm',           name: 'Worm',             icon: '🪱' },
-    { key: 'gland',          name: 'Gland',            icon: '💧' },
-    { key: 'cyclopsToe',     name: 'Cyclops Toe',      icon: '🦶' },
-    { key: 'wolfToothChain', name: 'Wolf Tooth Chain', icon: '⛓'  },
-    { key: 'cyclopsEye',     name: 'Cyclops Eye',      icon: '👁'  },
-    { key: 'battleStone',    name: 'Battle Stone',     icon: '💎' },
+    { key: 'blueEssence',   name: 'Blue Essence',   icon: '🔵' },
+    { key: 'greenEssence',  name: 'Green Essence',  icon: '🟢' },
+    { key: 'redEssence',    name: 'Red Essence',    icon: '🔴' },
+    { key: 'yellowEssence', name: 'Yellow Essence', icon: '🟡' },
 ];
 
+// Loot table per monster tier (M1..M11). Each row defines the base chance to drop any essence,
+// and the relative chance of each essence color.
+const LOOT_TABLE = [
+    { dropChance: 0.05,  weights: { blue: 0.70, green: 0.20, red: 0.09, yellow: 0.01 } },
+    { dropChance: 0.0625, weights: { blue: 0.68, green: 0.21, red: 0.10, yellow: 0.01 } },
+    { dropChance: 0.078,  weights: { blue: 0.65, green: 0.23, red: 0.11, yellow: 0.01 } },
+    { dropChance: 0.097,  weights: { blue: 0.62, green: 0.25, red: 0.12, yellow: 0.01 } },
+    { dropChance: 0.12,   weights: { blue: 0.58, green: 0.27, red: 0.14, yellow: 0.01 } },
+    { dropChance: 0.15,   weights: { blue: 0.55, green: 0.28, red: 0.15, yellow: 0.02 } },
+    { dropChance: 0.19,   weights: { blue: 0.50, green: 0.30, red: 0.17, yellow: 0.03 } },
+    { dropChance: 0.24,   weights: { blue: 0.45, green: 0.32, red: 0.19, yellow: 0.04 } },
+    { dropChance: 0.30,   weights: { blue: 0.40, green: 0.34, red: 0.21, yellow: 0.05 } },
+    { dropChance: 0.38,   weights: { blue: 0.35, green: 0.36, red: 0.23, yellow: 0.06 } },
+    { dropChance: 0.48,   weights: { blue: 0.30, green: 0.38, red: 0.25, yellow: 0.07 } },
+];
+
+function _pickWeighted(weights) {
+    const total = Object.values(weights).reduce((a, b) => a + b, 0);
+    const r = Math.random() * total;
+    let acc = 0;
+    for (const [key, value] of Object.entries(weights)) {
+        acc += value;
+        if (r <= acc) return key;
+    }
+    return Object.keys(weights)[0];
+}
+
+function getAreaTierIndex() {
+    const idx = AREAS.findIndex(a => a.id === currentArea);
+    return Math.max(0, Math.min(LOOT_TABLE.length - 1, idx));
+}
+
+function rollEssenceDrops(isBoss, isUber) {
+    const tier = getAreaTierIndex();
+    const row = LOOT_TABLE[tier];
+    if (!row) return [];
+
+    let chance = row.dropChance;
+    let qty = 1;
+    if (isBoss) {
+        chance *= 2;
+        qty *= 2;
+    }
+    if (isUber) {
+        chance *= 2;
+        qty *= 2;
+    }
+
+    if (Math.random() >= chance) return [];
+
+    const color = _pickWeighted(row.weights);
+    const key = {
+        blue: 'blueEssence',
+        green: 'greenEssence',
+        red: 'redEssence',
+        yellow: 'yellowEssence',
+    }[color];
+    return key ? [{ k: key, qty }] : [];
+}
+
 const CRAFTING_RECIPES = [
-    { id: 'wealth',       name: 'Small Potion of Wealth',    icon: '💰', desc: '+50% gold gain for 5 minutes',                                  goldCost:  10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
-    { id: 'wisdom',       name: 'Small Potion of Wisdom',    icon: '📚', desc: '+50% experience gain for 5 minutes',                              goldCost:  10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
-    { id: 'swiftness',    name: 'Small Potion of Swiftness', icon: '⚡', desc: '-20% all cooldowns for 5 minutes',                                goldCost:  10000, ingredients: { lumpOfDirt: 5, rotwormFang: 5, worm: 5, gland: 1 } },
-    { id: 'medWealth',    name: 'Medium Potion of Wealth',   icon: '💰', desc: '+75% gold gain for 5 minutes',                                   goldCost:  20000, ingredients: { cyclopsToe: 5, wolfToothChain: 5, cyclopsEye: 5, battleStone: 1 }, ascendedOnly: true },
-    { id: 'medWisdom',    name: 'Medium Potion of Wisdom',   icon: '📚', desc: '+75% experience gain for 5 minutes',                             goldCost:  20000, ingredients: { cyclopsToe: 5, wolfToothChain: 5, cyclopsEye: 5, battleStone: 1 }, ascendedOnly: true },
-    { id: 'medSwiftness', name: 'Medium Potion of Swiftness',icon: '⚡', desc: '-50% all cooldowns for 5 minutes',                               goldCost:  20000, ingredients: { cyclopsToe: 5, wolfToothChain: 5, cyclopsEye: 5, battleStone: 1 }, ascendedOnly: true },
-    { id: 'madness',      name: 'Potion of Madness',         icon: '🌀', desc: '+10 max spawn cap & 10× spawn rate for 5 minutes',               goldCost:  50000, ingredients: { cyclopsToe: 10, wolfToothChain: 10, cyclopsEye: 10, battleStone: 2 }, ascendedOnly: true },
-    { id: 'danger',       name: 'Potion of Danger',          icon: '💀', desc: 'Reduces kills required for boss by 25% for 5 minutes',           goldCost:  50000, ingredients: { cyclopsToe: 10, wolfToothChain: 10, cyclopsEye: 10, battleStone: 2 }, ascendedOnly: true },
+    { id: 'wealth',       name: 'Small Potion of Wealth',    icon: '💰', desc: '+50% gold gain for 5 minutes',                               goldCost:  10000, ingredients: { blueEssence: 5, greenEssence: 5, redEssence: 5, yellowEssence: 1 } },
+    { id: 'wisdom',       name: 'Small Potion of Wisdom',    icon: '📚', desc: '+50% experience gain for 5 minutes',                         goldCost:  10000, ingredients: { blueEssence: 5, greenEssence: 5, redEssence: 5, yellowEssence: 1 } },
+    { id: 'swiftness',    name: 'Small Potion of Swiftness', icon: '⚡', desc: '-20% all cooldowns for 5 minutes',                           goldCost:  10000, ingredients: { blueEssence: 5, greenEssence: 5, redEssence: 5, yellowEssence: 1 } },
+    { id: 'medWealth',    name: 'Medium Potion of Wealth',   icon: '💰', desc: '+75% gold gain for 5 minutes',                              goldCost:  20000, ingredients: { blueEssence: 10, greenEssence: 10, redEssence: 10, yellowEssence: 2 }, ascendedOnly: true },
+    { id: 'medWisdom',    name: 'Medium Potion of Wisdom',   icon: '📚', desc: '+75% experience gain for 5 minutes',                        goldCost:  20000, ingredients: { blueEssence: 10, greenEssence: 10, redEssence: 10, yellowEssence: 2 }, ascendedOnly: true },
+    { id: 'medSwiftness', name: 'Medium Potion of Swiftness',icon: '⚡', desc: '-50% all cooldowns for 5 minutes',                          goldCost:  20000, ingredients: { blueEssence: 10, greenEssence: 10, redEssence: 10, yellowEssence: 2 }, ascendedOnly: true },
+    { id: 'madness',      name: 'Potion of Madness',         icon: '🌀', desc: '+10 max spawn cap & 10× spawn rate for 5 minutes',          goldCost:  50000, ingredients: { blueEssence: 15, greenEssence: 15, redEssence: 15, yellowEssence: 3 }, ascendedOnly: true },
+    { id: 'danger',       name: 'Potion of Danger',          icon: '💀', desc: 'Reduces kills required for boss by 25% for 5 minutes',        goldCost:  50000, ingredients: { blueEssence: 15, greenEssence: 15, redEssence: 15, yellowEssence: 3 }, ascendedOnly: true },
 ];
 
 const CRAFTING_UNLOCK_LEVEL = 20;
@@ -1729,7 +1785,7 @@ function killWorm(w) {
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: expGain, color: 'white', life: 80 });
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 32, value: goldGain, color: '#f0c040', life: 80 });
     // Loot drop
-    const _wd = rollDrops(ascended ? CYCLOPS_DROPS : ROTWORM_DROPS, false, false);
+    const _wd = rollEssenceDrops(false, false);
     let _wq = 0;
     _wd.forEach(({ k, qty }) => { inventory[k] = (inventory[k] || 0) + qty; _wq += qty; });
     if (_wq > 0) dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 46, value: '+' + _wq, color: '#5599ff', life: 80 });
@@ -1759,7 +1815,7 @@ function killBoss(b) {
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 18, value: expGain, color: '#ffd700', life: 100 });
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 32, value: goldGain, color: '#f0c040', life: 100 });
     // Loot drop
-    const _bd = rollDrops(ascended ? CYCLOPS_BOSS_DROPS : ROTWORM_BOSS_DROPS, b.isUber, true);
+    const _bd = rollEssenceDrops(true, b.isUber);
     let _bq = 0;
     _bd.forEach(({ k, qty }) => { inventory[k] = (inventory[k] || 0) + qty; _bq += qty; });
     if (_bq > 0) dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 46, value: '+' + _bq, color: '#5599ff', life: 100 });
