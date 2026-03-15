@@ -322,7 +322,7 @@ def auth_player(token: str):
     return row
 
 # ── State versioning ──────────────────────────────────────────────
-LATEST_STATE_VERSION = 6
+LATEST_STATE_VERSION = 7
 
 def _upgrade_state(state: dict) -> dict:
     """Bring any player state up to LATEST_STATE_VERSION, filling missing keys
@@ -390,6 +390,27 @@ def _upgrade_state(state: dict) -> dict:
         state['skillPoints'] = {}
         state.setdefault('firestormCharges', 0)
         state['stateVersion'] = 6
+
+    if v < 7:
+        # v7 replaces knight and sorcerer ascension skill trees (3×4, no level gating).
+        # Reset ascension skill points; re-derive class ability unlocks from ascendedClass.
+        state['knightSkillPts'] = {}
+        state['sorcSkillPts'] = {}
+        cls = state.get('ascendedClass')
+        if cls == 'sorcerer':
+            state['ueUnlocked'] = True
+            state['autoUeUnlocked'] = True
+            state['powerStanceUnlocked'] = True
+        elif cls == 'knight':
+            state['annihilationUnlocked'] = True
+        # New sorcerer HMM + knight combo state defaults
+        state.setdefault('hmmCooldownEnd', 0)
+        state.setdefault('arcaneWeakeningStacks', 0)
+        state.setdefault('obliterationBeamCooldownEnd', 0)
+        state.setdefault('comboStacks', 0)
+        state.setdefault('flowStacks', 0)
+        state.setdefault('clickOrderCount', 0)
+        state['stateVersion'] = 7
 
     return state
 

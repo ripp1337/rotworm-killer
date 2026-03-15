@@ -348,6 +348,14 @@ function doAscendAsClass(cls) {
     if (ascended) return;
     ascendedClass = cls;
     ascended = true;
+    // Auto-unlock class abilities on ascension (no longer gated by skill tree)
+    if (cls === 'sorcerer') {
+        ueUnlocked = true; autoUeUnlocked = true; autoUeEnabled = true;
+        powerStanceUnlocked = true; autoPsEnabled = true;
+    }
+    if (cls === 'knight') {
+        annihilationUnlocked = true; autoAnniEnabled = true;
+    }
     worms    = [];
     boss     = null;
     bossSpawnCounter = 0;
@@ -387,6 +395,63 @@ function basicDmgMin()  { return WEAPONS[weaponIndex].min + knightDmgMinBonus() 
 function basicDmgMax()  { return WEAPONS[weaponIndex].max + knightDmgMaxBonus() + sorcDmgMaxBonus(); }
 function rollBasicDmg() { return basicDmgMin() + Math.floor(Math.random() * (basicDmgMax() - basicDmgMin() + 1)); }
 function rollAutoDmg()  { return Math.ceil(rollBasicDmg() * skillAutoDmgMult()); }
+
+// Knight click combat: tracks combo, crits, executioner, adrenaline, overclocked.
+function _processClick(isBoss) {
+    const now = Date.now();
+    // K10 Adrenaline Rush: each click adds a stack that expires after 1s
+    if (kPts(110) > 0) adrenalineStackExpiry.push(now + 1000);
+    adrenalineStackExpiry = adrenalineStackExpiry.filter(t => t > now);
+    adrenalineStacks = Math.min(10, adrenalineStackExpiry.length);
+    // K12 Overclocked: track click timestamps for >3/s check
+    recentClickTimes.push(now);
+    if (recentClickTimes.length > 20) recentClickTimes.shift();
+    // K4 Executioner's Rhythm: every 5th click
+    clickOrderCount++;
+    const isExecutioner = kPts(104) > 0 && (clickOrderCount % 5 === 0);
+    // K5-K8 Combo system
+    const isComboBreaker = comboBreakReady && kPts(107) > 0;
+    if (kPts(105) > 0) {
+        if (isComboBreaker) {
+            // K8 Perfect Flow: reaching max combo within 5s of previous Combo Breaker
+            if (kPts(108) > 0 && lastComboBreakTime > 0 && (now - lastComboBreakTime) <= 5000 && flowStacks < 3) {
+                flowStacks++;
+            }
+            comboStacks = 0;
+            comboBreakReady = false;
+            lastComboBreakTime = now;
+        } else {
+            comboStacks = Math.min(knightComboMaxStacks(), comboStacks + 1);
+            if (kPts(107) > 0 && comboStacks >= knightComboMaxStacks()) comboBreakReady = true;
+        }
+    }
+    return rollClickDmg(isBoss, isComboBreaker, isExecutioner);
+}
+
+function rollClickDmg(isBoss, isComboBreaker, isExecutioner) {
+    let dmg = rollBasicDmg();
+    if (ascendedClass === 'knight') {
+        const oc = recentClickTimes.filter(t => Date.now() - t < 1000).length >= 3;
+        // K1 + K5 combo + K8 flow + K12 overclocked + K7 combo breaker + K4 executioner
+        let mult = 1 + kPts(101) * 0.10;
+        if (kPts(105) > 0) mult *= (1 + comboStacks * 0.01);
+        if (kPts(108) > 0) mult *= (1 + flowStacks * kPts(108) * 0.02);
+        if (kPts(112) > 0 && oc) mult *= (1 + kPts(112) * 0.02);
+        if (isComboBreaker) mult *= (1 + kPts(107) * 0.20);
+        if (isExecutioner) mult *= (1 + kPts(104) * 0.20);
+        dmg = Math.ceil(dmg * mult);
+        // K2 + K3 Critical Strike
+        const critChance = kPts(102) * 0.02 + (kPts(112) > 0 && oc ? kPts(112) * 0.01 : 0);
+        if (critChance > 0 && Math.random() < critChance) {
+            dmg = Math.ceil(dmg * knightCritMult());
+        }
+    }
+    // S9 Bane of Titans + S10 Arcane Weakening (sorcerer, boss target)
+    if (isBoss && ascendedClass === 'sorcerer') {
+        dmg = Math.ceil(dmg * sorcBossDmgMult() * sorcWeakeningBonusMult());
+    }
+    return dmg;
+}
 
 // Tibia-accurate health bar color based on HP ratio
 function hpBarColor(ratio) {
@@ -543,10 +608,27 @@ const GFB_COOLDOWN_MS    = 20000;  // 20s base (reduced by Fireball CDR skill)
 const GFB_GOLD_COST      = 0;      // free to cast
 const GFB_UNLOCK_LEVEL   = 4;
 const GFB_UNLOCK_GOLD    = 100;
+const HMM_COOLDOWN_MS    = 20000;  // Heavy Magic Missile: 20s (Sorcerer S1)
+const OBLITERATION_BEAM_COOLDOWN_MS = 60000; // Obliteration Beam: 60s (Sorcerer S12)
 let gfbUnlocked     = false;
 let lastBasicAttack = 0;   // timestamp of last basic hit
 let gfbCooldownEnd  = 0;   // timestamp when GFB is ready again
 let firestormCharges = 0;  // Firestorm Charge counter (C3 skill)
+
+// Sorcerer Heavy Magic Missile + Obliteration Beam state
+let hmmCooldownEnd = 0;
+let hmmHitCounter  = 0;              // total HMM fires (Cataclysm every 5, Titan Slayer every 3)
+let arcaneWeakeningStacks = 0;       // S10 Arcane Weakening stacks on current boss
+let obliterationBeamCooldownEnd = 0;
+
+// Knight combo + speed state
+let comboStacks        = 0;
+let comboBreakReady    = false;
+let lastComboBreakTime = 0;
+let flowStacks         = 0;
+let clickOrderCount    = 0;          // total clicks (Executioner's Rhythm every 5)
+let adrenalineStackExpiry = [];      // K10: per-stack expiry timestamps
+let recentClickTimes      = [];      // K12: click timestamps for >3/s check
 
 const UE_UNLOCK_LEVEL = 40; // Sorcerer only
 const UE_UNLOCK_GOLD  = 1000;
@@ -679,7 +761,7 @@ function rollEssenceDrops(isBoss, isUber) {
     const row = LOOT_TABLE[tier];
     if (!row) return [];
 
-    let chance = row.dropChance * skillMatDropMult();
+    let chance = row.dropChance * skillMatDropMult() * sorcMatMult();
     let qty = 1;
     if (isBoss) {
         chance *= 2;
@@ -689,7 +771,7 @@ function rollEssenceDrops(isBoss, isUber) {
         chance *= 2;
         qty *= 2;
     }
-    qty = Math.ceil(qty * skillMatQtyMult());
+    qty = Math.ceil(qty * skillMatQtyMult() * sorcMatMult());
 
     if (Math.random() >= chance) return [];
 
@@ -907,7 +989,7 @@ function craftPotion(id) {
     // Stack duration for the same potion type when crafting again while it's active.
     const now = Date.now();
     const currentEnd = _getPotionEnd(id);
-    const duration = (r.durationMinutes || 5) * 60 * 1000;
+    const duration = (r.durationMinutes || 5) * 60 * 1000 * sorcPotionDurMult();
     _setPotionEnd(id, Math.max(now, currentEnd) + duration);
 
     renderCrafting();
@@ -988,18 +1070,21 @@ function skillCdResetEnabled()    { return false; }
 // ── Knight skill tree ─────────────────────────────────────────────
 // costs[] = gold cost per level [lvl1, lvl2, ...]
 const KNIGHT_SKILLS = [
-    // Column 1 — Speed
-    { id: 101, col: 1, row: 1, name: 'Attack Speed',      max: 5, reqLevel: 30, prereqs: [],           costs: [100, 500, 2000, 5000, 10000],             desc: '-10% click attack cooldown per point (max -50%)' },
-    { id: 102, col: 1, row: 2, name: 'Auto Speed',        max: 5, reqLevel: 35, prereqs: [101],          costs: [500, 1000, 5000, 20000, 50000],            desc: '-10% auto attack cooldown per point (max -50%)' },
-    { id: 103, col: 1, row: 3, name: 'Extra Auto Target', max: 1, reqLevel: 50, prereqs: [101, 102],     costs: [50000],                                    desc: 'Auto attack hits one additional target (stacks with Double Strike)' },
-    // Column 2 — Annihilation
-    { id: 104, col: 2, row: 1, name: 'Annihilation',      max: 1, reqLevel: 40, prereqs: [],             costs: [20000],                                    desc: 'Unlock Annihilation: instantly slay the boss (3 min CD, no effect on Uber bosses)' },
-    { id: 105, col: 2, row: 2, name: 'Auto Annihilation', max: 1, reqLevel: 50, prereqs: [104],          costs: [50000],                                    desc: 'Automatically casts Annihilation whenever ready' },
-    { id: 106, col: 2, row: 3, name: 'Anni CDR',          max: 5, reqLevel: 60, prereqs: [104, 105],     costs: [1000, 2000, 5000, 20000, 100000],          desc: '-10% Annihilation cooldown per point (max -50%)' },
-    // Column 3 — Damage
-    { id: 107, col: 3, row: 1, name: 'Max Damage',        max: 5, reqLevel: 30, prereqs: [],             costs: [100, 500, 2000, 5000, 10000],             desc: '+5 max damage per point' },
-    { id: 108, col: 3, row: 2, name: 'Min Damage',        max: 5, reqLevel: 40, prereqs: [107],          costs: [500, 1000, 5000, 20000, 50000],           desc: '+5 min damage per point' },
-    { id: 109, col: 3, row: 3, name: 'Power Surge',       max: 5, reqLevel: 50, prereqs: [107, 108],     costs: [1000, 2000, 5000, 20000, 100000],         desc: '+5 min and max damage per point' },
+    // Column 1 — Click Damage
+    { id: 101, col: 1, row: 1, name: 'Strike Training',      max: 10, prereqs: [],       costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                 desc: '+10% click damage per point (+100% at max)' },
+    { id: 102, col: 1, row: 2, name: 'Precision Strikes',    max: 10, prereqs: [101],    costs: [500,1000,2000,4000,8000,16000,32000,64000,128000,256000],                         desc: '+2% critical strike chance per point (+20% at max). Requires 1pt Strike Training' },
+    { id: 103, col: 1, row: 3, name: 'Heavy Blows',          max: 10, prereqs: [102],    costs: [2000,4000,8000,16000,32000,64000,128000,256000,512000,1024000],                   desc: '+10% crit damage per point (×2 base → ×3 at max). Requires 1pt Precision Strikes' },
+    { id: 104, col: 1, row: 4, name: "Executioner's Rhythm", max: 10, prereqs: [103],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],             desc: 'Every 5th click deals +20% bonus damage per point (+200% at max). Requires 1pt Heavy Blows' },
+    // Column 2 — Combo
+    { id: 105, col: 2, row: 1, name: 'Combo Meter',          max: 10, prereqs: [],       costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                 desc: 'Each click adds 1 combo stack (+1% click damage each). Max stacks = 10+1/pt (20 at max)' },
+    { id: 106, col: 2, row: 2, name: 'Combo Speed',          max: 10, prereqs: [105],    costs: [500,1000,2000,4000,8000,16000,32000,64000,128000,256000],                         desc: '+0.5% attack speed per combo stack per point. Requires 1pt Combo Meter' },
+    { id: 107, col: 2, row: 3, name: 'Combo Breaker',        max: 10, prereqs: [106],    costs: [2000,4000,8000,16000,32000,64000,128000,256000,512000,1024000],                   desc: 'At max combo, next click is a Combo Breaker: +20% damage per point, resets combo. Requires 1pt Combo Speed' },
+    { id: 108, col: 2, row: 4, name: 'Perfect Flow',         max: 10, prereqs: [107],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],             desc: 'Reaching max combo within 5s of a Combo Breaker grants a Flow Stack (max 3): +2% dmg and +1% speed per point per stack. Requires 1pt Combo Breaker' },
+    // Column 3 — Speed
+    { id: 109, col: 3, row: 1, name: 'Quick Hands',          max: 10, prereqs: [],       costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                 desc: '-0.01s click cooldown per point (0.50s → 0.40s at max)' },
+    { id: 110, col: 3, row: 2, name: 'Adrenaline Rush',      max: 10, prereqs: [109],    costs: [500,1000,2000,4000,8000,16000,32000,64000,128000,256000],                         desc: 'Each click grants +1% attack speed per point for 1s (stacks up to 10×). Requires 1pt Quick Hands' },
+    { id: 111, col: 3, row: 3, name: 'Rapid Strikes',        max: 10, prereqs: [110],    costs: [2000,4000,8000,16000,32000,64000,128000,256000,512000,1024000],                   desc: 'Every 10 clicks, instantly perform 1 extra attack per point. Requires 1pt Adrenaline Rush' },
+    { id: 112, col: 3, row: 4, name: 'Overclocked',          max: 10, prereqs: [111],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],             desc: 'While clicking >3/s: +2% click damage and +1% crit chance per point. Requires 1pt Rapid Strikes' },
 ];
 
 let knightSkillPts = {};
@@ -1007,7 +1092,6 @@ let knightSkillPts = {};
 function kPts(id)           { return knightSkillPts[id] || 0; }
 function kPrereqsMet(skill) { return skill.prereqs.every(pid => kPts(pid) >= 1); }
 function kCanBuy(skill) {
-    if (level < skill.reqLevel)      return false;
     if (kPts(skill.id) >= skill.max) return false;
     if (!kPrereqsMet(skill))         return false;
     return gold >= (skill.costs[kPts(skill.id)] ?? 0);
@@ -1017,36 +1101,35 @@ function buyKnightSkill(id) {
     if (!skill || !kCanBuy(skill)) return;
     gold -= (skill.costs[kPts(skill.id)] ?? 0);
     knightSkillPts[id] = (knightSkillPts[id] || 0) + 1;
-    if (id === 104) annihilationUnlocked = true;
-    if (id === 105) { autoAnniEnabled = true; }
     renderSkillTree();
 }
 
 // Knight effect helpers
-function knightDmgMinBonus()     { return (kPts(108) + kPts(109)) * 5; }
-function knightDmgMaxBonus()     { return (kPts(107) + kPts(109)) * 5; }
-function knightExtraAutoTarget() { return kPts(103) >= 1; }
-function knightAutoAnniOn()      { return kPts(105) >= 1 && autoAnniEnabled; }
+function knightDmgMinBonus()     { return 0; }                         // no additive bonus (K1 is a multiplier in rollClickDmg)
+function knightDmgMaxBonus()     { return 0; }                         // same
+function knightExtraAutoTarget() { return false; }                     // removed (auto targeting handled by general tree)
+function knightAutoAnniOn()      { return autoAnniEnabled; }           // Annihilation auto-unlocked on ascension
+function knightComboMaxStacks()  { return kPts(105) > 0 ? 10 + kPts(105) : 0; }
+function knightCritMult()        { return 2.0 + kPts(103) * 0.10; }   // K3: base ×2, up to ×3
 
 // ── Sorcerer skill tree ───────────────────────────────────────────
 // costs[] = gold cost per level [lvl1, lvl2, ...]
 const SORC_SKILLS = [
-    // Column 1 — Great Fireball
-    { id: 201, col: 1, row: 1, name: 'Great Fireball',      max: 1, reqLevel: 30, prereqs: [],           costs: [5000],                              desc: 'Upgrades Fireball to Great Fireball: instantly kills all non-boss enemies in range (requires Fireball from General Skill Tree)' },
-    { id: 202, col: 1, row: 2, name: 'Volatile Blast',     max: 1, reqLevel: 35, prereqs: [201],         costs: [20000],                              desc: 'GFB also deals 50% of boss max HP as bonus damage when boss is in range' },
-    { id: 203, col: 1, row: 3, name: 'Double Fireball',     max: 1, reqLevel: 50, prereqs: [201, 202],    costs: [50000],                             desc: 'Each Fireball cast fires a second Fireball at the best remaining cluster' },
-    // Column 2 — Ultimate Explosion
-    { id: 204, col: 2, row: 1, name: 'Ultimate Explosion',  max: 1, reqLevel: 40, prereqs: [],            costs: [20000],                             desc: 'Unlock Ultimate Explosion: instantly kills all non-boss enemies (5 min CD)' },
-    { id: 205, col: 2, row: 2, name: 'Auto Ult. Explosion', max: 1, reqLevel: 50, prereqs: [204],         costs: [50000],                             desc: 'Automatically casts Ultimate Explosion whenever off cooldown' },
-    { id: 206, col: 2, row: 3, name: 'UE CDR',              max: 5, reqLevel: 60, prereqs: [204, 205],    costs: [1000, 2000, 5000, 20000, 100000],    desc: '-10% Ultimate Explosion cooldown per point (max -50%)' },
-    // Column 3 — Damage
-    { id: 207, col: 3, row: 1, name: 'Max Damage',          max: 5, reqLevel: 30, prereqs: [],            costs: [100, 500, 2000, 5000, 10000],        desc: '+5 max damage per point' },
-    { id: 208, col: 3, row: 2, name: 'Min Damage',          max: 5, reqLevel: 40, prereqs: [207],         costs: [500, 1000, 5000, 20000, 50000],      desc: '+5 min damage per point' },
-    { id: 209, col: 3, row: 3, name: 'Power Surge',         max: 5, reqLevel: 50, prereqs: [207, 208],    costs: [1000, 2000, 5000, 20000, 100000],    desc: '+5 min and max damage per point' },
-    // Column 4 — Power Stance
-    { id: 210, col: 4, row: 1, name: 'Power Stance',        max: 1, reqLevel: 40, prereqs: [],            costs: [10000],                             desc: 'Unlock Power Stance: +15 min/max damage, +50% attack speed for 90s (6 min CD)' },
-    { id: 211, col: 4, row: 2, name: 'Auto Power Stance',   max: 1, reqLevel: 50, prereqs: [210],         costs: [20000],                             desc: 'Automatically activates Power Stance whenever off cooldown' },
-    { id: 212, col: 4, row: 3, name: 'PS CDR',              max: 5, reqLevel: 60, prereqs: [210, 211],    costs: [1000, 2000, 5000, 20000, 100000],    desc: '-10% Power Stance cooldown per point (max -50%)' },
+    // Column 1 — Heavy Magic Missile
+    { id: 201, col: 1, row: 1, name: 'Heavy Magic Missile',  max: 10, prereqs: [],       costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                 desc: 'Unlocks Heavy Magic Missile: auto-fires every 20s dealing (10+5×pts)% of monster max HP' },
+    { id: 202, col: 1, row: 2, name: 'Missile Empowerment',  max: 10, prereqs: [201],    costs: [500,1000,2000,4000,8000,16000,32000,64000,128000,256000],                         desc: '+4% Heavy Magic Missile damage per point (+40% at max). Requires 1pt Heavy Magic Missile' },
+    { id: 203, col: 1, row: 3, name: 'Twin Missile',         max: 10, prereqs: [202],    costs: [2000,4000,8000,16000,32000,64000,128000,256000,512000,1024000],                   desc: '+3% chance per point to fire a second missile (+30% at max). Requires 1pt Missile Empowerment' },
+    { id: 204, col: 1, row: 4, name: 'Cataclysmic Missile',  max: 10, prereqs: [203],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],             desc: 'Every 5th missile unleashes a Cataclysm: +10% monster max HP bonus damage per point. Requires 1pt Twin Missile' },
+    // Column 2 — Loot / Economy
+    { id: 205, col: 2, row: 1, name: 'Arcane Fortune',       max: 10, prereqs: [],       costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                 desc: '+3% gold gained per point (+30% at max)' },
+    { id: 206, col: 2, row: 2, name: 'Mystic Salvaging',     max: 10, prereqs: [205],    costs: [500,1000,2000,4000,8000,16000,32000,64000,128000,256000],                         desc: '+5% crafting material drops per point (+50% at max). Requires 1pt Arcane Fortune' },
+    { id: 207, col: 2, row: 3, name: 'Arcane Extraction',    max: 10, prereqs: [206],    costs: [2000,4000,8000,16000,32000,64000,128000,256000,512000,1024000],                   desc: '+2% extra boss loot per point (+20% at max). Requires 1pt Mystic Salvaging' },
+    { id: 208, col: 2, row: 4, name: 'Grand Alchemist',      max: 10, prereqs: [207],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],             desc: '+2% potion duration per point (+20% at max). Requires 1pt Arcane Extraction' },
+    // Column 3 — Boss Killer
+    { id: 209, col: 3, row: 1, name: 'Bane of Titans',       max: 10, prereqs: [],       costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                 desc: '+5% damage dealt to bosses per point (+50% at max)' },
+    { id: 210, col: 3, row: 2, name: 'Arcane Weakening',     max: 10, prereqs: [209],    costs: [500,1000,2000,4000,8000,16000,32000,64000,128000,256000],                         desc: 'Heavy Magic Missiles hitting a boss add a Weakening stack (max 10): +2% damage taken per point per stack. Requires 1pt Bane of Titans' },
+    { id: 211, col: 3, row: 3, name: 'Titan Slayer',         max: 10, prereqs: [210],    costs: [2000,4000,8000,16000,32000,64000,128000,256000,512000,1024000],                   desc: 'Every 3rd missile deals bonus boss damage: +10% boss max HP per point. Requires 1pt Arcane Weakening' },
+    { id: 212, col: 3, row: 4, name: 'Obliteration Beam',    max: 10, prereqs: [211],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],             desc: 'Auto-fires a boss-only nuke every 60s dealing +5% boss max HP per point (+50% at max). Requires 1pt Titan Slayer' },
 ];
 
 let sorcSkillPts = {};
@@ -1054,10 +1137,8 @@ let sorcSkillPts = {};
 function sPts(id)           { return sorcSkillPts[id] || 0; }
 function sPrereqsMet(skill) { return skill.prereqs.every(pid => sPts(pid) >= 1); }
 function sCanBuy(skill) {
-    if (level < skill.reqLevel)      return false;
     if (sPts(skill.id) >= skill.max) return false;
     if (!sPrereqsMet(skill))         return false;
-    if (skill.id === 201 && !gfbUnlocked) return false; // requires Fireball from General tree first
     return gold >= (skill.costs[sPts(skill.id)] ?? 0);
 }
 function buySorcSkill(id) {
@@ -1065,21 +1146,30 @@ function buySorcSkill(id) {
     if (!skill || !sCanBuy(skill)) return;
     gold -= (skill.costs[sPts(skill.id)] ?? 0);
     sorcSkillPts[id] = (sorcSkillPts[id] || 0) + 1;
-    // id 201: no side-effect — fireball already unlocked via general tree; 201 just upgrades it
-    if (id === 204) ueUnlocked = true;
-    if (id === 205) { autoUeUnlocked = true; autoUeEnabled = true; }
-    if (id === 210) powerStanceUnlocked = true;
-    if (id === 211) { autoPsEnabled = true; }
     renderSkillTree();
 }
 
 // Sorc effect helpers
-function sorcDmgMinBonus()  { return (sPts(208) + sPts(209)) * 5 + (powerStanceActive ? 15 : 0); }
-function sorcDmgMaxBonus()  { return (sPts(207) + sPts(209)) * 5 + (powerStanceActive ? 15 : 0); }
-function sorcDoubleGfb()    { return sPts(203) >= 1; }
-function sorcGfbUpgraded()  { return ascendedClass === 'sorcerer' && sPts(201) >= 1; }
-function sorcAutoUe()       { return sPts(205) >= 1; }
-function sorcAutoPs()       { return sPts(211) >= 1 && autoPsEnabled; }
+function sorcDmgMinBonus()         { return powerStanceActive ? 15 : 0; }       // Power Stance flat bonus (auto-unlocked on ascension)
+function sorcDmgMaxBonus()         { return powerStanceActive ? 15 : 0; }       // same
+function sorcHmmDmgFrac()          { return (10 + sPts(201) * 5) / 100; }       // S1: (10+5/pt)% max HP
+function sorcHmmDmgMult()          { return 1 + sPts(202) * 0.04; }             // S2: +4%/pt
+function sorcTwinMissileChance()   { return sPts(203) * 0.03; }                 // S3: +3%/pt
+function sorcCataclysmDmgFrac()    { return sPts(204) * 0.10; }                 // S4: +10%/pt
+function sorcGoldMult()            { return 1 + sPts(205) * 0.03; }             // S5: +3%/pt gold
+function sorcMatMult()             { return 1 + sPts(206) * 0.05; }             // S6: +5%/pt materials
+function sorcBossLootMult()        { return 1 + sPts(207) * 0.02; }             // S7: +2%/pt boss loot
+function sorcPotionDurMult()       { return 1 + sPts(208) * 0.02; }             // S8: +2%/pt potion duration
+function sorcBossDmgMult()         { return 1 + sPts(209) * 0.05; }             // S9: +5%/pt boss damage
+function sorcWeakeningBonusMult()  { return 1 + arcaneWeakeningStacks * sPts(210) * 0.02; } // S10
+function sorcTitanSlayerDmgFrac()  { return sPts(211) * 0.10; }                 // S11: +10%/pt
+function sorcObliterationDmgFrac() { return sPts(212) * 0.05; }                 // S12: +5%/pt
+// Legacy stubs (old spells auto-unlocked on ascension, no longer skill-gated)
+function sorcDoubleGfb()    { return false; }                                    // GFB double removed
+function sorcGfbUpgraded()  { return false; }                                    // GFB upgrade removed
+function sorcVolatileBlast(){ return false; }                                    // Volatile Blast removed
+function sorcAutoUe()       { return autoUeEnabled; }                            // auto-unlocked on ascension
+function sorcAutoPs()       { return autoPsEnabled; }                            // auto-unlocked on ascension
 
 // ── Skill tree UI ─────────────────────────────────────────────────
 let _skillTab = 'general';
@@ -1186,16 +1276,15 @@ function renderKnightPane() {
     let html = '<div class="st-grid st-grid-knight">';
     for (let col = 1; col <= 3; col++) {
         html += '<div class="st-col">';
-        for (let row = 1; row <= 3; row++) {
+        for (let row = 1; row <= 4; row++) {
             const skill = KNIGHT_SKILLS.find(s => s.col === col && s.row === row);
             if (!skill) { html += `<div class="st-node st-node-empty"></div>`; continue; }
             const pts    = kPts(skill.id);
             const maxed  = pts >= skill.max;
             const prereqs = kPrereqsMet(skill);
-            const lvlOk  = level >= skill.reqLevel;
             const cost   = skill.costs[pts] ?? 0;
-            const canBuy = !maxed && prereqs && lvlOk && gold >= cost;
-            const locked = !prereqs || !lvlOk;
+            const canBuy = !maxed && prereqs && gold >= cost;
+            const locked = !prereqs;
             let cls = 'st-node';
             if (maxed)       cls += ' st-node-maxed';
             else if (locked) cls += ' st-node-locked';
@@ -1205,7 +1294,6 @@ function renderKnightPane() {
                 ? `<div class="st-connector ${prereqs ? 'st-conn-open' : 'st-conn-locked'}">&#9660;</div>`
                 : '';
             const reqChips = [];
-            if (skill.reqLevel > 1) reqChips.push(`<span class="st-req ${lvlOk ? 'st-req-met' : 'st-req-fail'}">Lv.${skill.reqLevel}</span>`);
             skill.prereqs.forEach(pid => {
                 const pname = KNIGHT_SKILLS.find(s => s.id === pid)?.name || `Skill ${pid}`;
                 reqChips.push(`<span class="st-req ${kPts(pid) >= 1 ? 'st-req-met' : 'st-req-fail'}">${pname}</span>`);
@@ -1235,19 +1323,17 @@ function renderKnightPane() {
 function renderSorcPane() {
     const pane = document.getElementById('st-pane-sorcerer');
     let html = '<div class="st-grid">';
-    for (let col = 1; col <= 4; col++) {
+    for (let col = 1; col <= 3; col++) {
         html += '<div class="st-col">';
-        for (let row = 1; row <= 3; row++) {
+        for (let row = 1; row <= 4; row++) {
             const skill = SORC_SKILLS.find(s => s.col === col && s.row === row);
             if (!skill) { html += `<div class="st-node st-node-empty"></div>`; continue; }
             const pts     = sPts(skill.id);
             const maxed   = pts >= skill.max;
             const prereqs = sPrereqsMet(skill);
-            const lvlOk   = level >= skill.reqLevel;
-            const extraLock = skill.id === 201 && !gfbUnlocked;
             const cost    = skill.costs[pts] ?? 0;
-            const canBuy  = !maxed && prereqs && lvlOk && !extraLock && gold >= cost;
-            const locked  = !prereqs || !lvlOk || extraLock;
+            const canBuy  = !maxed && prereqs && gold >= cost;
+            const locked  = !prereqs;
             let cls = 'st-node';
             if (maxed)       cls += ' st-node-maxed';
             else if (locked) cls += ' st-node-locked';
@@ -1257,12 +1343,10 @@ function renderSorcPane() {
                 ? `<div class="st-connector ${prereqs ? 'st-conn-open' : 'st-conn-locked'}">&#9660;</div>`
                 : '';
             const reqChips = [];
-            if (skill.reqLevel > 1) reqChips.push(`<span class="st-req ${lvlOk ? 'st-req-met' : 'st-req-fail'}">Lv.${skill.reqLevel}</span>`);
             skill.prereqs.forEach(pid => {
                 const pname = SORC_SKILLS.find(s => s.id === pid)?.name || `Skill ${pid}`;
                 reqChips.push(`<span class="st-req ${sPts(pid) >= 1 ? 'st-req-met' : 'st-req-fail'}">${pname}</span>`);
             });
-            if (skill.id === 201) reqChips.push(`<span class="st-req ${gfbUnlocked ? 'st-req-met' : 'st-req-fail'}">Fireball</span>`);
             const reqsHTML = reqChips.length ? `<div class="st-node-reqs">${reqChips.join('')}</div>` : '';
             html += `
                 ${connector}
@@ -1285,13 +1369,21 @@ function renderSorcPane() {
     pane.innerHTML = html;
 }
 
-function effectiveBasicCooldown() { return BASIC_COOLDOWN_MS * (ascendedClass === 'knight' ? (1 - kPts(101) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1) * potionCdrMult(); }
-function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS * skillAutoFreqMult() * (ascendedClass === 'knight' ? (1 - kPts(102) * 0.1) : 1) * (powerStanceActive ? 0.5 : 1) * potionCdrMult(); }
+function effectiveBasicCooldown() {
+    let cd = Math.max(100, BASIC_COOLDOWN_MS - kPts(109) * 10); // K9: -10ms/pt
+    if (ascendedClass === 'knight') {
+        if (kPts(106) > 0) cd *= Math.max(0.2, 1 - comboStacks * kPts(106) * 0.005);  // K6 combo speed
+        if (kPts(108) > 0) cd *= Math.max(0.2, 1 - flowStacks * kPts(108) * 0.01);    // K8 flow speed
+        if (kPts(110) > 0 && adrenalineStacks > 0) cd *= Math.max(0.2, 1 - adrenalineStacks * kPts(110) * 0.01); // K10 adrenaline
+    }
+    return cd * (powerStanceActive ? 0.5 : 1) * potionCdrMult();
+}
+function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS * skillAutoFreqMult() * (powerStanceActive ? 0.5 : 1) * potionCdrMult(); }
 function effectiveGfbCooldown()   { return Math.max(10000, GFB_COOLDOWN_MS - skillPts(32) * 1000) * potionCdrMult(); }
-function sorcVolatileBlast()      { return sPts(202) >= 1; }
-function effectiveUeCooldown()    { return UE_COOLDOWN_MS * (1 - sPts(206) * 0.1) * potionCdrMult(); }
-function effectivePsCooldown()    { return POWER_STANCE_COOLDOWN_MS * (1 - sPts(212) * 0.1) * potionCdrMult(); }
-function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * (1 - kPts(106) * 0.1) * potionCdrMult(); }
+function sorcVolatileBlast()      { return false; }  // removed from skill tree
+function effectiveUeCooldown()    { return UE_COOLDOWN_MS * potionCdrMult(); }
+function effectivePsCooldown()    { return POWER_STANCE_COOLDOWN_MS * potionCdrMult(); }
+function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * potionCdrMult(); }
 
 // ── Progress save / load ─────────────────────────────────────────
 function getProgress() {
@@ -1319,6 +1411,8 @@ function getProgress() {
         potionMadnessEnd, potionDangerEnd,
         currentArea, unlockedAreas,
         firestormCharges,
+        hmmCooldownEnd, arcaneWeakeningStacks, obliterationBeamCooldownEnd,
+        comboStacks, flowStacks, clickOrderCount,
         savedAt: Date.now(),
     };
 }
@@ -1377,9 +1471,18 @@ function loadProgress(state) {
         if (s.currentArea           != null) currentArea           = s.currentArea;
         if (s.unlockedAreas         != null) unlockedAreas         = Array.isArray(s.unlockedAreas) ? s.unlockedAreas : ['Rookgaard'];
         if (s.firestormCharges      != null) firestormCharges       = s.firestormCharges;
+        if (s.hmmCooldownEnd        != null) hmmCooldownEnd        = s.hmmCooldownEnd;
+        if (s.arcaneWeakeningStacks != null) arcaneWeakeningStacks = s.arcaneWeakeningStacks;
+        if (s.obliterationBeamCooldownEnd != null) obliterationBeamCooldownEnd = s.obliterationBeamCooldownEnd;
+        if (s.comboStacks           != null) comboStacks           = s.comboStacks;
+        if (s.flowStacks            != null) flowStacks            = s.flowStacks;
+        if (s.clickOrderCount       != null) clickOrderCount       = s.clickOrderCount;
         // Derive unlock flags from skill points (migration-safe)
         if (skillPts(11) >= 1) { autoUnlocked = true; bossFocusUnlocked = true; }
         if (skillPts(31) >= 1) { gfbUnlocked = true; autoGfbUnlocked = true; }
+        // Derive class ability unlocks from ascendedClass (v7 migration-safe)
+        if (ascendedClass === 'sorcerer') { ueUnlocked = true; autoUeUnlocked = true; powerStanceUnlocked = true; }
+        if (ascendedClass === 'knight')   { annihilationUnlocked = true; }
     } catch (_) {}
     applyMobConfig();
 }
@@ -1866,7 +1969,7 @@ function killWorm(w) {
     score += MOB_KILLS;
     const expGain  = Math.floor(MOB_EXP  * skillExpMult() * potionExpMult());
     const goldBase = MOB_GOLD_MIN + Math.floor(Math.random() * (MOB_GOLD_MAX - MOB_GOLD_MIN + 1));
-    const goldGain = Math.floor(goldBase * skillGoldMult() * potionGoldMult());
+    const goldGain = Math.floor(goldBase * skillGoldMult() * sorcGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
     checkLevelUp();
@@ -1896,7 +1999,7 @@ function killBoss(b) {
     score += BOSS_KILLS;
     const rewardMult = b.isUber ? 2 : 1;
     const expGain  = Math.floor(BOSS_EXP  * skillExpMult()  * rewardMult * potionExpMult());
-    const goldGain = Math.floor(BOSS_GOLD * skillGoldMult() * rewardMult * potionGoldMult());
+    const goldGain = Math.floor(BOSS_GOLD * skillGoldMult() * sorcGoldMult() * rewardMult * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
     checkLevelUp();
@@ -1906,13 +2009,14 @@ function killBoss(b) {
     const _bd = rollEssenceDrops(true, b.isUber);
     let _bq = 0;
     _bd.forEach(({ k, qty }) => {
-        const boostedQty = Math.ceil(qty * skillBossLootMult());
+        const boostedQty = Math.ceil(qty * skillBossLootMult() * sorcBossLootMult());
         inventory[k] = (inventory[k] || 0) + boostedQty;
         _bq += boostedQty;
     });
     if (_bq > 0) dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 46, value: '+' + _bq, color: '#5599ff', life: 100 });
     bossKillCounter++;
     boss = null;
+    arcaneWeakeningStacks = 0; // S10 Arcane Weakening resets on boss death
     // Extra boss spawn (B4)
     if (skillExtraBossChance() > 0 && Math.random() < skillExtraBossChance()) {
         spawnBoss();
@@ -2065,11 +2169,20 @@ canvas.addEventListener('click', e => {
         if (Math.hypot(dx, dy) < boss.size) {
             lastBasicAttack = now;
             totalClicks++;
-            const dmg = rollBasicDmg();
+            const dmg = _processClick(true);
             boss.hp -= dmg;
             spawnAttackEffect(boss.x, boss.y);
             dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#8b0000', life: 60 });
             if (boss.hp <= 0) killBoss(boss);
+            // K11 Rapid Strikes: every 10 clicks, extra hits
+            if (kPts(111) > 0 && clickOrderCount % 10 === 0) {
+                for (let _r = 0; _r < kPts(111); _r++) {
+                    if (!boss) break;
+                    const rdmg = _processClick(true);
+                    boss.hp -= rdmg;
+                    if (boss.hp <= 0) { killBoss(boss); break; }
+                }
+            }
             return;
         }
     }
@@ -2083,12 +2196,22 @@ canvas.addEventListener('click', e => {
         if (clickedWorm) {
             lastBasicAttack = now;
             totalClicks++;
-            const dmg = rollBasicDmg();
+            const dmg = _processClick(false);
             clickedWorm.hp -= dmg;
             spawnAttackEffect(clickedWorm.x, clickedWorm.y);
             dmgNumbers.push({ x: clickedWorm.x + (Math.random()*20-10), y: clickedWorm.y - clickedWorm.size, value: dmg, color: '#8b0000', life: 60 });
             if (clickedWorm.hp <= 0) killWorm(clickedWorm);
             worms = worms.filter(w => w.hp > 0);
+            // K11 Rapid Strikes: every 10 clicks, extra hits on remaining worms
+            if (kPts(111) > 0 && clickOrderCount % 10 === 0 && worms.length > 0) {
+                for (let _r = 0; _r < kPts(111); _r++) {
+                    const nextW = worms[0];
+                    if (!nextW) break;
+                    const rdmg = _processClick(false);
+                    nextW.hp -= rdmg;
+                    if (nextW.hp <= 0) { killWorm(nextW); worms = worms.filter(w => w.hp > 0); }
+                }
+            }
         }
     }
 });
@@ -2173,10 +2296,59 @@ function update() {
             }
         }
     }
-    // Auto Annihilation (knight skill 105)
+    // Auto Annihilation (auto-unlocked on knight ascension)
     if (knightAutoAnniOn() && annihilationUnlocked && boss && !boss.isUber && Date.now() >= annihilationCooldownEnd) {
         annihilationCooldownEnd = Date.now() + effectiveAnniCooldown();
         killBoss(boss);
+    }
+    // Heavy Magic Missile (Sorcerer S1): auto-fires every 20s
+    if (ascendedClass === 'sorcerer' && sPts(201) >= 1 && !spawnPaused && Date.now() >= hmmCooldownEnd) {
+        const _hmmTargets = [...worms, ...(boss ? [boss] : [])];
+        if (_hmmTargets.length > 0) {
+            hmmCooldownEnd = Date.now() + HMM_COOLDOWN_MS;
+            hmmHitCounter++;
+            const _hmmTarget = boss || worms.reduce((a, b) => a.hp <= b.hp ? a : b, worms[0]);
+            const _hmmIsBoss = _hmmTarget === boss;
+            const _cataDmgFrac = (kPts(204) > 0 && hmmHitCounter % 5 === 0) ? sorcCataclysmDmgFrac() : 0;
+            const _fireHmm = (target, isBoss2) => {
+                const baseHp = isBoss2 ? target.maxHp : MOB_MAXHP;
+                let d = Math.ceil(baseHp * sorcHmmDmgFrac() * sorcHmmDmgMult());
+                if (isBoss2) {
+                    d = Math.ceil(d * sorcBossDmgMult() * sorcWeakeningBonusMult());
+                    if (sPts(210) > 0) arcaneWeakeningStacks = Math.min(10, arcaneWeakeningStacks + 1);
+                }
+                if (_cataDmgFrac > 0) d += Math.ceil(baseHp * _cataDmgFrac);
+                target.hp -= d;
+                dmgNumbers.push({ x: target.x + (Math.random()*20-10), y: target.y - target.size, value: d, color: '#9900ff', life: 60 });
+            };
+            _fireHmm(_hmmTarget, _hmmIsBoss);
+            if (_hmmIsBoss) { if (boss && boss.hp <= 0) killBoss(boss); }
+            else { if (_hmmTarget.hp <= 0) { killWorm(_hmmTarget); worms = worms.filter(w => w !== _hmmTarget); } }
+            // S3 Twin Missile: chance to fire a second missile at same target type
+            if (sPts(203) > 0 && Math.random() < sorcTwinMissileChance()) {
+                const _twin = _hmmIsBoss ? boss : (worms.length > 0 ? worms[0] : null);
+                if (_twin) {
+                    _fireHmm(_twin, _hmmIsBoss);
+                    if (_hmmIsBoss) { if (boss && boss.hp <= 0) killBoss(boss); }
+                    else { if (_twin.hp <= 0) { killWorm(_twin); worms = worms.filter(w => w !== _twin); } }
+                }
+            }
+            // S11 Titan Slayer: every 3rd HMM also deals bonus damage to boss
+            if (sPts(211) > 0 && boss && hmmHitCounter % 3 === 0) {
+                const tsDmg = Math.ceil(boss.maxHp * sorcTitanSlayerDmgFrac() * sorcBossDmgMult() * sorcWeakeningBonusMult());
+                boss.hp -= tsDmg;
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size - 10, value: tsDmg, color: '#cc00ff', life: 70 });
+                if (boss.hp <= 0) killBoss(boss);
+            }
+        }
+    }
+    // Obliteration Beam (Sorcerer S12): boss-only nuke every 60s
+    if (ascendedClass === 'sorcerer' && sPts(212) >= 1 && boss && Date.now() >= obliterationBeamCooldownEnd) {
+        obliterationBeamCooldownEnd = Date.now() + OBLITERATION_BEAM_COOLDOWN_MS;
+        const obDmg = Math.ceil(boss.maxHp * sorcObliterationDmgFrac() * sorcBossDmgMult() * sorcWeakeningBonusMult());
+        boss.hp -= obDmg;
+        dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size - 16, value: obDmg, color: '#ff00cc', life: 80 });
+        if (boss.hp <= 0) killBoss(boss);
     }
     // auto GFB logic
     if (autoGfbEnabled && gfbUnlocked && (worms.length > 0 || boss) && !fireballActive && !spawnPaused &&
@@ -2275,17 +2447,11 @@ function update() {
         const postActiveRemaining = powerStanceActive ? effectivePsCooldown() : psRemaining;
         document.getElementById('cd-ps-bar').style.width  = powerStanceUnlocked && postActiveRemaining > 0 ? ((1 - postActiveRemaining / effectivePsCooldown()) * 100) + '%' : ((powerStanceUnlocked && !powerStanceActive) ? '100%' : '0%');
         document.getElementById('cd-ps-text').textContent = !powerStanceUnlocked ? 'Locked' : (powerStanceActive ? `Active (${Math.ceil(Math.max(0, powerStanceEnd - Date.now()) / 1000)}s)` : (psRemaining > 0 ? Math.ceil(psRemaining / 1000) + 's' : 'Ready'));
-        // Auto Power Stance button
+        // Auto Power Stance button (auto-unlocked on ascension as sorcerer)
         const autoPsEl = document.getElementById('autoPsBtn');
-        if (sPts(211) < 1) {
-            autoPsEl.textContent = 'Auto Power Stance (unlock in Skill Tree)';
-            autoPsEl.disabled = true;
-            autoPsEl.classList.remove('auto-on');
-        } else {
-            autoPsEl.textContent = autoPsEnabled ? 'Auto Power Stance: ON' : 'Auto Power Stance: OFF';
-            autoPsEl.disabled = false;
-            autoPsEl.classList.toggle('auto-on', autoPsEnabled);
-        }
+        autoPsEl.textContent = autoPsEnabled ? 'Auto Power Stance: ON' : 'Auto Power Stance: OFF';
+        autoPsEl.disabled = false;
+        autoPsEl.classList.toggle('auto-on', autoPsEnabled);
     }
     // update Annihilation button (Knight only)
     if (ascendedClass === 'knight') {
@@ -2302,17 +2468,11 @@ function update() {
             anniBtnEl.innerHTML = `${anniIcon} Annihilation`;
             anniBtnEl.disabled = !boss || boss.isUber;
         }
-        // Auto Annihilation button
+        // Auto Annihilation button (auto-unlocked on ascension as knight)
         const autoAnniEl = document.getElementById('autoAnniBtn');
-        if (kPts(105) < 1) {
-            autoAnniEl.textContent = 'Auto Annihilation (unlock in Skill Tree)';
-            autoAnniEl.disabled = true;
-            autoAnniEl.classList.remove('auto-on');
-        } else {
-            autoAnniEl.textContent = autoAnniEnabled ? 'Auto Annihilation: ON' : 'Auto Annihilation: OFF';
-            autoAnniEl.disabled = false;
-            autoAnniEl.classList.toggle('auto-on', autoAnniEnabled);
-        }
+        autoAnniEl.textContent = autoAnniEnabled ? 'Auto Annihilation: ON' : 'Auto Annihilation: OFF';
+        autoAnniEl.disabled = false;
+        autoAnniEl.classList.toggle('auto-on', autoAnniEnabled);
         document.getElementById('cd-anni-bar').style.width  = annihilationUnlocked && anniRemaining > 0 ? ((1 - anniRemaining / effectiveAnniCooldown()) * 100) + '%' : (annihilationUnlocked ? '100%' : '0%');
         document.getElementById('cd-anni-text').textContent = !annihilationUnlocked ? 'Locked' : (anniRemaining > 0 ? Math.ceil(anniRemaining / 1000) + 's' : (boss ? 'Ready' : 'No boss'));
         // Whirlwind CD bar — no longer used (skill removed)
