@@ -375,6 +375,20 @@ function fmtCost(n) {
     return n.toString();
 }
 
+// ── Dev helpers (only active on non-production hostnames) ───────────────────────
+function _isDevEnv() {
+    const h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.railway.app');
+}
+function devFillMaterials() {
+    ITEM_DEFS.forEach(def => { inventory[def.key] = (inventory[def.key] || 0) + 100; });
+    renderInventory();
+}
+if (_isDevEnv()) {
+    const btn = document.getElementById('devFillMatsBtn');
+    if (btn) btn.style.display = '';
+}
+
 // ── Drop tables & crafting ─────────────────────────────────────────────────────
 const ROTWORM_DROPS      = ['lumpOfDirt', 'rotwormFang', 'worm'];
 const ROTWORM_BOSS_DROPS = ['lumpOfDirt', 'rotwormFang', 'worm', 'gland'];
