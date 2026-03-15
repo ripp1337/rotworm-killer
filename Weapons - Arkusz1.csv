@@ -1,0 +1,16 @@
+Weapon's name,Weapon's sprite,Min damage,Max damage,Level required,Gold required
+Club,Club.gif,3,8,none (basic),none (basic)
+Rapier,Rapier.gif,5,10,2,50
+Mace,Mace.gif,7,12,4,200
+Longsword,Longsword.gif,9,14,5,500
+Clerical Mace,Clerical_Mace.gif,11,16,7,1000
+Orcish Axe,Orcish_Axe.gif,13,18,10,2500
+Dwarven Axe,Dwarven_Axe.gif,15,22,12,5000
+Fire Sword,Fire_Sword.gif,18,25,14,10000
+Skull Staff,Skull_Staff.gif,20,27,17,20000
+Fire Axe,Fire_Axe.gif,22,30,20,50000
+Giant Sword,Giant_Sword.gif,25,35,25,100000
+Queen's Sceptre,Queen's_Sceptre.gif,30,40,30,150000
+Stonecutter Axe,Stonecutter_Axe.gif,40,55,35,200000
+Thunder Hammer,Thunder_Hammer.gif,55,70,40,500000
+Magic Long Sword,Magic_Long_Sword.gif,70,100,50,1000000
