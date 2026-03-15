@@ -485,13 +485,19 @@ function renderInventory(filterKey) {
                   (qty === 0         ? ' inv-item-empty'     : '') +
                   (clickable         ? ' inv-item-clickable' : '') +
                   (filterKey === def.key ? ' inv-item-highlight' : '');
-        const oc = clickable ? `onclick="openCraftingFromItem('${def.key}')"` : '';
-        return `<div class="${cls}" ${oc} title="${def.name}${clickable ? ' \u2014 click to see recipes' : ''}">
+        return `<div class="${cls}" data-key="${def.key}" title="${def.name}${clickable ? ' \u2014 click to see recipes' : ''}">
             <div class="inv-icon">${def.icon}</div>
             <div class="inv-qty">${qty}</div>
             <div class="inv-name">${def.name}</div>
         </div>`;
     }).join('');
+    // Add event listeners for click and touchend
+    Array.from(body.getElementsByClassName('inv-item-clickable')).forEach(el => {
+        const key = el.getAttribute('data-key');
+        const handler = () => openCraftingFromItem(key);
+        el.addEventListener('click', handler);
+        el.addEventListener('touchend', handler);
+    });
 }
 function openCraftingFromItem(key) {
     document.getElementById('inventory-modal').style.display = 'none';
