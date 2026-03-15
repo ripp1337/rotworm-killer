@@ -62,8 +62,11 @@ const BOSS_HP        = 1000;
 const BOSS_EXP       = 600;
 const BOSS_GOLD      = 1000;
 const BOSS_KILLS     = 10;   // counts as this many kills
-const BOSS_SIZE      = 32;   // half-width for hitbox/draw (64px sprite)
+const BOSS_SIZE      = 64;   // half-width for hitbox/draw (128px sprite)
 const UBER_BOSS_EVERY = 10;  // spawn an uber boss every N boss kills
+
+// Scaling
+const MONSTER_SCALE = 2;  // enlarge monsters by this factor
 let bossSpawnCounter = 0;    // increments with every worm/boss kill
 let bossKillCounter  = 0;    // increments with every boss kill; uber spawns every UBER_BOSS_EVERY
 let firstBossSpawned = false; // first boss spawns early at 10 kills
@@ -281,7 +284,7 @@ let MOB_EXP    = 40;
 let MOB_KILLS  = 1;   // score contribution per kill
 let MOB_GOLD_MIN = 0;
 let MOB_GOLD_MAX = 39; // random gold [MOB_GOLD_MIN, MOB_GOLD_MAX]
-let MOB_SIZE   = 20;
+let MOB_SIZE   = 20 * MONSTER_SCALE;
 
 function applyMobConfig() {
     const area = getCurrentArea();
@@ -290,7 +293,7 @@ function applyMobConfig() {
     MOB_KILLS  = 1; // per-kill score multiplier
     MOB_GOLD_MIN = area.mobGoldMin;
     MOB_GOLD_MAX = area.mobGoldMax;
-    MOB_SIZE   = area.mobSize || 20;
+    MOB_SIZE   = (area.mobSize || 20) * MONSTER_SCALE;
     floorImg.src = area.floor;
 
     // Ascension gives a class bonus (skills, etc.) but does not change area.
@@ -2173,6 +2176,12 @@ if (areaUnlockBtn) {
         gold -= next.goldCost;
         currentArea = next.id;
         if (!unlockedAreas.includes(next.id)) unlockedAreas.push(next.id);
+        // Reset the fight state when moving to a new area.
+        worms = [];
+        boss = null;
+        bossSpawnCounter = 0;
+        bossKillCounter = 0;
+        firstBossSpawned = false;
         applyMobConfig();
         saveProgress();
     });
@@ -2482,5 +2491,14 @@ function debugAddGold() {
     if (!isProd) {
         const panel = document.getElementById('debug-panel');
         if (panel) panel.style.display = '';
+
+        const devTools = document.getElementById('dev-tools');
+        if (devTools) {
+            devTools.style.display = '';
+            const addGoldBtn = document.getElementById('dev-add-gold');
+            const addExpBtn  = document.getElementById('dev-add-exp');
+            if (addGoldBtn) addGoldBtn.addEventListener('click', () => { gold += 1000000000; updateHUD(); });
+            if (addExpBtn)  addExpBtn.addEventListener('click', () => { exp += 1000000000; checkLevelUp(); updateHUD(); });
+        }
     }
 })();
