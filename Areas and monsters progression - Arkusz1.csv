@@ -1,0 +1,12 @@
+Area,Level required,Pay to go there,Floor,Monster,Monster picture (.gif),Monster hp,Monster exp,Monster gold min,Monster gold max,Boss,Boss picture (.gif),Crafting materials,Boss crafting materials
+Rookgaard,1 (starting area),0 (starting area),Lush_Grass,Rat,Rat,15,10,2,4,Cave Rat,Cave_Rat,None,None
+Rotworm Cave,8,100,Muddy_Floor_(Dark),Rotworm,Rotworm,60,40,5,15,Vesperoth,Vesperoth,"Lump of Dirt, Rotworm Fang, Worm",Gland
+Cyclopolis,30,5000,Gravel,Cyclops,Cyclops,260,150,10,30,Behemoth,Behemoth,"Cyclops Toe, Wolf Tooth Chain, Cyclops Eye",Battle Stone
+Hell Gate,50,50000,Stone_Floor_(Grey),Demon Skeleton,Demon_Skeleton,400,240,20,50,Bonebeast,Bonebeast,"Bone, Skull, Skeletal Hand",Candle
+Dragon Lair,70,100000,Earth_Ground,Dragon,Dragon,1000,700,30,60,Dragon Lord,Dragon_Lord,"Dragon Ham, Dragon Leather, Dragon Scale",Dragon Claw
+Plains of Havoc,100,200000,Grass_(Tile),Giant Spider,Giant_Spider,1300,900,40,80,Mamma Long Legs,Unwanted,"Spider Silk, Spider Leg, Poisonous Slime",Spider's Fangs
+Demona,130,1000000,Black_Marble_Floor,Warlock,Warlock,4000,3000,50,100,Infernalist,Infernalist,"Purple Tome, Old Spellbook, Wand",Wizard's Hat
+Goroma,175,5000000,Strange_Sand,Demon,Demon,8000,6000,75,125,Orshabaal,Weakened_Demon,"Demon's Heart, Demon's Horn, Demon's Eye",Magic Dust
+Formogar Mines,200,10000000,Ice_Stone_Floor,Juggernaut,Juggernaut,12000,9000,100,150,Massacre ,Arbaziloth,"Demonic Essence, Juggernaut Horn, Demonic Blood",Soul Orb
+Roshamuul,250,50000000,Dry_Earth_(Zao),Guzzlemaw,Guzzlemaw,18000,14000,200,300,Sight of Surrender,Sight_of_Surrender,"Banana Skin, Fishbone, Piece of Iron",Giant Eye
+The Void,300,100000000,Void_(Tile),Void Emissary,The_Unarmored_Voidborn,30000,20000,300,500,Devovorga,Devovorga,"Cosmic Tail, Void Claw, Void Carapace",Stardust
