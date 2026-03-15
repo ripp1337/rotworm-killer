@@ -322,7 +322,7 @@ def auth_player(token: str):
     return row
 
 # ── State versioning ──────────────────────────────────────────────
-LATEST_STATE_VERSION = 3
+LATEST_STATE_VERSION = 4
 
 def _upgrade_state(state: dict) -> dict:
     """Bring any player state up to LATEST_STATE_VERSION, filling missing keys
@@ -370,6 +370,13 @@ def _upgrade_state(state: dict) -> dict:
         state.setdefault('potionWisdomEnd', 0)
         state.setdefault('potionSwiftnessEnd', 0)
         state['stateVersion'] = 3
+
+    if v < 4:
+        # v4 expands weapon list from 5 to 15; remap old indices to closest new equivalents.
+        _WEAPON_MIGRATION = {0: 2, 1: 4, 2: 7, 3: 11, 4: 12}
+        old_idx = int(state.get('weaponIndex') or 0)
+        state['weaponIndex'] = _WEAPON_MIGRATION.get(old_idx, old_idx)
+        state['stateVersion'] = 4
 
     return state
 

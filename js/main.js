@@ -156,11 +156,21 @@ function doAscendAsClass(cls) {
 
 // weapon progression
 const WEAPONS = [
-    { name: 'Serpent Sword',   min:  5, max: 15, cost:     0, sprite: 'Serpent_Sword.gif'   },
-    { name: 'Clerical Mace',   min:  10, max: 20, cost:   500, sprite: 'Clerical_Mace.gif'   },
-    { name: 'Fire Sword',      min: 15, max: 30, cost:  1500, sprite: 'Fire_Sword.gif'       },
-    { name: 'Warhammer',       min: 25, max: 45, cost: 10000, sprite: 'War_Hammer.gif'       },
-    { name: 'Stonecutter Axe', min: 45, max: 55, cost: 50000, sprite: 'Stonecutter_Axe.gif' },
+    { name: 'Club',             min:   3, max:   8, cost:        0, minLevel:  1, sprite: 'Club.gif'             },
+    { name: 'Rapier',           min:   5, max:  10, cost:       50, minLevel:  2, sprite: 'Rapier.gif'           },
+    { name: 'Mace',             min:   7, max:  12, cost:      200, minLevel:  4, sprite: 'Mace.gif'             },
+    { name: 'Longsword',        min:   9, max:  14, cost:      500, minLevel:  5, sprite: 'Longsword.gif'        },
+    { name: 'Clerical Mace',    min:  11, max:  16, cost:     1000, minLevel:  7, sprite: 'Clerical_Mace.gif'    },
+    { name: 'Orcish Axe',       min:  13, max:  18, cost:     2500, minLevel: 10, sprite: 'Orcish_Axe.gif'       },
+    { name: 'Dwarven Axe',      min:  15, max:  22, cost:     5000, minLevel: 12, sprite: 'Dwarven_Axe.gif'      },
+    { name: 'Fire Sword',       min:  18, max:  25, cost:    10000, minLevel: 14, sprite: 'Fire_Sword.gif'       },
+    { name: 'Skull Staff',      min:  20, max:  27, cost:    20000, minLevel: 17, sprite: 'Skull_Staff.gif'      },
+    { name: 'Fire Axe',         min:  22, max:  30, cost:    50000, minLevel: 20, sprite: 'Fire_Axe.gif'         },
+    { name: 'Giant Sword',      min:  25, max:  35, cost:   100000, minLevel: 25, sprite: 'Giant_Sword.gif'      },
+    { name: "Queen's Sceptre",  min:  30, max:  40, cost:   150000, minLevel: 30, sprite: "Queen's_Sceptre.gif"  },
+    { name: 'Stonecutter Axe',  min:  40, max:  55, cost:   200000, minLevel: 35, sprite: 'Stonecutter_Axe.gif'  },
+    { name: 'Thunder Hammer',   min:  55, max:  70, cost:   500000, minLevel: 40, sprite: 'Thunder_Hammer.gif'   },
+    { name: 'Magic Longsword',  min:  70, max: 100, cost:  1000000, minLevel: 50, sprite: 'Magic_Longsword.gif'  },
 ];
 let weaponIndex = 0; // current weapon
 
@@ -206,10 +216,16 @@ function updateHUD() {
     document.getElementById('hud-weapon-name').textContent = WEAPONS[weaponIndex].name;
     document.getElementById('hud-weapon-img').src = WEAPONS[weaponIndex].sprite;
     if (nextWeapon) {
-        const canUpgrade = gold >= nextWeapon.cost;
-        const upgradeBtn = document.getElementById('weaponUpgradeBtn');
-        upgradeBtn.innerHTML = `<img src="${nextWeapon.sprite}" class="btn-icon"> ${nextWeapon.name} (${nextWeapon.cost}g)`;
-        upgradeBtn.disabled = !canUpgrade;
+        const canAfford   = gold >= nextWeapon.cost;
+        const meetsLevel  = level >= nextWeapon.minLevel;
+        const canUpgrade  = canAfford && meetsLevel;
+        const upgradeBtn  = document.getElementById('weaponUpgradeBtn');
+        const costFmt     = nextWeapon.cost.toLocaleString();
+        let label = `<img src="${nextWeapon.sprite}" class="btn-icon"> ${nextWeapon.name} (${costFmt}g`;
+        if (!meetsLevel) label += ` · Lv.${nextWeapon.minLevel} req`;
+        label += ')';
+        upgradeBtn.innerHTML = label;
+        upgradeBtn.disabled  = !canUpgrade;
         upgradeBtn.style.display = 'block';
     } else {
         document.getElementById('weaponUpgradeBtn').style.display = 'none';
@@ -378,7 +394,7 @@ function fmtCost(n) {
 // ── Dev helpers (only active on non-production hostnames) ───────────────────────
 function _isDevEnv() {
     const h = location.hostname;
-    return h === 'localhost' || h === '127.0.0.1' || h.endsWith('.railway.app');
+    return h === 'localhost' || h === '127.0.0.1';
 }
 function devFillMaterials() {
     ITEM_DEFS.forEach(def => { inventory[def.key] = (inventory[def.key] || 0) + 100; });
@@ -961,7 +977,13 @@ function loadProgress(state) {
         if (s.gold             != null) gold             = s.gold;
         if (s.exp              != null) exp              = s.exp;
         if (s.level            != null) level            = s.level;
-        if (s.weaponIndex      != null) weaponIndex      = Math.min(s.weaponIndex, WEAPONS.length - 1);
+        if (s.weaponIndex      != null) {
+            // v4 migration: remap old 5-weapon indices to new 15-weapon list
+            const _WPN_MIGRATE = [2, 4, 7, 11, 12];
+            let wi = s.weaponIndex;
+            if ((s.stateVersion || 0) < 4 && wi < _WPN_MIGRATE.length) wi = _WPN_MIGRATE[wi];
+            weaponIndex = Math.min(wi, WEAPONS.length - 1);
+        }
         if (s.skillPoints      != null) skillPoints      = s.skillPoints;
         if (s.knightSkillPts       != null) knightSkillPts       = s.knightSkillPts;
         if (s.sorcSkillPts         != null) sorcSkillPts         = s.sorcSkillPts;
@@ -1936,7 +1958,7 @@ function update() {
 const weaponUpgradeBtn = document.getElementById('weaponUpgradeBtn');
 weaponUpgradeBtn.addEventListener('click', () => {
     const next = WEAPONS[weaponIndex + 1];
-    if (!next || gold < next.cost) return;
+    if (!next || gold < next.cost || level < next.minLevel) return;
     gold -= next.cost;
     weaponIndex++;
 });
