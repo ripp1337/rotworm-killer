@@ -120,6 +120,12 @@
                 <hr>
                 <button id="ascendBtn" disabled>&#9734; Ascend (need lvl 30)</button>
                 <button id="skillTreeBtn" onclick="openSkillTree()">&#9643; Skill Tree</button>
+                <button id="backpackBtn" onclick="openInventory()">&#127890; Backpack</button>
+                <button id="craftingBtn" onclick="openCrafting()" disabled>&#9879; Crafting (lv.20)</button>
+                <div id="hud-potions-section" style="display:none">
+                    <div class="hud-section" style="margin-top:4px">Active Potions</div>
+                    <div id="hud-potions"></div>
+                </div>
                 <hr>
                 <div class="hud-section sb-header">
                     Top Killers
@@ -610,6 +616,27 @@
                 </button>
             </div>
             <p class="class-choice-warn">⚠ This choice is permanent and cannot be reversed.</p>
+        </div>
+    </div>
+    <!-- Inventory modal -->
+    <div id="inventory-modal" style="display:none">
+        <div class="st-modal-box inv-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">&#127890; Backpack</span>
+                <button class="st-close-btn" onclick="document.getElementById('inventory-modal').style.display='none'">&#x2715;</button>
+            </div>
+            <p class="inv-hint">Gold-bordered items have crafting recipes &mdash; click to open Crafting.</p>
+            <div id="inv-body" class="inv-grid"></div>
+        </div>
+    </div>
+    <!-- Crafting modal -->
+    <div id="crafting-modal" style="display:none">
+        <div class="st-modal-box craft-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">&#9879; Crafting</span>
+                <button class="st-close-btn" onclick="document.getElementById('crafting-modal').style.display='none'">&#x2715;</button>
+            </div>
+            <div id="craft-body" class="craft-body"></div>
         </div>
     </div>
     <script src="js/main.js"></script>

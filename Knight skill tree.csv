@@ -1,0 +1,10 @@
+ID,Tier,Name,What it does,Max points,Value per point,Required level,Prerequisites ID,Comment,Cost per level
+1,1,Attack speed,Reduced attack (not the auto one!) by 10%,5,10%,30,,max 50% reduction at level 5,"100, 500, 2000, 5000, 10000 (for levels 1, 2, 3...)"
+2,2,Auto attack speed,Reduced auto attack cooldown,5,10%,35,1,max 50% reduction at level 5,"500, 1000, 5000, 20000, 50000 (for levels 1, 2, 3...)"
+3,3,Additional enemey for auto attacks,Auto attacks hit an additional enemy,1,1,50,"1, 2","Basic is 1, it can be increased to 2 in general skill tree so this adds +1 to either 1 or 2 - depending on status of the general upgrade",50 000
+4,1,Annihilation,Kills the boss instantly,1,1,40,,"Cooldown - 3 min, doesn't work on ""Uber bosses""",20 000
+5,2,Auto Annihilation,Casts Annihilation automatically,1,1,50,4,Same as auto fireball or attack,50 000
+6,3,Annihilation cooldown,Reduced Annihilation cooldown,1,1,60,"4, 5",max 50% reduction at level 5,"1000, 2000, 5000, 20000, 100000 (for levels 1, 2, 3...)"
+7,4,Increase max damage,Increases maximal damage,5,5,30,,additional 25 max damage on level 5,"100, 500, 2000, 5000, 10000 (for levels 1, 2, 3...)"
+8,5,Increase min damage,Increases minimal damage,5,5,40,7,additional 25 min damage on level 5,"500, 1000, 5000, 20000, 50000 (for levels 1, 2, 3...)"
+9,6,Increase min and max damage,Increase both min and max damage,5,5,50,"7, 8",additional 25 min and max damage,"1000, 2000, 5000, 20000, 100000 (for levels 1, 2, 3...)"

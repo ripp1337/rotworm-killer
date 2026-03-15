@@ -322,7 +322,7 @@ def auth_player(token: str):
     return row
 
 # ── State versioning ──────────────────────────────────────────────
-LATEST_STATE_VERSION = 2
+LATEST_STATE_VERSION = 3
 
 def _upgrade_state(state: dict) -> dict:
     """Bring any player state up to LATEST_STATE_VERSION, filling missing keys
@@ -362,6 +362,14 @@ def _upgrade_state(state: dict) -> dict:
         # v2 adds totalClicks tracking.
         state.setdefault('totalClicks', 0)
         state['stateVersion'] = 2
+
+    if v < 3:
+        # v3 adds inventory and potion buff timers.
+        state.setdefault('inventory', {})
+        state.setdefault('potionWealthEnd', 0)
+        state.setdefault('potionWisdomEnd', 0)
+        state.setdefault('potionSwiftnessEnd', 0)
+        state['stateVersion'] = 3
 
     return state
 
