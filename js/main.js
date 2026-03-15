@@ -79,11 +79,13 @@ const AREAS = [
         levelReq: 1,
         goldCost: 0,
         floor: 'Lush_Grass.gif',
+        mobName: 'Rat',
         mobSprite: 'Rat.gif',
         mobHp: 15,
         mobExp: 10,
         mobGoldMin: 2,
         mobGoldMax: 4,
+        bossName: 'Cave Rat',
         bossSprite: 'Cave_Rat.gif',
     },
     {
@@ -92,11 +94,13 @@ const AREAS = [
         levelReq: 8,
         goldCost: 100,
         floor: 'Muddy_Floor_(Dark).gif',
+        mobName: 'Rotworm',
         mobSprite: 'Rotworm.gif',
         mobHp: 60,
         mobExp: 40,
         mobGoldMin: 5,
         mobGoldMax: 15,
+        bossName: 'Vesperoth',
         bossSprite: 'Vesperoth.gif',
     },
     {
@@ -105,11 +109,13 @@ const AREAS = [
         levelReq: 30,
         goldCost: 5000,
         floor: 'Gravel.gif',
+        mobName: 'Cyclops',
         mobSprite: 'Cyclops.gif',
         mobHp: 260,
         mobExp: 150,
         mobGoldMin: 10,
         mobGoldMax: 30,
+        bossName: 'Behemoth',
         bossSprite: 'Behemoth.gif',
     },
     {
@@ -118,11 +124,13 @@ const AREAS = [
         levelReq: 50,
         goldCost: 50000,
         floor: 'Stone_Floor_(Grey).gif',
+        mobName: 'Demon Skeleton',
         mobSprite: 'Demon_Skeleton.gif',
         mobHp: 400,
         mobExp: 240,
         mobGoldMin: 20,
         mobGoldMax: 50,
+        bossName: 'Bonebeast',
         bossSprite: 'Bonebeast.gif',
     },
     {
@@ -131,11 +139,13 @@ const AREAS = [
         levelReq: 70,
         goldCost: 100000,
         floor: 'Earth_Ground.gif',
+        mobName: 'Dragon',
         mobSprite: 'Dragon.gif',
         mobHp: 1000,
         mobExp: 700,
         mobGoldMin: 30,
         mobGoldMax: 60,
+        bossName: 'Dragon Lord',
         bossSprite: 'Dragon_Lord.gif',
     },
     {
@@ -144,11 +154,13 @@ const AREAS = [
         levelReq: 100,
         goldCost: 200000,
         floor: 'Grass_(Tile).gif',
+        mobName: 'Giant Spider',
         mobSprite: 'Giant_Spider.gif',
         mobHp: 1300,
         mobExp: 900,
         mobGoldMin: 40,
         mobGoldMax: 80,
+        bossName: 'Mamma Long Legs',
         bossSprite: 'Unwanted.gif',
     },
     {
@@ -157,11 +169,13 @@ const AREAS = [
         levelReq: 130,
         goldCost: 1000000,
         floor: 'Black_Marble_Floor.gif',
+        mobName: 'Warlock',
         mobSprite: 'Warlock.gif',
         mobHp: 4000,
         mobExp: 3000,
         mobGoldMin: 50,
         mobGoldMax: 100,
+        bossName: 'Infernalist',
         bossSprite: 'Infernalist.gif',
     },
     {
@@ -170,11 +184,13 @@ const AREAS = [
         levelReq: 175,
         goldCost: 5000000,
         floor: 'Strange_Sand.gif',
+        mobName: 'Demon',
         mobSprite: 'Demon.gif',
         mobHp: 8000,
         mobExp: 6000,
         mobGoldMin: 75,
         mobGoldMax: 125,
+        bossName: 'Weakened Demon',
         bossSprite: 'Weakened_Demon.gif',
     },
     {
@@ -183,11 +199,13 @@ const AREAS = [
         levelReq: 200,
         goldCost: 10000000,
         floor: 'Ice_Stone_Floor.gif',
+        mobName: 'Juggernaut',
         mobSprite: 'Juggernaut.gif',
         mobHp: 12000,
         mobExp: 9000,
         mobGoldMin: 100,
         mobGoldMax: 150,
+        bossName: 'Arbaziloth',
         bossSprite: 'Arbaziloth.gif',
     },
     {
@@ -196,11 +214,13 @@ const AREAS = [
         levelReq: 250,
         goldCost: 50000000,
         floor: 'Dry_Earth_(Zao).gif',
+        mobName: 'Guzzlemaw',
         mobSprite: 'Guzzlemaw.gif',
         mobHp: 18000,
         mobExp: 14000,
         mobGoldMin: 200,
         mobGoldMax: 300,
+        bossName: 'Sight of Surrender',
         bossSprite: 'Sight_of_Surrender.gif',
     },
     {
@@ -209,11 +229,13 @@ const AREAS = [
         levelReq: 300,
         goldCost: 100000000,
         floor: 'Void_(Tile).gif',
+        mobName: 'Void Emissary',
         mobSprite: 'The_Unarmored_Voidborn.gif',
         mobHp: 30000,
         mobExp: 20000,
         mobGoldMin: 300,
         mobGoldMax: 500,
+        bossName: 'Devovorga',
         bossSprite: 'Devovorga.gif',
     },
 ];
@@ -1757,6 +1779,7 @@ function draw() {
             }
         }
     }
+    const area = getCurrentArea();
     worms.forEach(w => {
         // sprite drawn as DOM <img> via syncSpriteLayer() — only draw HP bar here
         const barW = 40;
@@ -1768,6 +1791,14 @@ function draw() {
         ctx.fillRect(barX, barY, barW, barH);
         ctx.fillStyle = hpBarColor(hpRatio);
         ctx.fillRect(barX, barY, barW * hpRatio, barH);
+
+        // Monster name above health bar
+        ctx.save();
+        ctx.font = 'bold 10px Verdana, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = hpBarColor(hpRatio);
+        ctx.fillText(area.mobName || '', w.x, barY - 4);
+        ctx.restore();
     });
     // draw boss
     if (boss) {
@@ -1782,16 +1813,14 @@ function draw() {
         ctx.fillRect(bBarX, bBarY, bBarW, bBarH);
         ctx.fillStyle = hpBarColor(bHpRatio);
         ctx.fillRect(bBarX, bBarY, bBarW * bHpRatio, bBarH);
-        // boss label
-        if (boss.isUber) {
-            ctx.fillStyle = '#ff4400';
-            ctx.font = 'bold 12px Verdana, sans-serif';
-            ctx.fillText('UBER BOSS', boss.x - 36, boss.y - boss.size - 13);
-        } else {
-            ctx.fillStyle = '#ffd700';
-            ctx.font = 'bold 10px Verdana, sans-serif';
-            ctx.fillText('BOSS', boss.x - 14, boss.y - boss.size - 13);
-        }
+        // boss label (use area name, but preserve Uber label)
+        ctx.save();
+        ctx.font = boss.isUber ? 'bold 12px Verdana, sans-serif' : 'bold 10px Verdana, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = hpBarColor(bHpRatio);
+        const bossLabel = boss.isUber ? `UBER ${area.bossName || 'BOSS'}` : (area.bossName || 'BOSS');
+        ctx.fillText(bossLabel, boss.x, boss.y - boss.size - 13);
+        ctx.restore();
     }
     // highlight auto-attack target
     if (autoEnabled && autoTarget && worms.includes(autoTarget)) {
