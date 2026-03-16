@@ -185,8 +185,61 @@
         }
         #refresh-info span { color: #7a6030; }
 
-        .loading { padding: 24px; text-align: center; color: #5a4020; font-size: 12px; }
-        .error   { padding: 24px; text-align: center; color: #cc4444; font-size: 12px; }
+        /* Class distribution cards */
+        .class-cards {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .class-card {
+            flex: 1 1 120px;
+            background: #17100a;
+            border: 1px solid #3a2408;
+            border-radius: 4px;
+            padding: 10px 14px;
+            text-align: center;
+        }
+        .class-card .cval {
+            font-size: 22px;
+            font-weight: bold;
+            color: #c0a050;
+            line-height: 1.2;
+        }
+        .class-card .clbl {
+            font-size: 10px;
+            color: #7a6030;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 3px;
+        }
+        .class-card.nv  .cval { color: #a09050; }
+        .class-card.kni .cval { color: #c09030; }
+        .class-card.sor .cval { color: #9060d8; }
+
+        /* Filter tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .ftab {
+            padding: 4px 14px;
+            background: #17100a;
+            border: 1px solid #3a2408;
+            color: #6a5030;
+            font-size: 11px;
+            font-family: Verdana, sans-serif;
+            cursor: pointer;
+        }
+        .ftab:hover { background: #241408; color: #c0a050; }
+        .ftab.active { background: #2e1e08; color: #f0c040; border-color: #7a5818; }
+
+        /* Class badge in table */
+        td.cls { text-align: center; font-size: 10px; font-weight: bold; }
+        td.cls-nv  { color: #605030; }
+        td.cls-kni { color: #c09030; }
+        td.cls-sor { color: #9060d8; }
     </style>
 </head>
 <body>
@@ -221,9 +274,31 @@
         </div>
     </div>
 
+    <div class="class-cards">
+        <div class="class-card nv">
+            <div class="cval" id="stat-nv">—</div>
+            <div class="clbl">No Vocation</div>
+        </div>
+        <div class="class-card kni">
+            <div class="cval" id="stat-kni">—</div>
+            <div class="clbl">Knights</div>
+        </div>
+        <div class="class-card sor">
+            <div class="cval" id="stat-sor">—</div>
+            <div class="clbl">Sorcerers</div>
+        </div>
+    </div>
+
     <div id="search-wrap">
         <input id="search" type="text" placeholder="Search player…" oninput="filterTable()">
         <span id="result-count"></span>
+    </div>
+
+    <div class="filter-tabs">
+        <button class="ftab active" onclick="setClassFilter('all', this)">All</button>
+        <button class="ftab" onclick="setClassFilter('nv', this)">No Vocation</button>
+        <button class="ftab" onclick="setClassFilter('knight', this)">⚔️ Knight</button>
+        <button class="ftab" onclick="setClassFilter('sorcerer', this)">🔮 Sorcerer</button>
     </div>
 
     <div id="scoreboard-wrap">
@@ -238,7 +313,8 @@
 </div>
 
 <script>
-    let allPlayers = [];
+    let allPlayers    = [];
+    let activeFilter  = 'all';  // 'all' | 'nv' | 'knight' | 'sorcerer'
 
     function fmt(n) {
         if (n == null) return '—';
@@ -252,41 +328,74 @@
         return '';
     }
 
+    function classLabel(c) {
+        if (c === 'knight')   return 'KNI';
+        if (c === 'sorcerer') return 'SOR';
+        return 'NV';
+    }
+    function classCss(c) {
+        if (c === 'knight')   return 'cls cls-kni';
+        if (c === 'sorcerer') return 'cls cls-sor';
+        return 'cls cls-nv';
+    }
+
+    function setClassFilter(cls, btn) {
+        activeFilter = cls;
+        document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        filterTable();
+    }
+
     function renderTable(players) {
         if (!players.length) {
             document.getElementById('table-container').innerHTML =
                 '<div class="loading">No players match your search.</div>';
             return;
         }
+        // Re-rank within the filtered set to keep #1, #2, … continuous
         let html = `<table>
             <thead>
                 <tr>
                     <th class="num">#</th>
                     <th>Player</th>
+                    <th>Class</th>
                     <th class="num">Score</th>
                     <th class="num">Level</th>
                     <th class="num">Clicks</th>
                 </tr>
             </thead><tbody>`;
-        for (const p of players) {
-            const rc = rankClass(p.rank);
+        players.forEach((p, idx) => {
+            const rc  = rankClass(idx + 1);
             html += `<tr>
-                <td class="rank num ${rc}">${p.rank}</td>
+                <td class="rank num ${rc}">${idx + 1}</td>
                 <td class="username">${escHtml(p.username)}</td>
+                <td class="${classCss(p.ascendedClass)}">${classLabel(p.ascendedClass)}</td>
                 <td class="num">${fmt(p.score)}</td>
                 <td class="num">${fmt(p.level)}</td>
                 <td class="num clicks">${fmt(p.totalClicks)}</td>
             </tr>`;
-        }
+        });
         html += '</tbody></table>';
         document.getElementById('table-container').innerHTML = html;
     }
 
     function filterTable() {
-        const q = document.getElementById('search').value.trim().toLowerCase();
-        const filtered = q ? allPlayers.filter(p => p.username.toLowerCase().includes(q)) : allPlayers;
+        const q   = document.getElementById('search').value.trim().toLowerCase();
+        let pool  = allPlayers;
+        if (activeFilter !== 'all') {
+            pool = pool.filter(p => {
+                const cls = p.ascendedClass || null;
+                if (activeFilter === 'nv')       return !cls;
+                if (activeFilter === 'knight')   return cls === 'knight';
+                if (activeFilter === 'sorcerer') return cls === 'sorcerer';
+                return true;
+            });
+        }
+        const filtered = q ? pool.filter(p => p.username.toLowerCase().includes(q)) : pool;
         document.getElementById('result-count').textContent =
-            q ? `${filtered.length} / ${allPlayers.length} players` : `${allPlayers.length} players`;
+            (q || activeFilter !== 'all')
+                ? `${filtered.length} / ${allPlayers.length} players`
+                : `${allPlayers.length} players`;
         renderTable(filtered);
     }
 
@@ -304,6 +413,12 @@
             document.getElementById('stat-5min').textContent  = fmt(data.activeLast5Min);
             document.getElementById('stat-1h').textContent    = fmt(data.activeLast1h);
             document.getElementById('stat-24h').textContent   = fmt(data.activeLast24h);
+
+            if (data.classCounts) {
+                document.getElementById('stat-nv').textContent  = fmt(data.classCounts.nv);
+                document.getElementById('stat-kni').textContent = fmt(data.classCounts.knight);
+                document.getElementById('stat-sor').textContent = fmt(data.classCounts.sorcerer);
+            }
 
             allPlayers = data.players || [];
             filterTable();

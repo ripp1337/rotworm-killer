@@ -103,6 +103,11 @@ class _DictRow:
         return self._values[self._keys.index(key)]
     def keys(self):
         return self._keys
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except (KeyError, ValueError):
+            return default
     def __iter__(self):
         return iter(self._values)
 
@@ -122,22 +127,24 @@ class _TursoCursor:
         return [_DictRow(desc, r) for r in self._cur.fetchall()]
 
 def _turso_reconnect() -> '_TursoConn':
-    """Create a fresh Turso connection, replacing the global one."""
+    """Create a fresh Turso connection, replacing the global one.
+    Lock-protected so simultaneous threads don\'t all reconnect at once."""
     global _turso_conn
-    print('[turso] reconnecting after stale stream...')
-    try:
-        if _turso_conn is not None:
-            try:
-                _turso_conn.close()
-            except Exception:
-                pass
-    except Exception:
-        pass
-    raw = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
-    raw.sync()
-    _turso_conn = _TursoConn(raw)
-    print('[turso] reconnected.')
-    return _turso_conn
+    with _turso_reconnect_lock:
+        print('[turso] reconnecting after stale stream...')
+        try:
+            if _turso_conn is not None:
+                try:
+                    _turso_conn.close()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        raw = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
+        raw.sync()
+        _turso_conn = _TursoConn(raw)
+        print('[turso] reconnected.')
+        return _turso_conn
 
 class _TursoConn:
     """Connection wrapper that adds sqlite3.Row-style column-name access."""
@@ -147,16 +154,29 @@ class _TursoConn:
     def execute(self, sql, params=()):
         try:
             return _TursoCursor(self._raw.execute(sql, params))
-        except Exception as e:
-            if 'stream not found' in str(e) or 'stream' in str(e).lower():
+        except BaseException as e:
+            # pyo3_runtime.PanicException (Rust unwrap panic) is a BaseException, not
+            # Exception, so we must use BaseException here.  Re-raise hard signals.
+            if isinstance(e, (KeyboardInterrupt, SystemExit, GeneratorExit)):
+                raise
+            e_str  = str(e)
+            e_type = type(e).__name__
+            if ('stream not found' in e_str or 'stream' in e_str.lower() or
+                    e_type == 'PanicException' or 'unwrap' in e_str.lower()):
                 fresh = _turso_reconnect()
+                # Single retry on the fresh connection; let any failure propagate.
                 return _TursoCursor(fresh._raw.execute(sql, params))
             raise
     def commit(self):
         try:
             self._raw.commit()
-        except Exception as e:
-            if 'stream not found' in str(e) or 'stream' in str(e).lower():
+        except BaseException as e:
+            if isinstance(e, (KeyboardInterrupt, SystemExit, GeneratorExit)):
+                raise
+            e_str  = str(e)
+            e_type = type(e).__name__
+            if ('stream not found' in e_str or 'stream' in e_str.lower() or
+                    e_type == 'PanicException' or 'unwrap' in e_str.lower()):
                 _turso_reconnect()
             else:
                 raise
@@ -273,6 +293,7 @@ init_db()
 
 # Thread-local SQLite connections (WAL mode for concurrency)
 _tls        = threading.local()
+_turso_reconnect_lock = threading.Lock()  # prevents concurrent reconnect storms
 _write_lock = threading.Lock()
 
 # ── In-memory session cache ────────────────────────────────────────
@@ -370,7 +391,8 @@ def auth_player(token: str):
             ).fetchone()
             if row:
                 _cache_player_data(row)
-            return row
+                return _get_cached_player_data(player_id)
+            return None
         del _session_cache[token]  # expired
     # Slow path: first request for this session — check DB.
     row = db().execute('SELECT player_id FROM sessions WHERE token=?', (token,)).fetchone()
@@ -386,7 +408,8 @@ def auth_player(token: str):
     ).fetchone()
     if row:
         _cache_player_data(row)
-    return row
+        return _get_cached_player_data(player_id)
+    return None
 
 # ── State versioning ──────────────────────────────────────────────
 LATEST_STATE_VERSION = 7
@@ -453,16 +476,19 @@ def _upgrade_state(state: dict) -> dict:
 
     if v < 6:
         # v6 replaces general skill system (old IDs 1-12 → new IDs 11-34).
-        # Reset skillPoints so all players rebuild with the new tree.
-        state['skillPoints'] = {}
+        # Reset skillPoints only if it was the old integer format (not already migrated dict).
+        if not isinstance(state.get('skillPoints'), dict):
+            state['skillPoints'] = {}
         state.setdefault('firestormCharges', 0)
         state['stateVersion'] = 6
 
     if v < 7:
         # v7 replaces knight and sorcerer ascension skill trees (3×4, no level gating).
-        # Reset ascension skill points; re-derive class ability unlocks from ascendedClass.
-        state['knightSkillPts'] = {}
-        state['sorcSkillPts'] = {}
+        # Reset ascension skill points only if they hold old data (not already migrated dicts).
+        if not isinstance(state.get('knightSkillPts'), dict):
+            state['knightSkillPts'] = {}
+        if not isinstance(state.get('sorcSkillPts'), dict):
+            state['sorcSkillPts'] = {}
         cls = state.get('ascendedClass')
         if cls == 'sorcerer':
             state['ueUnlocked'] = True
@@ -725,33 +751,42 @@ class Handler(BaseHTTPRequestHandler):
                 active24 = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_24h,)).fetchone()[0]  # type: ignore[index]
 
                 rows = conn.execute(
-                    'SELECT username,score,level,total_clicks FROM players '
-                    'ORDER BY score DESC, level DESC, username ASC'
+                    "SELECT username, score, level, total_clicks, "
+                    "json_extract(state, '$.ascendedClass') as ascendedClass "
+                    'FROM players ORDER BY score DESC, level DESC, username ASC'
                 ).fetchall()
 
-                players = [
-                    {
-                        'rank':        i + 1,
-                        'username':    r['username'],
-                        'score':       int(r['score'] or 0),
-                        'level':       int(r['level'] or 1),
-                        'totalClicks': int(r['total_clicks'] or 0),
-                    }
-                    for i, r in enumerate(rows)
-                ]
+                class_counts = {'nv': 0, 'knight': 0, 'sorcerer': 0}
+                players = []
+                for i, r in enumerate(rows):
+                    cls = r['ascendedClass'] or None
+                    if cls == 'knight':   class_counts['knight']   += 1
+                    elif cls == 'sorcerer': class_counts['sorcerer'] += 1
+                    else:                 class_counts['nv']       += 1
+                    players.append({
+                        'rank':          i + 1,
+                        'username':      r['username'],
+                        'score':         int(r['score'] or 0),
+                        'level':         int(r['level'] or 1),
+                        'totalClicks':   int(r['total_clicks'] or 0),
+                        'ascendedClass': cls,
+                    })
 
                 self.send_json(200, {
                     'totalPlayers':   total,
                     'activeLast5Min': active5,
                     'activeLast1h':   active1h,
                     'activeLast24h':  active24,
+                    'classCounts':    class_counts,
                     'players':        players,
                 })
 
             elif path == '/api/scoreboard':
                 conn  = db()
                 top10 = [dict(r) for r in conn.execute(
-                    'SELECT username,score,level FROM players ORDER BY score DESC,level DESC LIMIT 10'
+                    "SELECT username, score, level, "
+                    "json_extract(state, '$.ascendedClass') as ascendedClass "
+                    'FROM players ORDER BY score DESC,level DESC LIMIT 10'
                 ).fetchall()]
                 my_entry = None
                 player   = auth_player(self.get_token())
@@ -764,11 +799,20 @@ class Handler(BaseHTTPRequestHandler):
                             (player['score'], player['score'], player['level'])
                         ).fetchone()
                         assert row is not None
+                        state_blob = player.get('state')
+                        my_class = None
+                        if state_blob:
+                            try:
+                                import json as _j
+                                my_class = _j.loads(state_blob).get('ascendedClass')
+                            except Exception:
+                                pass
                         my_entry = {
-                            'rank':     row['rnk'],
-                            'username': player['username'],
-                            'score':    player['score'],
-                            'level':    player['level'],
+                            'rank':          row['rnk'],
+                            'username':      player['username'],
+                            'score':         player['score'],
+                            'level':         player['level'],
+                            'ascendedClass': my_class,
                         }
                 self.send_json(200, {'players': top10, 'me': my_entry})
 

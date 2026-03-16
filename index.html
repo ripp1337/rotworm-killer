@@ -38,7 +38,8 @@
             <button class="nav-btn" id="nav-news-btn" onclick="showPage('news')">📢 Announcements</button>
             <button class="nav-btn" id="nav-suggest-btn" onclick="showPage('suggest')">💬 Feedback</button>
             <a class="nav-btn" href="/stats.html">📊 Statistics</a>
-            <a class="nav-btn nav-discord" href="https://discord.gg/2NsBBAE8" target="_blank" rel="noopener noreferrer">🎮 Discord</a>
+            <a class="nav-btn" href="https://discord.gg/2NsBBAE8" target="_blank" rel="noopener noreferrer">🎮 Discord</a>
+            <a class="nav-btn nav-donate" href="https://buymeacoffee.com/ripp1337" target="_blank" rel="noopener noreferrer">☕ Donate</a>
         </div>
     </nav>
 
@@ -104,6 +105,7 @@
             <div id="hud-right">
                 <div class="hud-row player-row">
                     <span id="hud-player">—</span>
+                    <button id="statsBtn" onclick="openStats()">📊</button>
                     <button id="logoutBtn">Logout</button>
                 </div>
                 <hr>
@@ -670,6 +672,16 @@
                 </button>
             </div>
             <p class="class-choice-warn">⚠ This choice is permanent and cannot be reversed.</p>
+        </div>
+    </div>
+    <!-- Stats modal -->
+    <div id="stats-modal" style="display:none">
+        <div class="st-modal-box stats-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">📊 My Statistics</span>
+                <button class="st-close-btn" onclick="document.getElementById('stats-modal').style.display='none'">&#x2715;</button>
+            </div>
+            <div id="stats-body" class="stats-body"></div>
         </div>
     </div>
     <!-- Inventory modal -->

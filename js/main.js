@@ -524,6 +524,18 @@ function updateHUD() {
 }
 
 let totalClicks = 0;   // lifetime successful click-attacks
+let totalMonstersKilled   = 0;  // lifetime worm kills
+let totalBossesKilled     = 0;  // lifetime regular boss kills
+let totalUberBossesKilled = 0;  // lifetime uber boss kills
+let totalMaterialsGathered = 0; // lifetime items ever added to inventory
+let totalPotionsCrafted   = 0;  // lifetime potions crafted
+// Session counters (reset each page load — not persisted)
+const sessionStartTime      = Date.now();
+let sessionMonstersKilled   = 0;
+let sessionBossesKilled     = 0;
+let sessionUberBossesKilled = 0;
+let sessionGoldEarned       = 0;
+let sessionExpEarned        = 0;
 let fireballActive = false;
 let spawnPaused = false;
 let dmgNumbers = []; // floating damage numbers
@@ -616,10 +628,10 @@ const BOSS_FOCUS_UNLOCK_GOLD  = 1000;
 let bossFocusUnlocked = false;
 
 function fmtCost(n) {
-    if (n >= 1e12) return (n/1e12).toFixed(0) + 'T';
-    if (n >= 1e9)  return (n/1e9).toFixed(0)  + 'B';
-    if (n >= 1e6)  return (n/1e6).toFixed(0)  + 'M';
-    if (n >= 1e3)  return (n/1e3).toFixed(0)  + 'K';
+    if (n >= 1e12) return (n/1e12).toFixed(1).replace(/\.0$/, '') + 'T';
+    if (n >= 1e9)  return (n/1e9).toFixed(1).replace(/\.0$/, '')  + 'B';
+    if (n >= 1e6)  return (n/1e6).toFixed(1).replace(/\.0$/, '')  + 'M';
+    if (n >= 1e3)  return (n/1e3).toFixed(1).replace(/\.0$/, '')  + 'K';
     return n.toString();
 }
 
@@ -905,6 +917,7 @@ function craftPotion(id) {
     gold -= r.goldCost;
     Object.entries(r.ingredients).forEach(([k, v]) => { inventory[k] -= v; });
 
+    totalPotionsCrafted++;
     // Stack duration for the same potion type when crafting again while it's active.
     const now = Date.now();
     const currentEnd = _getPotionEnd(id);
@@ -1312,6 +1325,8 @@ function getProgress() {
         bossSpawnCounter,
         bossKillCounter,
         totalClicks,
+        totalMonstersKilled, totalBossesKilled, totalUberBossesKilled,
+        totalMaterialsGathered, totalPotionsCrafted,
         inventory,
         potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
         potionMedWealthEnd, potionMedWisdomEnd, potionMedSwiftnessEnd,
@@ -1320,7 +1335,7 @@ function getProgress() {
         currentArea, unlockedAreas,
         hmmCooldownEnd, arcaneWeakeningStacks, suddenDeathCooldownEnd, essenceGatheringEnd,
         comboStacks, flowStacks, clickOrderCount,
-        stateVersion: 4,
+        stateVersion: 7,
         savedAt: Date.now(),
     };
 }
@@ -1358,6 +1373,11 @@ function loadProgress(state) {
         if (s.bossKillCounter        != null) bossKillCounter        = s.bossKillCounter;
         // legacy: firstBossSpawned is no longer used
         if (s.totalClicks             != null) totalClicks           = s.totalClicks;
+        if (s.totalMonstersKilled    != null) totalMonstersKilled    = s.totalMonstersKilled;
+        if (s.totalBossesKilled      != null) totalBossesKilled      = s.totalBossesKilled;
+        if (s.totalUberBossesKilled  != null) totalUberBossesKilled  = s.totalUberBossesKilled;
+        if (s.totalMaterialsGathered != null) totalMaterialsGathered = s.totalMaterialsGathered;
+        if (s.totalPotionsCrafted    != null) totalPotionsCrafted    = s.totalPotionsCrafted;
         if (s.inventory        != null) inventory        = Object.assign({}, inventory, s.inventory);
         if (s.potionWealthEnd       != null) potionWealthEnd       = s.potionWealthEnd;
         if (s.potionWisdomEnd       != null) potionWisdomEnd       = s.potionWisdomEnd;
@@ -1397,6 +1417,11 @@ async function saveProgress() {
     if (!Number.isFinite(exp)   || exp   < 0) exp   = 0;
     if (!Number.isFinite(score) || score < 0) score = 0;
     if (!Number.isFinite(level) || level < 1) level = 1;
+    // Snapshot the values being sent so we can compare against them (not the
+    // current live values) when the response arrives.  A boss kill or worm kill
+    // can happen in the ~100–300 ms the request is in-flight; comparing against
+    // the snapshot avoids reverting those gains.
+    const _snapScore = score, _snapLevel = level, _snapGold = gold, _snapExp = exp;
     try {
         const _res = await fetch('/api/save', {
             method: 'POST',
@@ -1408,13 +1433,15 @@ async function saveProgress() {
             body: JSON.stringify({ state: getProgress() }),
         });
         // Reconcile client state with server-authoritative clamped values.
-        // This corrects any console manipulation within one save cycle (≤30s).
+        // Apply corrections as a delta relative to the snapshot so that any
+        // gains earned after the snapshot (during the in-flight window) are
+        // preserved rather than reverted.
         if (_res.ok) {
             const _d = await _res.json();
-            if (typeof _d.score === 'number' && _d.score < score) score = _d.score;
-            if (typeof _d.level === 'number' && _d.level < level) level = _d.level;
-            if (typeof _d.gold  === 'number' && _d.gold  < gold)  gold  = _d.gold;
-            if (typeof _d.exp   === 'number' && _d.exp   < exp)   exp   = _d.exp;
+            if (typeof _d.score === 'number' && _d.score < _snapScore) score = Math.max(1, score - (_snapScore - _d.score));
+            if (typeof _d.level === 'number' && _d.level < _snapLevel) level = Math.max(1, level - (_snapLevel - _d.level));
+            if (typeof _d.gold  === 'number' && _d.gold  < _snapGold)  gold  = Math.max(0, gold  - (_snapGold  - _d.gold));
+            if (typeof _d.exp   === 'number' && _d.exp   < _snapExp)   exp   = Math.max(0, exp   - (_snapExp   - _d.exp));
         } else if (_res.status === 403) {
             const _d = await _res.json().catch(() => ({}));
             clearInterval(_saveTimer);
@@ -1578,6 +1605,12 @@ function escHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function _classLabel(cls) {
+    if (cls === 'knight')   return 'KNI';
+    if (cls === 'sorcerer') return 'SOR';
+    return 'NV';
+}
+
 async function fetchScoreboard() {
     try {
         const res  = await fetch('/api/scoreboard', {
@@ -1593,6 +1626,7 @@ async function fetchScoreboard() {
             row.innerHTML =
                 `<span class="sb-rank">#${i + 1}</span>` +
                 `<span class="sb-name">${escHtml(p.username)}</span>` +
+                `<span class="sb-class sb-class-${p.ascendedClass || 'nv'}">${_classLabel(p.ascendedClass)}</span>` +
                 `<span class="sb-score">${p.score}</span>` +
                 `<span class="sb-level">lv${p.level}</span>`;
             el.appendChild(row);
@@ -1607,11 +1641,64 @@ async function fetchScoreboard() {
             row.innerHTML =
                 `<span class="sb-rank">#${data.me.rank}</span>` +
                 `<span class="sb-name">${escHtml(data.me.username)}</span>` +
+                `<span class="sb-class sb-class-${data.me.ascendedClass || 'nv'}">${_classLabel(data.me.ascendedClass)}</span>` +
                 `<span class="sb-score">${data.me.score}</span>` +
                 `<span class="sb-level">lv${data.me.level}</span>`;
             el.appendChild(row);
         }
     } catch (_) {}
+}
+
+// ── Personal Statistics ──────────────────────────────────────────
+function openStats() {
+    const fmt = n => (n || 0).toLocaleString();
+    const fmtTime = ms => {
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    };
+    const sessionDuration = Date.now() - sessionStartTime;
+    const className = ascendedClass === 'knight'   ? 'Knight'
+                    : ascendedClass === 'sorcerer' ? 'Sorcerer'
+                    : 'No Vocation';
+    const totalBosses   = totalBossesKilled + totalUberBossesKilled;
+    const sessionBosses = sessionBossesKilled + sessionUberBossesKilled;
+    document.getElementById('stats-body').innerHTML = `
+        <div class="stats-player-header">
+            <span class="stats-player-name">${escHtml(authUsername || '?')}</span>
+            <span class="stats-player-class stats-class-${ascendedClass || 'nv'}">${className}</span>
+        </div>
+        <div class="stats-meta-row">
+            <span>Level <b>${fmt(level)}</b></span>
+            <span>Score <b>${fmt(score)}</b></span>
+            <span>Area <b>${escHtml(currentArea || 'Rookgaard')}</b></span>
+        </div>
+        <div class="stats-section-title">This Session &mdash; <span style="font-size:10px;font-weight:normal;color:#7a6030">${fmtTime(sessionDuration)} online</span></div>
+        <div class="stats-grid">
+            <span class="stats-label">Monsters killed</span><span class="stats-val">${fmt(sessionMonstersKilled)}</span>
+            <span class="stats-label">Bosses killed</span><span class="stats-val">${fmt(sessionBossesKilled)}</span>
+            <span class="stats-label">Uber bosses killed</span><span class="stats-val">${fmt(sessionUberBossesKilled)}</span>
+            <span class="stats-label">Total kills</span><span class="stats-val">${fmt(sessionMonstersKilled + sessionBosses)}</span>
+            <span class="stats-label">Gold earned</span><span class="stats-val">${fmt(sessionGoldEarned)}</span>
+            <span class="stats-label">Experience earned</span><span class="stats-val">${fmt(sessionExpEarned)}</span>
+        </div>
+        <div class="stats-section-title" style="margin-top:14px">All Time</div>
+        <div class="stats-grid">
+            <span class="stats-label">Monsters killed</span><span class="stats-val">${fmt(totalMonstersKilled)}</span>
+            <span class="stats-label">Bosses killed</span><span class="stats-val">${fmt(totalBossesKilled)}</span>
+            <span class="stats-label">Uber bosses killed</span><span class="stats-val">${fmt(totalUberBossesKilled)}</span>
+            <span class="stats-label">Total kills</span><span class="stats-val">${fmt(totalMonstersKilled + totalBosses)}</span>
+            <span class="stats-label" style="margin-top:6px">Boss kill streak</span><span class="stats-val" style="margin-top:6px">${fmt(bossKillCounter)}</span>
+            <span class="stats-label">Materials gathered</span><span class="stats-val">${fmt(totalMaterialsGathered)}</span>
+            <span class="stats-label">Potions crafted</span><span class="stats-val">${fmt(totalPotionsCrafted)}</span>
+            <span class="stats-label">Total clicks</span><span class="stats-val">${fmt(totalClicks)}</span>
+        </div>
+    `;
+    document.getElementById('stats-modal').style.display = 'flex';
 }
 
 // ── Auth flow ────────────────────────────────────────────────────
@@ -1702,10 +1789,17 @@ async function initAuth() {
                 startGame(data.player.state);
                 return;
             }
-        } catch (_) {}
-        authToken = null;
-        localStorage.removeItem('rk_token');
-        localStorage.removeItem('rk_username');
+            // Only invalidate the token if the server explicitly rejects it (401).
+            // For 5xx or other errors keep the token so the player can retry after
+            // a server restart / temporary outage without losing their session.
+            if (res.status === 401) {
+                authToken = null;
+                localStorage.removeItem('rk_token');
+                localStorage.removeItem('rk_username');
+            }
+        } catch (_) {
+            // Network error — keep the token; the session may still be valid
+        }
     }
     document.getElementById('login-modal').style.display = 'flex';
 }
@@ -1922,11 +2016,15 @@ function spawnBoss() {
 
 function killWorm(w) {
     score += MOB_KILLS;
+    totalMonstersKilled++;
+    sessionMonstersKilled++;
     const expGain  = Math.floor(MOB_EXP  * skillExpMult() * potionExpMult());
     const goldBase = MOB_GOLD_MIN + Math.floor(Math.random() * (MOB_GOLD_MAX - MOB_GOLD_MIN + 1));
     const goldGain = Math.floor(goldBase * skillGoldMult() * sorcGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
+    sessionGoldEarned += goldGain;
+    sessionExpEarned  += expGain;
     checkLevelUp();
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: expGain, color: 'white', life: 80 });
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 32, value: goldGain, color: '#f0c040', life: 80 });
@@ -1934,6 +2032,7 @@ function killWorm(w) {
     const _wd = rollEssenceDrops(false, false);
     let _wq = 0;
     _wd.forEach(({ k, qty }) => { inventory[k] = (inventory[k] || 0) + qty; _wq += qty; });
+    totalMaterialsGathered += _wq;
     if (_wq > 0) dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 46, value: '+' + _wq, color: '#5599ff', life: 80 });
     bossSpawnCounter++;
     // Boss spawn: first boss guaranteed after 10 kills; afterwards probabilistic per kill
@@ -1964,11 +2063,15 @@ function killWorm(w) {
 
 function killBoss(b) {
     score += b.isUber ? BOSS_KILLS * 2 : BOSS_KILLS;
+    if (b.isUber) { totalUberBossesKilled++; sessionUberBossesKilled++; }
+    else          { totalBossesKilled++;     sessionBossesKilled++; }
     const _bossMult = b.isUber ? 20 : 10;
     const expGain  = Math.floor(MOB_EXP  * _bossMult * skillExpMult() * potionExpMult());
     const goldGain = Math.floor(Math.floor((MOB_GOLD_MIN + MOB_GOLD_MAX) / 2) * _bossMult * skillGoldMult() * sorcGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
+    sessionGoldEarned += goldGain;
+    sessionExpEarned  += expGain;
     checkLevelUp();
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 18, value: expGain, color: '#ffd700', life: 100 });
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 32, value: goldGain, color: '#f0c040', life: 100 });
@@ -1980,6 +2083,7 @@ function killBoss(b) {
         inventory[k] = (inventory[k] || 0) + boostedQty;
         _bq += boostedQty;
     });
+    totalMaterialsGathered += _bq;
     if (_bq > 0) dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 46, value: '+' + _bq, color: '#5599ff', life: 100 });
     bossKillCounter++;
     boss = null;
@@ -2082,15 +2186,20 @@ function draw() {
         ctx.restore();
     }
     // highlight auto-attack target
-    if (autoEnabled && autoTarget && worms.includes(autoTarget)) {
-        ctx.save();
-        ctx.strokeStyle = '#dd88ff';
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = 0.85;
-        ctx.beginPath();
-        ctx.arc(autoTarget.x, autoTarget.y, autoTarget.size + 5, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+    if (autoEnabled) {
+        const _circTarget = (bossFocusUnlocked && boss) ? boss
+                          : (autoTarget && worms.includes(autoTarget)) ? autoTarget
+                          : null;
+        if (_circTarget) {
+            ctx.save();
+            ctx.strokeStyle = (bossFocusUnlocked && boss) ? '#ff6666' : '#dd88ff';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath();
+            ctx.arc(_circTarget.x, _circTarget.y, _circTarget.size + 5, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
     }
     // level-up message (canvas only)
     if (levelUpMsg > 0) {

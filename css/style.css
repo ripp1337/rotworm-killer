@@ -71,6 +71,22 @@ body {
     border-color: #5865f2;
 }
 
+.nav-btn.nav-donate {
+    color: #fff8f0;
+    background: #7a2e08 !important;
+    border-color: #c04a18;
+    font-weight: bold;
+    text-shadow: 0 0 6px #ff6e4044;
+    box-shadow: 0 0 6px #7a2e0888;
+}
+
+.nav-btn.nav-donate:hover {
+    background: #a03a0a !important;
+    color: #fff;
+    border-color: #ff6e40;
+    box-shadow: 0 0 12px #ff6e4055;
+}
+
 /* ── Pages ───────────────────────────────────────────────────── */
 #page-game {
     padding: 8px 12px;
@@ -412,6 +428,21 @@ canvas {
     color: #e07070 !important;
 }
 
+#statsBtn {
+    font-size: 10px !important;
+    padding: 2px 4px !important;
+    background: #0e1a1e !important;
+    color: #5599cc !important;
+    border-color: #1a4a5a !important;
+    box-shadow: none !important;
+    flex-shrink: 0;
+}
+
+#statsBtn:hover {
+    background: #0e2a3a !important;
+    color: #88ccff !important;
+}
+
 /* ── Ascend button ───────────────────────────────────────────── */
 #ascendBtn {
     width: 100%;
@@ -474,7 +505,7 @@ canvas {
 
 .sb-row {
     display: grid;
-    grid-template-columns: 20px 1fr 34px 26px;
+    grid-template-columns: 20px 1fr 26px 34px 26px;
     gap: 2px;
     font-size: 9px;
     color: #8a7040;
@@ -490,6 +521,9 @@ canvas {
 
 .sb-rank  { color: #5a4020; text-align: right; padding-right: 2px; }
 .sb-name  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-class { text-align: center; font-size: 8px; font-weight: bold; color: #5a7080; }
+.sb-class-knight   { color: #c09030; }
+.sb-class-sorcerer { color: #8050c8; }
 .sb-score { text-align: right; }
 .sb-level { text-align: right; color: #6080a0; }
 .sb-sep   { font-size: 9px; color: #3a2408; }
@@ -1560,7 +1594,8 @@ canvas {
 
 /* ── Inventory modal ─────────────────────────────────────────── */
 #inventory-modal,
-#crafting-modal {
+#crafting-modal,
+#stats-modal {
     position: fixed;
     top: 0;
     right: 0;
@@ -1577,6 +1612,60 @@ canvas {
 
 .inv-modal-box  { width: 520px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
 .craft-modal-box { width: 540px; max-width: 96vw; }
+.stats-modal-box { width: 460px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
+
+/* ── Stats modal body ──────────────────────────────────────────────── */
+.stats-body {
+    padding: 14px 18px 18px;
+}
+.stats-player-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.stats-player-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #f0c040;
+}
+.stats-player-class {
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #1e1408;
+    color: #8a7040;
+    border: 1px solid #3a2408;
+}
+.stats-class-knight   { color: #c09030; border-color: #7a5010; }
+.stats-class-sorcerer { color: #9060d8; border-color: #5030a0; }
+.stats-meta-row {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: #7a6030;
+    margin-bottom: 12px;
+}
+.stats-meta-row b { color: #c0a050; }
+.stats-section-title {
+    font-size: 11px;
+    font-weight: bold;
+    color: #f0c040;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #3a2408;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 3px 12px;
+    font-size: 11px;
+}
+.stats-label { color: #8a7040; }
+.stats-val    { color: #f0d060; text-align: right; font-weight: bold; }
 
 .inv-hint {
     font-size: 10px;
