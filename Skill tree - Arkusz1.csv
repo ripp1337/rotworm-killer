@@ -1,7 +1,0 @@
-ID,Tier,Name,What it does,Max points,Value per point,Required level,Prerequisites ID,Comment
-1,1,More monsters,Additional monster spawn (natural cap is 10),5,1,1,none,So at max 5 points - 15 instead of 10 monsters
-2,2,More bosses,Bosses spawn more frequently (naturally - once per 30 monsters),5,2,5,1,So at max 5 points - every 20 monsters instead of every 30
-3,3,Uber bosses,"Uber boss can spawn (once every 50 monsters, unaffected by other modifiers)",1,1,15,"1, 2",
-4,1,More gold,More gold per kill (10% per point),5,10%,1,none,So at max 5 points +50% gold
-5,2,More exp,More exp per kill (10% per point),5,10%,5,4,So at max 5 points +50% exp
-6,3,Cooldown reset,All cooldowns are reset once in a while (1% chance after killing a monster),1,1,15,"5, 6",After killing a monster there is a 1 in 100 chance that alll cooldowns will be reset
