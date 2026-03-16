@@ -751,7 +751,9 @@ class Handler(BaseHTTPRequestHandler):
             elif path == '/api/scoreboard':
                 conn  = db()
                 top10 = [dict(r) for r in conn.execute(
-                    'SELECT username,score,level FROM players ORDER BY score DESC,level DESC LIMIT 10'
+                    "SELECT username, score, level, "
+                    "json_extract(state, '$.ascendedClass') as ascendedClass "
+                    'FROM players ORDER BY score DESC,level DESC LIMIT 10'
                 ).fetchall()]
                 my_entry = None
                 player   = auth_player(self.get_token())
@@ -764,11 +766,20 @@ class Handler(BaseHTTPRequestHandler):
                             (player['score'], player['score'], player['level'])
                         ).fetchone()
                         assert row is not None
+                        state_blob = player.get('state')
+                        my_class = None
+                        if state_blob:
+                            try:
+                                import json as _j
+                                my_class = _j.loads(state_blob).get('ascendedClass')
+                            except Exception:
+                                pass
                         my_entry = {
-                            'rank':     row['rnk'],
-                            'username': player['username'],
-                            'score':    player['score'],
-                            'level':    player['level'],
+                            'rank':          row['rnk'],
+                            'username':      player['username'],
+                            'score':         player['score'],
+                            'level':         player['level'],
+                            'ascendedClass': my_class,
                         }
                 self.send_json(200, {'players': top10, 'me': my_entry})
 

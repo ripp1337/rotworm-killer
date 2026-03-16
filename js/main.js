@@ -524,6 +524,15 @@ function updateHUD() {
 }
 
 let totalClicks = 0;   // lifetime successful click-attacks
+let totalMonstersKilled   = 0;  // lifetime worm kills
+let totalBossesKilled     = 0;  // lifetime regular boss kills
+let totalUberBossesKilled = 0;  // lifetime uber boss kills
+let totalMaterialsGathered = 0; // lifetime items ever added to inventory
+let totalPotionsCrafted   = 0;  // lifetime potions crafted
+// Session counters (reset each page load — not persisted)
+let sessionMonstersKilled   = 0;
+let sessionBossesKilled     = 0;
+let sessionUberBossesKilled = 0;
 let fireballActive = false;
 let spawnPaused = false;
 let dmgNumbers = []; // floating damage numbers
@@ -905,6 +914,7 @@ function craftPotion(id) {
     gold -= r.goldCost;
     Object.entries(r.ingredients).forEach(([k, v]) => { inventory[k] -= v; });
 
+    totalPotionsCrafted++;
     // Stack duration for the same potion type when crafting again while it's active.
     const now = Date.now();
     const currentEnd = _getPotionEnd(id);
@@ -1312,6 +1322,8 @@ function getProgress() {
         bossSpawnCounter,
         bossKillCounter,
         totalClicks,
+        totalMonstersKilled, totalBossesKilled, totalUberBossesKilled,
+        totalMaterialsGathered, totalPotionsCrafted,
         inventory,
         potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
         potionMedWealthEnd, potionMedWisdomEnd, potionMedSwiftnessEnd,
@@ -1358,6 +1370,11 @@ function loadProgress(state) {
         if (s.bossKillCounter        != null) bossKillCounter        = s.bossKillCounter;
         // legacy: firstBossSpawned is no longer used
         if (s.totalClicks             != null) totalClicks           = s.totalClicks;
+        if (s.totalMonstersKilled    != null) totalMonstersKilled    = s.totalMonstersKilled;
+        if (s.totalBossesKilled      != null) totalBossesKilled      = s.totalBossesKilled;
+        if (s.totalUberBossesKilled  != null) totalUberBossesKilled  = s.totalUberBossesKilled;
+        if (s.totalMaterialsGathered != null) totalMaterialsGathered = s.totalMaterialsGathered;
+        if (s.totalPotionsCrafted    != null) totalPotionsCrafted    = s.totalPotionsCrafted;
         if (s.inventory        != null) inventory        = Object.assign({}, inventory, s.inventory);
         if (s.potionWealthEnd       != null) potionWealthEnd       = s.potionWealthEnd;
         if (s.potionWisdomEnd       != null) potionWisdomEnd       = s.potionWisdomEnd;
@@ -1578,6 +1595,12 @@ function escHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function _classLabel(cls) {
+    if (cls === 'knight')   return 'KNI';
+    if (cls === 'sorcerer') return 'SOR';
+    return 'NV';
+}
+
 async function fetchScoreboard() {
     try {
         const res  = await fetch('/api/scoreboard', {
@@ -1593,6 +1616,7 @@ async function fetchScoreboard() {
             row.innerHTML =
                 `<span class="sb-rank">#${i + 1}</span>` +
                 `<span class="sb-name">${escHtml(p.username)}</span>` +
+                `<span class="sb-class sb-class-${p.ascendedClass || 'nv'}">${_classLabel(p.ascendedClass)}</span>` +
                 `<span class="sb-score">${p.score}</span>` +
                 `<span class="sb-level">lv${p.level}</span>`;
             el.appendChild(row);
@@ -1607,11 +1631,39 @@ async function fetchScoreboard() {
             row.innerHTML =
                 `<span class="sb-rank">#${data.me.rank}</span>` +
                 `<span class="sb-name">${escHtml(data.me.username)}</span>` +
+                `<span class="sb-class sb-class-${data.me.ascendedClass || 'nv'}">${_classLabel(data.me.ascendedClass)}</span>` +
                 `<span class="sb-score">${data.me.score}</span>` +
                 `<span class="sb-level">lv${data.me.level}</span>`;
             el.appendChild(row);
         }
     } catch (_) {}
+}
+
+// ── Personal Statistics ──────────────────────────────────────────
+function openStats() {
+    const fmt = n => (n || 0).toLocaleString();
+    const totalBosses = totalBossesKilled + totalUberBossesKilled;
+    const sessionBosses = sessionBossesKilled + sessionUberBossesKilled;
+    document.getElementById('stats-body').innerHTML = `
+        <div class="stats-section-title">This Session</div>
+        <div class="stats-grid">
+            <span class="stats-label">Monsters killed</span><span class="stats-val">${fmt(sessionMonstersKilled)}</span>
+            <span class="stats-label">Bosses killed</span><span class="stats-val">${fmt(sessionBossesKilled)}</span>
+            <span class="stats-label">Uber bosses killed</span><span class="stats-val">${fmt(sessionUberBossesKilled)}</span>
+            <span class="stats-label">Total kills (session)</span><span class="stats-val">${fmt(sessionMonstersKilled + sessionBosses)}</span>
+        </div>
+        <div class="stats-section-title" style="margin-top:14px">All Time</div>
+        <div class="stats-grid">
+            <span class="stats-label">Monsters killed</span><span class="stats-val">${fmt(totalMonstersKilled)}</span>
+            <span class="stats-label">Bosses killed</span><span class="stats-val">${fmt(totalBossesKilled)}</span>
+            <span class="stats-label">Uber bosses killed</span><span class="stats-val">${fmt(totalUberBossesKilled)}</span>
+            <span class="stats-label">Total kills (all time)</span><span class="stats-val">${fmt(totalMonstersKilled + totalBosses)}</span>
+            <span class="stats-label">Materials gathered</span><span class="stats-val">${fmt(totalMaterialsGathered)}</span>
+            <span class="stats-label">Potions crafted</span><span class="stats-val">${fmt(totalPotionsCrafted)}</span>
+            <span class="stats-label">Total clicks</span><span class="stats-val">${fmt(totalClicks)}</span>
+        </div>
+    `;
+    document.getElementById('stats-modal').style.display = 'flex';
 }
 
 // ── Auth flow ────────────────────────────────────────────────────
@@ -1702,10 +1754,17 @@ async function initAuth() {
                 startGame(data.player.state);
                 return;
             }
-        } catch (_) {}
-        authToken = null;
-        localStorage.removeItem('rk_token');
-        localStorage.removeItem('rk_username');
+            // Only invalidate the token if the server explicitly rejects it (401).
+            // For 5xx or other errors keep the token so the player can retry after
+            // a server restart / temporary outage without losing their session.
+            if (res.status === 401) {
+                authToken = null;
+                localStorage.removeItem('rk_token');
+                localStorage.removeItem('rk_username');
+            }
+        } catch (_) {
+            // Network error — keep the token; the session may still be valid
+        }
     }
     document.getElementById('login-modal').style.display = 'flex';
 }
@@ -1922,6 +1981,8 @@ function spawnBoss() {
 
 function killWorm(w) {
     score += MOB_KILLS;
+    totalMonstersKilled++;
+    sessionMonstersKilled++;
     const expGain  = Math.floor(MOB_EXP  * skillExpMult() * potionExpMult());
     const goldBase = MOB_GOLD_MIN + Math.floor(Math.random() * (MOB_GOLD_MAX - MOB_GOLD_MIN + 1));
     const goldGain = Math.floor(goldBase * skillGoldMult() * sorcGoldMult() * potionGoldMult());
@@ -1934,6 +1995,7 @@ function killWorm(w) {
     const _wd = rollEssenceDrops(false, false);
     let _wq = 0;
     _wd.forEach(({ k, qty }) => { inventory[k] = (inventory[k] || 0) + qty; _wq += qty; });
+    totalMaterialsGathered += _wq;
     if (_wq > 0) dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 46, value: '+' + _wq, color: '#5599ff', life: 80 });
     bossSpawnCounter++;
     // Boss spawn: first boss guaranteed after 10 kills; afterwards probabilistic per kill
@@ -1964,6 +2026,8 @@ function killWorm(w) {
 
 function killBoss(b) {
     score += b.isUber ? BOSS_KILLS * 2 : BOSS_KILLS;
+    if (b.isUber) { totalUberBossesKilled++; sessionUberBossesKilled++; }
+    else          { totalBossesKilled++;     sessionBossesKilled++; }
     const _bossMult = b.isUber ? 20 : 10;
     const expGain  = Math.floor(MOB_EXP  * _bossMult * skillExpMult() * potionExpMult());
     const goldGain = Math.floor(Math.floor((MOB_GOLD_MIN + MOB_GOLD_MAX) / 2) * _bossMult * skillGoldMult() * sorcGoldMult() * potionGoldMult());
@@ -1980,6 +2044,7 @@ function killBoss(b) {
         inventory[k] = (inventory[k] || 0) + boostedQty;
         _bq += boostedQty;
     });
+    totalMaterialsGathered += _bq;
     if (_bq > 0) dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 46, value: '+' + _bq, color: '#5599ff', life: 100 });
     bossKillCounter++;
     boss = null;
@@ -2082,15 +2147,20 @@ function draw() {
         ctx.restore();
     }
     // highlight auto-attack target
-    if (autoEnabled && autoTarget && worms.includes(autoTarget)) {
-        ctx.save();
-        ctx.strokeStyle = '#dd88ff';
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = 0.85;
-        ctx.beginPath();
-        ctx.arc(autoTarget.x, autoTarget.y, autoTarget.size + 5, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+    if (autoEnabled) {
+        const _circTarget = (bossFocusUnlocked && boss) ? boss
+                          : (autoTarget && worms.includes(autoTarget)) ? autoTarget
+                          : null;
+        if (_circTarget) {
+            ctx.save();
+            ctx.strokeStyle = (bossFocusUnlocked && boss) ? '#ff6666' : '#dd88ff';
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath();
+            ctx.arc(_circTarget.x, _circTarget.y, _circTarget.size + 5, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
     }
     // level-up message (canvas only)
     if (levelUpMsg > 0) {
