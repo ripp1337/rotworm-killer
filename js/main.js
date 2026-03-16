@@ -1417,6 +1417,11 @@ async function saveProgress() {
     if (!Number.isFinite(exp)   || exp   < 0) exp   = 0;
     if (!Number.isFinite(score) || score < 0) score = 0;
     if (!Number.isFinite(level) || level < 1) level = 1;
+    // Snapshot the values being sent so we can compare against them (not the
+    // current live values) when the response arrives.  A boss kill or worm kill
+    // can happen in the ~100–300 ms the request is in-flight; comparing against
+    // the snapshot avoids reverting those gains.
+    const _snapScore = score, _snapLevel = level, _snapGold = gold, _snapExp = exp;
     try {
         const _res = await fetch('/api/save', {
             method: 'POST',
@@ -1428,13 +1433,15 @@ async function saveProgress() {
             body: JSON.stringify({ state: getProgress() }),
         });
         // Reconcile client state with server-authoritative clamped values.
-        // This corrects any console manipulation within one save cycle (≤30s).
+        // Apply corrections as a delta relative to the snapshot so that any
+        // gains earned after the snapshot (during the in-flight window) are
+        // preserved rather than reverted.
         if (_res.ok) {
             const _d = await _res.json();
-            if (typeof _d.score === 'number' && _d.score < score) score = _d.score;
-            if (typeof _d.level === 'number' && _d.level < level) level = _d.level;
-            if (typeof _d.gold  === 'number' && _d.gold  < gold)  gold  = _d.gold;
-            if (typeof _d.exp   === 'number' && _d.exp   < exp)   exp   = _d.exp;
+            if (typeof _d.score === 'number' && _d.score < _snapScore) score = Math.max(1, score - (_snapScore - _d.score));
+            if (typeof _d.level === 'number' && _d.level < _snapLevel) level = Math.max(1, level - (_snapLevel - _d.level));
+            if (typeof _d.gold  === 'number' && _d.gold  < _snapGold)  gold  = Math.max(0, gold  - (_snapGold  - _d.gold));
+            if (typeof _d.exp   === 'number' && _d.exp   < _snapExp)   exp   = Math.max(0, exp   - (_snapExp   - _d.exp));
         } else if (_res.status === 403) {
             const _d = await _res.json().catch(() => ({}));
             clearInterval(_saveTimer);

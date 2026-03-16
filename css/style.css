@@ -1612,7 +1612,7 @@ canvas {
 
 .inv-modal-box  { width: 520px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
 .craft-modal-box { width: 540px; max-width: 96vw; }
-.stats-modal-box { width: 460px; max-width: 96vw; }
+.stats-modal-box { width: 460px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
 
 /* ── Stats modal body ──────────────────────────────────────────────── */
 .stats-body {
