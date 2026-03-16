@@ -2633,14 +2633,14 @@ initAuth();
 
 // ── Announcement ─────────────────────────────────────────────
 (function () {
-    const VERSION = '2026-03-15-v2';
+    const VERSION = '2026-03-16-v1';
     if (localStorage.getItem('announcementDismissed') !== VERSION) {
         document.getElementById('announcement-overlay').classList.add('visible');
     }
 })();
 
 function closeAnnouncement() {
-    localStorage.setItem('announcementDismissed', '2026-03-15-v2');
+    localStorage.setItem('announcementDismissed', '2026-03-16-v1');
     document.getElementById('announcement-overlay').classList.remove('visible');
 }
 
