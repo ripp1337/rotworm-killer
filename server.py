@@ -995,6 +995,27 @@ class Handler(BaseHTTPRequestHandler):
                     'state':      parsed_state,
                 })
 
+            elif path == '/api/admin/reset-db':
+                body_token = _normalize_token(str(body.get('adminToken', '')))
+                if not is_admin(self, body_token=body_token):
+                    return self.send_json(401, {'error': 'Unauthorized.'})
+
+                with _write_lock:
+                    conn = db()
+                    conn.execute('DELETE FROM sessions')
+                    conn.execute('DELETE FROM password_reset_tokens')
+                    player_result = conn.execute('DELETE FROM players')
+                    conn.commit()
+
+                # Flush all in-memory caches.
+                _session_cache.clear()
+                _player_data_cache.clear()
+
+                self.send_json(200, {
+                    'ok': True,
+                    'playersDeleted': player_result.rowcount,
+                })
+
             elif path == '/api/login':
                 username = (body.get('username') or '').strip()
                 password =  body.get('password') or ''
