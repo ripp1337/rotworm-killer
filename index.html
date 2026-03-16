@@ -155,9 +155,9 @@
             <details class="docs-section" open>
                 <summary>⚔ Basic Mechanics</summary>
                 <div class="docs-body">
-                    <p><strong>Click on a monster</strong> to attack it. Each click deals damage equal to your weapon's damage range plus any bonus from the Skill Tree. A 0.5-second cooldown applies between clicks.</p>
-                    <p>Killing monsters rewards <strong>Gold</strong> and <strong>EXP</strong>. Gold buys weapons and Skill Tree upgrades. EXP fills your XP bar and levels you up.</p>
-                    <p>The HP bar color under each monster indicates its health:</p>
+                    <p><strong>Click on a monster</strong> to attack it. Each click deals your weapon's damage range plus any bonuses from the Skill Tree. A 0.5-second cooldown applies between manual clicks (reducible via Knight skills).</p>
+                    <p>Killing monsters rewards <strong>Gold</strong> and <strong>EXP</strong>. Gold buys weapons, area unlocks, Skill Tree upgrades and potion crafting. EXP fills your XP bar and levels you up.</p>
+                    <p>The HP bar color under each monster indicates its remaining health:</p>
                     <table class="docs-table">
                         <tr><th>Color</th><th>HP Remaining</th></tr>
                         <tr><td><span style="color:#00BC00">■ Green</span></td><td>&gt; 92%</td></tr>
@@ -167,50 +167,53 @@
                         <tr><td><span style="color:#C80000">■ Red</span></td><td>4 – 14%</td></tr>
                         <tr><td><span style="color:#960000">■ Dark red</span></td><td>&lt; 4%</td></tr>
                     </table>
+                    <p>Up to <strong>10 monsters</strong> can be on screen at once. They respawn automatically. A boss spawns periodically — only one boss at a time. Uber Bosses spawn every 10 regular boss kills and are much tougher.</p>
+                </div>
+            </details>
+
+            <details class="docs-section">
+                <summary>🗺️ Locations</summary>
+                <div class="docs-body">
+                    <p>Unlock new locations by reaching the required level and paying a one-time Gold cost. All monsters in an area give +20% HP / EXP / Gold after Ascension compared to pre-ascension values.</p>
+                    <table class="docs-table">
+                        <tr><th>Location</th><th>Level</th><th>Cost</th><th>Monster</th><th>HP</th><th>EXP</th><th>Gold</th><th>Boss</th></tr>
+                        <tr><td>Rookgaard</td><td>1</td><td>Free</td><td>Rat</td><td>15</td><td>10</td><td>2 – 4</td><td>Cave Rat</td></tr>
+                        <tr><td>Rotworm Cave</td><td>8</td><td>100g</td><td>Rotworm</td><td>60</td><td>40</td><td>5 – 15</td><td>Versperoth</td></tr>
+                        <tr><td>Cyclopolis</td><td>30</td><td>5,000g</td><td>Cyclops</td><td>260</td><td>150</td><td>10 – 30</td><td>Behemoth</td></tr>
+                        <tr><td>Hell Gate</td><td>50</td><td>50,000g</td><td>Demon Skeleton</td><td>400</td><td>240</td><td>20 – 50</td><td>Bonebeast</td></tr>
+                        <tr><td>Dragon Lair</td><td>70</td><td>100,000g</td><td>Dragon</td><td>1,000</td><td>700</td><td>30 – 60</td><td>Dragon Lord</td></tr>
+                        <tr><td>Plains of Havoc</td><td>100</td><td>200,000g</td><td>Giant Spider</td><td>1,300</td><td>900</td><td>40 – 80</td><td>Mamma Long Legs</td></tr>
+                        <tr><td>Demona</td><td>130</td><td>1,000,000g</td><td>Warlock</td><td>4,000</td><td>3,000</td><td>50 – 100</td><td>Infernalist</td></tr>
+                        <tr><td>Goroma</td><td>175</td><td>5,000,000g</td><td>Demon</td><td>8,000</td><td>6,000</td><td>75 – 125</td><td>Weakened Demon</td></tr>
+                        <tr><td>Formogar Mines</td><td>200</td><td>10,000,000g</td><td>Juggernaut</td><td>12,000</td><td>9,000</td><td>100 – 150</td><td>Arbaziloth</td></tr>
+                        <tr><td>Roshamuul</td><td>250</td><td>50,000,000g</td><td>Guzzlemaw</td><td>18,000</td><td>14,000</td><td>200 – 300</td><td>Sight of Surrender</td></tr>
+                        <tr><td>The Void</td><td>300</td><td>100,000,000g</td><td>Void Emissary</td><td>30,000</td><td>20,000</td><td>300 – 500</td><td>Devovorga</td></tr>
+                    </table>
                 </div>
             </details>
 
             <details class="docs-section">
                 <summary>🗡 Weapons</summary>
                 <div class="docs-body">
-                    <p>Weapons are purchased in order using Gold. Each weapon permanently replaces the previous one.</p>
+                    <p>Weapons are purchased sequentially with Gold. Each weapon permanently replaces the previous one. A minimum character level is required before the upgrade becomes available.</p>
                     <table class="docs-table">
-                        <tr><th>Weapon</th><th>Damage</th><th>Cost</th></tr>
-                        <tr><td>Serpent Sword</td><td>5 – 15</td><td>Starting weapon</td></tr>
-                        <tr><td>Clerical Mace</td><td>10 – 20</td><td>500g</td></tr>
-                        <tr><td>Fire Sword</td><td>15 – 30</td><td>1,500g</td></tr>
-                        <tr><td>Warhammer</td><td>25 – 45</td><td>10,000g</td></tr>
-                        <tr><td>Stonecutter Axe</td><td>45 – 55</td><td>50,000g</td></tr>
+                        <tr><th>Weapon</th><th>Damage</th><th>Min Level</th><th>Cost</th></tr>
+                        <tr><td>Club</td><td>3 – 8</td><td>1</td><td>Starting weapon</td></tr>
+                        <tr><td>Rapier</td><td>5 – 10</td><td>2</td><td>50g</td></tr>
+                        <tr><td>Mace</td><td>7 – 12</td><td>4</td><td>200g</td></tr>
+                        <tr><td>Longsword</td><td>9 – 14</td><td>5</td><td>500g</td></tr>
+                        <tr><td>Clerical Mace</td><td>11 – 16</td><td>7</td><td>1,000g</td></tr>
+                        <tr><td>Orcish Axe</td><td>13 – 18</td><td>10</td><td>2,500g</td></tr>
+                        <tr><td>Dwarven Axe</td><td>15 – 22</td><td>12</td><td>5,000g</td></tr>
+                        <tr><td>Fire Sword</td><td>18 – 25</td><td>14</td><td>10,000g</td></tr>
+                        <tr><td>Skull Staff</td><td>20 – 27</td><td>17</td><td>20,000g</td></tr>
+                        <tr><td>Fire Axe</td><td>22 – 30</td><td>20</td><td>50,000g</td></tr>
+                        <tr><td>Giant Sword</td><td>25 – 35</td><td>25</td><td>100,000g</td></tr>
+                        <tr><td>Queen's Sceptre</td><td>30 – 40</td><td>30</td><td>150,000g</td></tr>
+                        <tr><td>Stonecutter Axe</td><td>40 – 55</td><td>35</td><td>200,000g</td></tr>
+                        <tr><td>Thunder Hammer</td><td>55 – 70</td><td>40</td><td>500,000g</td></tr>
+                        <tr><td>Magic Longsword</td><td>70 – 100</td><td>50</td><td>1,000,000g</td></tr>
                     </table>
-                    <p><em>Damage bonuses from the Skill Tree are added on top of the weapon's base range.</em></p>
-                </div>
-            </details>
-
-            <details class="docs-section">
-                <summary>🐛 Monsters</summary>
-                <div class="docs-body">
-                    <p>Up to <strong>10 monsters</strong> can be on screen at once (expandable via the Skill Tree). They respawn automatically.</p>
-                    <table class="docs-table">
-                        <tr><th>Monster</th><th>When</th><th>HP</th><th>EXP</th><th>Gold</th></tr>
-                        <tr><td>Rotworm</td><td>Pre-ascension</td><td>65</td><td>40</td><td>0 – 30</td></tr>
-                        <tr><td>Cyclops</td><td>Post-ascension</td><td>260</td><td>150</td><td>0 – 60</td></tr>
-                    </table>
-                </div>
-            </details>
-
-            <details class="docs-section">
-                <summary>💀 Bosses</summary>
-                <div class="docs-body">
-                    <p>A boss spawns every <strong>50 worm kills</strong> by default (reduceable via the <em>More Bosses</em> skill). Only one boss can be on the field at a time.</p>
-                    <table class="docs-table">
-                        <tr><th>Boss</th><th>When</th><th>HP</th><th>EXP</th><th>Gold</th><th>Counts as</th></tr>
-                        <tr><td>Versperoth</td><td>Pre-ascension (normal)</td><td>1,000</td><td>600</td><td>1,000</td><td>10 kills</td></tr>
-                        <tr><td>Versperoth (Uber)</td><td>Pre-ascension, every 10 bosses*</td><td>2,000</td><td>1,200</td><td>2,000</td><td>20 kills</td></tr>
-                        <tr><td>Behemoth</td><td>Post-ascension (normal)</td><td>1,000</td><td>600</td><td>1,000</td><td>10 kills</td></tr>
-                        <tr><td>Behemoth (Uber)</td><td>Post-ascension, every 10 bosses*</td><td>2,000</td><td>1,200</td><td>2,000</td><td>20 kills</td></tr>
-                    </table>
-                    <p>* Uber bosses require the <strong>Uber Bosses</strong> skill to be unlocked (General Skill Tree). Annihilation has <em>no effect</em> on Uber bosses.</p>
-                    <p>The first boss of a session spawns earlier, after just 10 worm kills.</p>
                 </div>
             </details>
 
@@ -220,95 +223,101 @@
                     <p>EXP required to reach each level follows the <strong>Tibia XP formula</strong>:<br>
                     <code style="font-family:monospace;color:#f0d070">floor( 50 × (L³ − 6L² + 17L − 12) / 3 )</code></p>
                     <table class="docs-table">
-                        <tr><th>Level</th><th>Total EXP needed</th></tr>
-                        <tr><td>2</td><td>100</td></tr>
-                        <tr><td>5</td><td>4,200</td></tr>
-                        <tr><td>10</td><td>45,000</td></tr>
-                        <tr><td>20</td><td>494,000</td></tr>
-                        <tr><td>30</td><td>2,248,000</td></tr>
-                        <tr><td>40</td><td>6,560,000</td></tr>
-                        <tr><td>50</td><td>15,250,000</td></tr>
+                        <tr><th>Level</th><th>Total EXP needed</th><th>Notable unlock</th></tr>
+                        <tr><td>2</td><td>100</td><td>—</td></tr>
+                        <tr><td>8</td><td>4,200</td><td>Rotworm Cave</td></tr>
+                        <tr><td>10</td><td>9,300</td><td>—</td></tr>
+                        <tr><td>20</td><td>98,800</td><td>Crafting unlocks</td></tr>
+                        <tr><td>30</td><td>368,300</td><td>Ascension + Cyclopolis</td></tr>
+                        <tr><td>50</td><td>1,847,300</td><td>Hell Gate</td></tr>
+                        <tr><td>70</td><td>5,488,300</td><td>Dragon Lair</td></tr>
+                        <tr><td>100</td><td>16,171,600</td><td>Plains of Havoc</td></tr>
+                        <tr><td>130</td><td>43,715,300</td><td>Demona</td></tr>
+                        <tr><td>175</td><td>170,545,600</td><td>Goroma</td></tr>
+                        <tr><td>200</td><td>319,868,300</td><td>Formogar Mines</td></tr>
+                        <tr><td>250</td><td>814,583,300</td><td>Roshamuul</td></tr>
+                        <tr><td>300</td><td>1,764,453,300</td><td>The Void</td></tr>
                     </table>
-                    <p>At <strong>level 30</strong> you can <strong>Ascend</strong> — a permanent, one-time choice between <strong>Knight</strong> and <strong>Sorcerer</strong>. This unlocks a class-specific Skill Tree and replaces Rotworms with Cyclops (harder, better loot).</p>
+                    <p>At <strong>level 30</strong> you can <strong>Ascend</strong> &mdash; a permanent, one-time choice between <strong>Knight</strong> and <strong>Sorcerer</strong>. This unlocks your class-specific Skill Tree. Ascension does <em>not</em> reset your progress, but it does permanently boost all mob stats by +20%.</p>
+                    <ul>
+                        <li><strong>Knight</strong> — active playstyle. Benefits heavily from manual clicking through Combo Meter, Cleaving Blows and Adrenaline Reset.</li>
+                        <li><strong>Sorcerer</strong> — idle/AFK playstyle. Light/Heavy Magic Missile, Sudden Death and Essence Gathering deliver strong output passively with no clicking required.</li>
+                    </ul>
                 </div>
             </details>
 
             <details class="docs-section">
-                <summary>🔥 Spells &amp; Abilities</summary>
+                <summary>⚗️ Crafting &amp; Potions</summary>
                 <div class="docs-body">
+                    <p>Monsters drop <strong>Essences</strong> at a chance that scales with area tier. There are four types: 🔵 Blue (most common), 🟢 Green, 🔴 Red, 🟡 Yellow (rarest). Bosses and Uber Bosses drop double the amount. <em>Crafting unlocks at level 20.</em></p>
+                    <p><strong>Drop chance by area:</strong> Rookgaard 5% → Rotworm Cave 6.25% → … → The Void 48%</p>
+                    <p>Potions are temporary buffs. Only one potion of each type can be active at a time (same-type potions override each other; Wealth, Wisdom and Swiftness are independent).</p>
+                    <p><strong>Small Potions</strong> <em>(level 20, 1,000g craft cost)</em></p>
                     <table class="docs-table">
-                        <tr><th>Ability</th><th>Class</th><th>Unlock</th><th>Effects &amp; Cooldown</th></tr>
-                        <tr><td><strong>Fireball</strong></td><td>All</td><td>General Skill Tree (lv.3, 500g)</td><td>Deals 50% of mob max HP as AoE damage in a radius. Base cooldown: 10s.</td></tr>
-                        <tr><td><strong>Great Fireball</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.30, 5,000g)</td><td>Upgrades Fireball: instantly kills all non-boss enemies in range. Requires Fireball unlocked first.</td></tr>
-                        <tr><td><strong>Volatile Blast</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.35, 20,000g)</td><td>GFB also deals 50% of boss max HP when boss is in range.</td></tr>
-                        <tr><td><strong>Double Fireball</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.50, 50,000g)</td><td>Each Fireball cast fires a second one at the next best monster cluster.</td></tr>
-                        <tr><td><strong>Ultimate Explosion</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.40, 20,000g)</td><td>Instantly kills all non-boss enemies on screen. Cooldown: 5 minutes.</td></tr>
-                        <tr><td><strong>Power Stance</strong></td><td>Sorcerer</td><td>Sorcerer Skill Tree (lv.40, 10,000g)</td><td>+15 min &amp; max damage, +50% attack speed for 90 seconds. Cooldown: 6 minutes.</td></tr>
-                        <tr><td><strong>Annihilation</strong></td><td>Knight</td><td>Knight Skill Tree (lv.40, 20,000g)</td><td>Instantly slays the active boss (does not work on Uber bosses). Cooldown: 3 minutes.</td></tr>
+                        <tr><th>Potion</th><th>Effect</th><th>Duration</th><th>Ingredients</th></tr>
+                        <tr><td>💰 Small Wealth</td><td>+15% gold gain</td><td>2 min</td><td>🔵×6, 🟢×1</td></tr>
+                        <tr><td>📚 Small Wisdom</td><td>+15% EXP gain</td><td>2 min</td><td>🔵×5, 🟢×2</td></tr>
+                        <tr><td>⚡ Small Swiftness</td><td>−10% cooldowns</td><td>1.5 min</td><td>🔵×4, 🟢×2, 🔴×1</td></tr>
                     </table>
-                    <p><em>All cooldowns can be reduced via Skill Tree upgrades. The <strong>Cooldown Reset</strong> skill gives a 1% chance on every kill to instantly reset all active cooldowns.</em></p>
-                </div>
-            </details>
-
-            <details class="docs-section">
-                <summary>🤖 Automation</summary>
-                <div class="docs-body">
-                    <p>Automation features run in the background so you don't have to click manually. Most unlock via the Skill Tree.</p>
+                    <p><strong>Medium Potions</strong> <em>(level 40, 5,000g)</em></p>
                     <table class="docs-table">
-                        <tr><th>Feature</th><th>Unlock</th><th>Description</th></tr>
-                        <tr><td>Auto Attack</td><td>General tree, lv.5</td><td>Attacks the lowest-HP monster once per second (fixed cooldown).</td></tr>
-                        <tr><td>Boss Focus</td><td>General tree, lv.10</td><td>Auto Attack always targets the boss when one is alive.</td></tr>
-                        <tr><td>Double Strike</td><td>General tree, lv.20</td><td>Auto Attack hits two monsters simultaneously per tick.</td></tr>
-                        <tr><td>Auto Fireball</td><td>General tree, lv.10</td><td>Automatically casts Fireball on the best target cluster whenever off cooldown.</td></tr>
-                        <tr><td>Auto UE</td><td>Sorcerer tree, lv.50</td><td>Automatically casts Ultimate Explosion whenever off cooldown.</td></tr>
-                        <tr><td>Auto Power Stance</td><td>Sorcerer tree, lv.50</td><td>Automatically activates Power Stance whenever off cooldown.</td></tr>
-                        <tr><td>Auto Annihilation</td><td>Knight tree, lv.50</td><td>Automatically casts Annihilation on the boss whenever off cooldown.</td></tr>
-                        <tr><td>Cooldown Reset</td><td>General tree, lv.15</td><td>1% chance per kill to reset all ability cooldowns instantly.</td></tr>
+                        <tr><th>Potion</th><th>Effect</th><th>Duration</th><th>Ingredients</th></tr>
+                        <tr><td>💰 Medium Wealth</td><td>+25% gold gain</td><td>4 min</td><td>🔵×8, 🟢×4, 🔴×2</td></tr>
+                        <tr><td>📚 Medium Wisdom</td><td>+25% EXP gain</td><td>4 min</td><td>🔵×6, 🟢×5, 🔴×2</td></tr>
+                        <tr><td>⚡ Medium Swiftness</td><td>−15% cooldowns</td><td>3 min</td><td>🔵×4, 🟢×4, 🔴×3</td></tr>
                     </table>
-                    <p>Auto Attack targets the <strong>lowest-HP monster</strong> to finish kills quickly.</p>
+                    <p><strong>Large Potions</strong> <em>(level 50, 10,000g)</em></p>
+                    <table class="docs-table">
+                        <tr><th>Potion</th><th>Effect</th><th>Duration</th><th>Ingredients</th></tr>
+                        <tr><td>💰 Large Wealth</td><td>+50% gold gain</td><td>8 min</td><td>🟢×6, 🔴×4, 🟡×1</td></tr>
+                        <tr><td>📚 Large Wisdom</td><td>+50% EXP gain</td><td>8 min</td><td>🟢×5, 🔴×5, 🟡×1</td></tr>
+                        <tr><td>⚡ Large Swiftness</td><td>−25% cooldowns</td><td>6 min</td><td>🟢×4, 🔴×6, 🟡×1</td></tr>
+                    </table>
+                    <p><strong>Special Potions</strong> <em>(Ascended characters only)</em></p>
+                    <table class="docs-table">
+                        <tr><th>Potion</th><th>Effect</th><th>Duration</th><th>Level</th><th>Ingredients</th></tr>
+                        <tr><td>💀 Danger</td><td>Reduces boss spawn requirement by 25%</td><td>10 min</td><td>60</td><td>🟢×3, 🔴×6, 🟡×3</td></tr>
+                        <tr><td>🌀 Madness</td><td>+10 max monster spawn &amp; ×10 spawn rate</td><td>15 min</td><td>70</td><td>🟢×10, 🔴×4, 🟡×6</td></tr>
+                    </table>
                 </div>
             </details>
 
             <details class="docs-section">
                 <summary>🌴 Offline Progress</summary>
                 <div class="docs-body">
-                    <p>If you have at least one automation active (Auto Attack, Auto Fireball, or Auto UE), the game simulates your progress while you're away — up to <strong>8 hours</strong>.</p>
+                    <p>If Auto-Attack is unlocked and enabled, the game simulates your progress while you're away — up to <strong>8 hours</strong>.</p>
                     <p>When you return, a pop-up shows how much Gold, EXP, and kills you earned offline. The gains are added to your character automatically.</p>
-                    <p><em>Offline progress requires your character to be saved to the cloud (registered account).</em></p>
+                    <p><em>Offline progress requires a saved account (not guest play).</em></p>
                 </div>
             </details>
 
             <details class="docs-section">
                 <summary>🌳 General Skill Tree</summary>
                 <div class="docs-body">
-                    <p><strong>Column 1 — Automation</strong> <em>(placeholder for future skills)</em></p>
-                    <p><strong>Column 2 — Monster &amp; Boss</strong></p>
+                    <p>Available to all players. All skills have 10 ranks. Costs listed are per level (level 1 → level 10).</p>
+                    <p><strong>Column A — Automation</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>Requires</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>More Monsters</td><td>5</td><td>—</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>+1 max spawn cap per point (base: 10)</td></tr>
-                        <tr><td>More Bosses</td><td>5</td><td>More Monsters</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>Boss spawns every −2 kills per point (base: 50)</td></tr>
-                        <tr><td>Uber Bosses</td><td>1</td><td>More Bosses, lv.15</td><td>10,000g</td><td>Enables Uber Bosses (every 10 regular bosses)</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Auto-Attack</td><td>—</td><td>100g → 51,200g</td><td>Unlocks auto-attack. −0.04s cooldown/pt (0.50s → 0.10s at max)</td></tr>
+                        <tr><td>Auto-Attack Damage</td><td>1pt Auto-Attack</td><td>1,000g → 512,000g</td><td>+10% auto-attack damage/pt (+100% at max)</td></tr>
+                        <tr><td>Multi-Target</td><td>1pt AA Damage</td><td>100,000g → 51.2Mg</td><td>+10%/pt chance to hit a 2nd monster (100% at max)</td></tr>
+                        <tr><td>Hyper Automation</td><td>1pt Multi-Target</td><td>1Mg → 512Mg</td><td>+10% auto dmg/pt, +10%/pt chance to hit a 3rd monster</td></tr>
                     </table>
-                    <p><strong>Column 3 — Economy</strong></p>
+                    <p><strong>Column B — More Numbers</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>Requires</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>More Gold</td><td>5</td><td>—</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>+10% gold per kill per point</td></tr>
-                        <tr><td>More EXP</td><td>5</td><td>More Gold</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>+10% EXP per kill per point</td></tr>
-                        <tr><td>Cooldown Reset</td><td>1</td><td>More EXP, lv.15</td><td>10,000g</td><td>1% chance on kill to reset all cooldowns</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Wealth Training</td><td>—</td><td>1,000g → 512,000g</td><td>+5% gold gain/pt (+50% at max)</td></tr>
+                        <tr><td>Exp. Mastery</td><td>1pt Wealth Training</td><td>10,000g → 5.12Mg</td><td>+5% EXP gain/pt (+50% at max)</td></tr>
+                        <tr><td>Material Harvesting</td><td>1pt Exp. Mastery</td><td>100,000g → 51.2Mg</td><td>+3% essence drop chance/pt, +2% drop quantity/pt</td></tr>
+                        <tr><td>Boss Attraction</td><td>1pt Mat. Harvest.</td><td>1Mg → 512Mg</td><td>+2% boss spawn rate/pt, +3% boss loot/pt, +1% extra boss chance/pt</td></tr>
                     </table>
-                    <p><strong>Column 4 — Fireball</strong></p>
+                    <p><strong>Column C — Fireball</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>Requires</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>Unlock Fireball</td><td>1</td><td>lv.3</td><td>500g</td><td>Unlocks Fireball spell</td></tr>
-                        <tr><td>Fireball CDR</td><td>5</td><td>Fireball</td><td>100 / 500 / 750 / 1,000 / 2,000g</td><td>−10% Fireball cooldown per point</td></tr>
-                        <tr><td>Auto Fireball</td><td>1</td><td>Fireball CDR, lv.10</td><td>1,000g</td><td>Automatically casts Fireball on best cluster</td></tr>
-                    </table>
-                    <p><strong>Automation Column</strong></p>
-                    <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>Requires</th><th>Cost</th><th>Effect</th></tr>
-                        <tr><td>Auto Attack</td><td>1</td><td>lv.5</td><td>500g</td><td>Attack once per second automatically</td></tr>
-                        <tr><td>Boss Focus</td><td>1</td><td>Auto Attack, lv.10</td><td>2,000g</td><td>Auto Attack targets boss when present</td></tr>
-                        <tr><td>Double Strike</td><td>1</td><td>Boss Focus, lv.20</td><td>10,000g</td><td>Auto Attack hits two targets per tick</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Fireball Mastery</td><td>—</td><td>1,000g → 512,000g</td><td>Unlocks Fireball (always auto-casts). Deals (10 + 5×pts)% of mob max HP. 20s base CD</td></tr>
+                        <tr><td>Fireball CDR</td><td>1pt Fireball Mastery</td><td>10,000g → 5.12Mg</td><td>−1s fireball CD/pt (min 10s)</td></tr>
+                        <tr><td>Fireball Annihilation</td><td>1pt Fireball CDR</td><td>100,000g → 51.2Mg</td><td>+3%/pt chance per fireball hit to instantly kill all non-boss monsters (30% at max)</td></tr>
+                        <tr><td>Ember of Renewal</td><td>1pt FB Annihilation</td><td>1Mg → 512Mg</td><td>+2%/pt chance on kill to instantly reset fireball cooldown (20% at max)</td></tr>
                     </table>
                 </div>
             </details>
@@ -316,26 +325,30 @@
             <details class="docs-section">
                 <summary>⚔ Knight Skill Tree <span style="color:#7a6030;font-size:10px;font-weight:normal;">(requires Ascension as Knight)</span></summary>
                 <div class="docs-body">
-                    <p><strong>Column 1 — Speed</strong></p>
+                    <p>All skills have 10 ranks. Knight excels at active play — more clicking = more damage.</p>
+                    <p><strong>Column 1 — Click Damage</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>Attack Speed</td><td>5</td><td>30</td><td>100 / 500 / 2,000 / 5,000 / 10,000g</td><td>−10% click cooldown per point (max −50%)</td></tr>
-                        <tr><td>Auto Speed</td><td>5</td><td>35</td><td>500 / 1,000 / 5,000 / 20,000 / 50,000g</td><td>−10% auto attack cooldown per point (max −50%)</td></tr>
-                        <tr><td>Extra Auto Target</td><td>1</td><td>50</td><td>50,000g</td><td>Auto Attack hits one additional target</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Strike Training</td><td>—</td><td>10,000g → 5.12Mg</td><td>+20% click damage/pt (+200% at max)</td></tr>
+                        <tr><td>Precision Execution</td><td>1pt Strike Train.</td><td>100,000g → 51.2Mg</td><td>+1%/pt of target max HP as bonus click damage (+10% at max)</td></tr>
+                        <tr><td>Cleaving Blows</td><td>1pt Prec. Exec.</td><td>1Mg → 512Mg</td><td>Every click deals AoE +1%/pt max HP damage to all non-boss enemies</td></tr>
+                        <tr><td>Double Strike Instinct</td><td>1pt Cleaving Blows</td><td>10Mg → 5.12Bg</td><td>+3%/pt chance to strike twice on click (30% at max)</td></tr>
                     </table>
-                    <p><strong>Column 2 — Annihilation</strong></p>
+                    <p><strong>Column 2 — Speed &amp; Multi-Target</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>Annihilation</td><td>1</td><td>40</td><td>20,000g</td><td>Unlock Annihilation (instant boss kill, 3 min CD)</td></tr>
-                        <tr><td>Auto Annihilation</td><td>1</td><td>50</td><td>50,000g</td><td>Auto-casts Annihilation whenever ready</td></tr>
-                        <tr><td>Anni CDR</td><td>5</td><td>60</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>−10% Annihilation cooldown per point</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Combo Meter</td><td>—</td><td>10,000g → 5.12Mg</td><td>−0.04s manual attack cooldown/pt (0.50s → 0.10s at max)</td></tr>
+                        <tr><td>Adrenaline Reset</td><td>1pt Combo Meter</td><td>100,000g → 51.2Mg</td><td>+2%/pt chance to instantly reset manual attack cooldown on any kill (20% at max)</td></tr>
+                        <tr><td>Sweeping Strikes</td><td>1pt Adrenaline Reset</td><td>1Mg → 512Mg</td><td>+3%/pt chance for manual attacks to also hit +1 extra monster (30% at max)</td></tr>
+                        <tr><td>Whirlwind Extension</td><td>1pt Sweeping Strikes</td><td>10Mg → 5.12Bg</td><td>+2%/pt chance to hit +2 additional monsters (20% at max; stacks with Sweeping Strikes)</td></tr>
                     </table>
-                    <p><strong>Column 3 — Damage</strong></p>
+                    <p><strong>Column 3 — Boss Destruction</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>Max Damage</td><td>5</td><td>30</td><td>100 / 500 / 2,000 / 5,000 / 10,000g</td><td>+5 max damage per point</td></tr>
-                        <tr><td>Min Damage</td><td>5</td><td>40</td><td>500 / 1,000 / 5,000 / 20,000 / 50,000g</td><td>+5 min damage per point</td></tr>
-                        <tr><td>Power Surge</td><td>5</td><td>50</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>+5 min &amp; max damage per point</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Decapitation Chance</td><td>—</td><td>10,000g → 5.12Mg</td><td>+0.5%/pt chance to instantly kill a boss or uber boss on click (5% at max)</td></tr>
+                        <tr><td>Endless Challenge</td><td>1pt Decapitation</td><td>100,000g → 51.2Mg</td><td>+1%/pt chance to instantly spawn the next uber boss after a boss kill (10% at max)</td></tr>
+                        <tr><td>Battlefield Purge</td><td>1pt Endless Chall.</td><td>1Mg → 512Mg</td><td>+5%/pt chance to kill all remaining non-boss enemies after a boss kill (50% at max)</td></tr>
+                        <tr><td>Momentum Overdrive</td><td>1pt Battlefield Purge</td><td>10Mg → 5.12Bg</td><td>Each manual click permanently increases weapon damage multiplier by +0.0001%/pt</td></tr>
                     </table>
                 </div>
             </details>
@@ -343,33 +356,30 @@
             <details class="docs-section">
                 <summary>✦ Sorcerer Skill Tree <span style="color:#7a6030;font-size:10px;font-weight:normal;">(requires Ascension as Sorcerer)</span></summary>
                 <div class="docs-body">
-                    <p><strong>Column 1 — Great Fireball</strong></p>
+                    <p>All skills have 10 ranks. Sorcerer excels at idle/AFK — everything fires automatically.</p>
+                    <p><strong>Column 1 — Magic Missile</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>Great Fireball</td><td>1</td><td>30</td><td>5,000g</td><td>Upgrades Fireball to GFB (instantly kills all non-boss in range)</td></tr>
-                        <tr><td>Volatile Blast</td><td>1</td><td>35</td><td>20,000g</td><td>GFB deals 50% boss HP bonus damage when boss is in range</td></tr>
-                        <tr><td>Double Fireball</td><td>1</td><td>50</td><td>50,000g</td><td>Each Fireball cast fires a second one at the next best cluster</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Light Magic Missile</td><td>—</td><td>10,000g → 5.12Mg</td><td>Unlocks LMM. Auto-fires every 20s dealing (10 + 5×pts)% of monster max HP</td></tr>
+                        <tr><td>Heavy Magic Missile</td><td>1pt Light MM</td><td>100,000g → 51.2Mg</td><td>+4%/pt HMM damage (+40% at max)</td></tr>
+                        <tr><td>Triple Missile Chance</td><td>1pt Heavy MM</td><td>1Mg → 512Mg</td><td>+5%/pt chance to fire 2 extra missiles per cast (50% at max)</td></tr>
+                        <tr><td>Ultimate Explosion</td><td>1pt Triple Missile</td><td>10Mg → 5.12Bg</td><td>Each HMM has +1.5%/pt chance to instantly kill all non-boss enemies on screen (15% at max)</td></tr>
                     </table>
-                    <p><strong>Column 2 — Ultimate Explosion</strong></p>
+                    <p><strong>Column 2 — Loot, Crafting &amp; Potions</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>Ultimate Explosion</td><td>1</td><td>40</td><td>20,000g</td><td>Unlock UE: wipes all non-boss mobs, 5 min CD</td></tr>
-                        <tr><td>Auto Ult. Explosion</td><td>1</td><td>50</td><td>50,000g</td><td>Auto-casts UE whenever off cooldown</td></tr>
-                        <tr><td>UE CDR</td><td>5</td><td>60</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>−10% UE cooldown per point</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Arcane Fortune</td><td>—</td><td>10,000g → 5.12Mg</td><td>+1%/pt gold gained (+10% at max)</td></tr>
+                        <tr><td>Mystic Salvaging</td><td>1pt Arcane Fortune</td><td>100,000g → 51.2Mg</td><td>+1%/pt crafting material drop chance (+10% at max)</td></tr>
+                        <tr><td>Arcane Extraction</td><td>1pt Mystic Salvaging</td><td>1Mg → 512Mg</td><td>+2%/pt potion duration (+20% at max)</td></tr>
+                        <tr><td>Grand Alchemist</td><td>1pt Arcane Extr.</td><td>10Mg → 5.12Bg</td><td>+1%/pt chance per boss kill to activate a random potion effect (10% at max)</td></tr>
                     </table>
-                    <p><strong>Column 3 — Damage</strong></p>
+                    <p><strong>Column 3 — Boss Killer</strong></p>
                     <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>Max Damage</td><td>5</td><td>30</td><td>100 / 500 / 2,000 / 5,000 / 10,000g</td><td>+5 max damage per point</td></tr>
-                        <tr><td>Min Damage</td><td>5</td><td>40</td><td>500 / 1,000 / 5,000 / 20,000 / 50,000g</td><td>+5 min damage per point</td></tr>
-                        <tr><td>Power Surge</td><td>5</td><td>50</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>+5 min &amp; max damage per point</td></tr>
-                    </table>
-                    <p><strong>Column 4 — Power Stance</strong></p>
-                    <table class="docs-table">
-                        <tr><th>Skill</th><th>Max</th><th>lv. req</th><th>Cost / Level</th><th>Effect</th></tr>
-                        <tr><td>Power Stance</td><td>1</td><td>40</td><td>10,000g</td><td>+15 min/max dmg, +50% speed for 90s; 6 min CD</td></tr>
-                        <tr><td>Auto Power Stance</td><td>1</td><td>50</td><td>20,000g</td><td>Auto-activates Power Stance whenever off cooldown</td></tr>
-                        <tr><td>PS CDR</td><td>5</td><td>60</td><td>1,000 / 2,000 / 5,000 / 20,000 / 100,000g</td><td>−10% Power Stance cooldown per point</td></tr>
+                        <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
+                        <tr><td>Bane of Titans</td><td>—</td><td>10,000g → 5.12Mg</td><td>+2%/pt damage dealt to bosses (+20% at max)</td></tr>
+                        <tr><td>Arcane Weakening</td><td>1pt Bane of Titans</td><td>100,000g → 51.2Mg</td><td>Bosses hit by HMM take +2%/pt per stack (up to 10 stacks, +20%/pt at max)</td></tr>
+                        <tr><td>Sudden Death</td><td>1pt Arcane Weakening</td><td>1Mg → 512Mg</td><td>Fires every 150 – 600s (scales down with pts), dealing 100% of boss max HP</td></tr>
+                        <tr><td>Essence Gathering</td><td>1pt Sudden Death</td><td>10Mg → 5.12Bg</td><td>Boss kill grants double damage for 30s (+3s/pt, 60s at max)</td></tr>
                     </table>
                 </div>
             </details>
@@ -377,9 +387,9 @@
             <details class="docs-section">
                 <summary>☁ Accounts &amp; Scoreboard</summary>
                 <div class="docs-body">
-                    <p>Playing as a <strong>Guest</strong> saves progress only in your browser. To keep progress across devices and appear on the scoreboard, <strong>create a free account</strong>.</p>
+                    <p>Playing as a <strong>Guest</strong> saves progress only in your browser. To keep progress across devices and appear on the scoreboard, <strong>create a free account</strong> — no email required, just a username and password.</p>
                     <p>The <strong>Top Killers</strong> scoreboard in the right panel shows the all-time top players by score. It refreshes every 60 seconds. Your rank is shown below the top 10 if you're not already in it.</p>
-                    <p>Visit the <a href="/stats.html">📊 Statistics</a> page for a full leaderboard with click counts.</p>
+                    <p>Visit the <a href="/stats.html">📊 Statistics</a> page for the full leaderboard with click counts.</p>
                 </div>
             </details>
 
