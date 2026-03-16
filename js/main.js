@@ -348,14 +348,8 @@ function doAscendAsClass(cls) {
     if (ascended) return;
     ascendedClass = cls;
     ascended = true;
-    // Auto-unlock class abilities on ascension (no longer gated by skill tree)
-    if (cls === 'sorcerer') {
-        ueUnlocked = true; autoUeUnlocked = true; autoUeEnabled = true;
-        powerStanceUnlocked = true; autoPsEnabled = true;
-    }
-    if (cls === 'knight') {
-        annihilationUnlocked = true; autoAnniEnabled = true;
-    }
+    // Auto-unlock fireball if already unlocked via skill tree (migration)
+    if (skillPts(31) >= 1) { gfbUnlocked = true; autoGfbUnlocked = true; }
     worms    = [];
     boss     = null;
     bossSpawnCounter = 0;
@@ -526,15 +520,11 @@ function updateHUD() {
     const isKnight   = ascendedClass === 'knight';
     document.getElementById('fireballBtn').style.display  = gfbUnlocked ? '' : 'none';
     document.getElementById('cd-fire-wrap').style.display  = gfbUnlocked ? '' : 'none';
-    document.getElementById('ultimateExplosionBtn').style.display = isSorcerer ? '' : 'none';
-    document.getElementById('cd-ue-wrap').style.display           = isSorcerer ? '' : 'none';
+    document.getElementById('cd-hmm-wrap').style.display  = isSorcerer && sPts(201) >= 1 ? '' : 'none';
+    document.getElementById('cd-sd-wrap').style.display   = isSorcerer && sPts(212) >= 1 ? '' : 'none';
     document.getElementById('annihilationBtn').style.display      = isKnight   ? '' : 'none';
     document.getElementById('cd-anni-wrap').style.display         = isKnight   ? '' : 'none';
     document.getElementById('autoAnniBtn').style.display          = isKnight   ? '' : 'none';
-    document.getElementById('autoUeBtn').style.display            = isSorcerer ? '' : 'none';
-    document.getElementById('autoPsBtn').style.display             = isSorcerer ? '' : 'none';
-    document.getElementById('powerStanceBtn').style.display       = isSorcerer ? '' : 'none';
-    document.getElementById('cd-ps-wrap').style.display           = isSorcerer ? '' : 'none';
     // Crafting button state
     const _cb = document.getElementById('craftingBtn');
     if (_cb) {
@@ -590,35 +580,22 @@ let hmmHitCounter  = 0;              // total HMM fires (Cataclysm every 5, Tita
 let arcaneWeakeningStacks = 0;       // S10 Arcane Weakening stacks on current boss
 let suddenDeathCooldownEnd = 0;
 
-// Knight combo + speed state
+// Knight combo state (legacy, kept for save migration only)
 let comboStacks        = 0;
-let comboBreakReady    = false;
-let lastComboBreakTime = 0;
 let flowStacks         = 0;
-let clickOrderCount    = 0;          // total clicks (Executioner's Rhythm every 5)
-let adrenalineStackExpiry = [];      // K10: per-stack expiry timestamps
-let recentClickTimes      = [];      // K12: click timestamps for >3/s check
+let clickOrderCount    = 0;
 
-const UE_UNLOCK_LEVEL = 40; // Sorcerer only
-const UE_UNLOCK_GOLD  = 1000;
-const UE_COOLDOWN_MS  = 5 * 60 * 1000; // 5 min (Sorcerer only)
-let ueUnlocked    = false;
-let ueCooldownEnd = 0;
-
-const POWER_STANCE_COOLDOWN_MS = 6 * 60 * 1000; // 6 min
-const POWER_STANCE_DURATION_MS = 90 * 1000;      // 90 sec
-let powerStanceUnlocked    = false;
-let powerStanceActive      = false;
-let powerStanceEnd         = 0;
+// ── Legacy sorcerer ability state (kept for save compatibility — no longer active) ──
+const UE_COOLDOWN_MS           = 5 * 60 * 1000;  // was 5-min standalone UE spell
+const POWER_STANCE_COOLDOWN_MS = 6 * 60 * 1000;
+const POWER_STANCE_DURATION_MS = 90 * 1000;
+let ueUnlocked          = false;
+let ueCooldownEnd       = 0;
+let powerStanceUnlocked = false;
+let powerStanceActive   = false;
+let powerStanceEnd      = 0;
 let powerStanceCooldownEnd = 0;
-let autoPsEnabled          = false;
-
-// ── Annihilation (Knight only) ────────────────────────────────────────
-const ANNIHILATION_UNLOCK_LEVEL = 40;
-const ANNIHILATION_COOLDOWN_MS  = 3 * 60 * 1000; // 3 min
-let annihilationUnlocked    = false;
-let annihilationCooldownEnd = 0;
-let autoAnniEnabled         = false;
+let autoPsEnabled       = false;
 
 // ── Inventory & crafting ─────────────────────────────────────────
 let inventory = { lumpOfDirt: 0, rotwormFang: 0, worm: 0, gland: 0,
@@ -656,10 +633,16 @@ const AUTO_GFB_UNLOCK_GOLD  = 1000;
 let autoGfbUnlocked = false;
 let autoGfbEnabled  = false;
 
-const AUTO_UE_UNLOCK_LEVEL = 45; // Sorcerer only, requires UE unlocked first
+const AUTO_UE_UNLOCK_LEVEL = 45; // legacy — kept for save compatibility
 const AUTO_UE_UNLOCK_GOLD  = 10000;
 let autoUeUnlocked = false;
 let autoUeEnabled  = false;
+
+// ── Annihilation (Knight only) ────────────────────────────────────────────────
+const ANNIHILATION_COOLDOWN_MS  = 3 * 60 * 1000; // 3 min
+let annihilationUnlocked    = false;
+let annihilationCooldownEnd = 0;
+let autoAnniEnabled         = false;
 
 const BOSS_FOCUS_UNLOCK_LEVEL = 10;
 const BOSS_FOCUS_UNLOCK_GOLD  = 1000;
@@ -1119,8 +1102,8 @@ function buySorcSkill(id) {
 }
 
 // Sorc effect helpers
-function sorcDmgMinBonus()           { return powerStanceActive ? 15 : 0; }       // Power Stance flat bonus (auto-unlocked on ascension)
-function sorcDmgMaxBonus()           { return powerStanceActive ? 15 : 0; }       // same
+function sorcDmgMinBonus()           { return 0; }
+function sorcDmgMaxBonus()           { return 0; }
 function sorcHmmDmgFrac()            { return (10 + sPts(201) * 5) / 100; }       // S1: (10+5/pt)% max HP
 function sorcHmmDmgMult()            { return 1 + sPts(202) * 0.04; }             // S2: +4%/pt
 function sorcTripleMissileChance()   { return sPts(203) * 0.05; }                 // S3: +5%/pt chance to fire 2 extra missiles
@@ -1138,8 +1121,8 @@ function sorcSuddenDeathCooldownMs() { return Math.max(300000, 600000 - sPts(213
 function sorcDoubleGfb()    { return false; }                                    // GFB double removed
 function sorcGfbUpgraded()  { return false; }                                    // GFB upgrade removed
 function sorcVolatileBlast(){ return false; }                                    // Volatile Blast removed
-function sorcAutoUe()       { return autoUeEnabled; }                            // auto-unlocked on ascension
-function sorcAutoPs()       { return autoPsEnabled; }                            // auto-unlocked on ascension
+function sorcAutoUe()       { return false; }                                    // removed
+function sorcAutoPs()       { return false; }                                    // removed
 
 // ── Skill tree UI ─────────────────────────────────────────────────
 let _skillTab = 'general';
@@ -1342,12 +1325,10 @@ function renderSorcPane() {
 
 function effectiveBasicCooldown() {
     let cd = Math.max(100, BASIC_COOLDOWN_MS - kPts(105) * 40); // K5 Combo Meter: -40ms/pt (0.50s → 0.10s at max)
-    return cd * (powerStanceActive ? 0.5 : 1) * potionCdrMult();
+    return cd * potionCdrMult();
 }
-function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS * skillAutoFreqMult() * (powerStanceActive ? 0.5 : 1) * potionCdrMult(); }
+function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS * skillAutoFreqMult() * potionCdrMult(); }
 function effectiveGfbCooldown()   { return Math.max(10000, GFB_COOLDOWN_MS - skillPts(32) * 1000) * potionCdrMult(); }
-function effectiveUeCooldown()    { return UE_COOLDOWN_MS * potionCdrMult(); }
-function effectivePsCooldown()    { return POWER_STANCE_COOLDOWN_MS * potionCdrMult(); }
 function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * potionCdrMult(); }
 
 // ── Progress save / load ─────────────────────────────────────────
@@ -1355,19 +1336,15 @@ function getProgress() {
     return {
         score, gold, exp, level, weaponIndex,
         skillPoints, knightSkillPts, sorcSkillPts,
-        gfbUnlocked, ueUnlocked,
-        powerStanceUnlocked, powerStanceCooldownEnd,
+        gfbUnlocked,
         autoUnlocked, autoEnabled,
         autoGfbUnlocked, autoGfbEnabled,
-        autoUeUnlocked,  autoUeEnabled,
-        autoPsEnabled,
         autoAnniEnabled,
         bossFocusUnlocked,
         ascended, ascendedClass,
         annihilationUnlocked,
         bossSpawnCounter,
         bossKillCounter,
-        // firstBossSpawned (legacy) 
         totalClicks,
         inventory,
         potionWealthEnd, potionWisdomEnd, potionSwiftnessEnd,
@@ -1400,18 +1377,12 @@ function loadProgress(state) {
         if (s.skillPoints      != null) skillPoints      = s.skillPoints;
         if (s.knightSkillPts       != null) knightSkillPts       = s.knightSkillPts;
         if (s.sorcSkillPts         != null) sorcSkillPts         = s.sorcSkillPts;
-        if (s.powerStanceUnlocked  != null) powerStanceUnlocked  = s.powerStanceUnlocked;
-        if (s.powerStanceCooldownEnd != null) powerStanceCooldownEnd = s.powerStanceCooldownEnd;
-        // legacy migration: old upgrade fields → skill points ignored (fresh start for skill tree)
+        // legacy migration: no longer storing many old fields, but load them if present
         if (s.gfbUnlocked      != null) gfbUnlocked      = s.gfbUnlocked;
-        if (s.ueUnlocked       != null) ueUnlocked       = s.ueUnlocked;
         if (s.autoUnlocked     != null) autoUnlocked     = s.autoUnlocked;
         if (s.autoEnabled      != null) autoEnabled      = s.autoEnabled;
         if (s.autoGfbUnlocked  != null) autoGfbUnlocked  = s.autoGfbUnlocked;
         if (s.autoGfbEnabled   != null) autoGfbEnabled   = s.autoGfbEnabled;
-        if (s.autoUeUnlocked   != null) autoUeUnlocked   = s.autoUeUnlocked;
-        if (s.autoUeEnabled    != null) autoUeEnabled    = s.autoUeEnabled;
-        if (s.autoPsEnabled    != null) autoPsEnabled    = s.autoPsEnabled;
         if (s.autoAnniEnabled  != null) autoAnniEnabled  = s.autoAnniEnabled;
         if (s.bossFocusUnlocked!= null) bossFocusUnlocked= s.bossFocusUnlocked;
         if (s.ascended             != null) { ascended = s.ascended; applyMobConfig(); }
@@ -1446,9 +1417,8 @@ function loadProgress(state) {
         // Derive unlock flags from skill points (migration-safe)
         if (skillPts(11) >= 1) { autoUnlocked = true; bossFocusUnlocked = true; }
         if (skillPts(31) >= 1) { gfbUnlocked = true; autoGfbUnlocked = true; }
-        // Derive class ability unlocks from ascendedClass (v7 migration-safe)
-        if (ascendedClass === 'sorcerer') { ueUnlocked = true; autoUeUnlocked = true; powerStanceUnlocked = true; }
-        if (ascendedClass === 'knight')   { annihilationUnlocked = true; }
+        // Annihilation is auto-unlocked for all knights on ascension
+        if (ascendedClass === 'knight') { annihilationUnlocked = true; }
     } catch (_) {}
     applyMobConfig();
 }
@@ -1952,12 +1922,10 @@ function killWorm(w) {
         bossSpawnCounter = 0;
         spawnBoss();
     }
-    // Cooldown reset proc (skill 6)
+    // Cooldown reset proc (legacy stub — skillCdResetEnabled always returns false)
     if (skillCdResetEnabled() && Math.random() < 0.01) {
         gfbCooldownEnd  = 0;
-        ueCooldownEnd   = 0;
         annihilationCooldownEnd = 0;
-        powerStanceCooldownEnd  = 0;
     }
     // K6 Adrenaline Reset: killing a monster has a chance to fully reset manual attack cooldown
     if (ascendedClass === 'knight' && kPts(106) > 0 && Math.random() < kPts(106) * 0.02) {
@@ -2363,6 +2331,7 @@ function update() {
             if (sPts(204) > 0 && !_hmmIsBoss && Math.random() < sorcUltimateExplosionChance()) {
                 worms.forEach(w => killWorm(w));
                 worms = [];
+                spawnUltimateExplosion(); // visual effect
             }
             // S3 Triple Missile Chance: chance to fire 2 extra missiles
             if (sPts(203) > 0 && Math.random() < sorcTripleMissileChance()) {
@@ -2378,6 +2347,7 @@ function update() {
                         if (sPts(204) > 0 && Math.random() < sorcUltimateExplosionChance() && worms.length > 0) {
                             worms.forEach(w => killWorm(w));
                             worms = [];
+                            spawnUltimateExplosion(); // visual effect
                             break;
                         }
                     }
@@ -2399,36 +2369,13 @@ function update() {
         const sdDmg = Math.ceil(boss.maxHp * sdFrac * sorcBossDmgMult() * sorcWeakeningBonusMult());
         boss.hp -= sdDmg;
         dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size - 16, value: sdDmg, color: '#ff00cc', life: 80 });
+        spawnAttackEffect(boss.x, boss.y); // visual: hit effect on boss
         if (boss.hp <= 0) killBoss(boss);
     }
     // auto GFB logic
     if (autoGfbEnabled && gfbUnlocked && (worms.length > 0 || boss) && !fireballActive && !spawnPaused &&
             Date.now() >= gfbCooldownEnd && gold >= GFB_GOLD_COST) {
         castGfb();
-    }
-    // auto UE logic — fires whenever off cooldown, boss immune (Sorcerer only)
-    if (autoUeEnabled && ueUnlocked && ascendedClass === 'sorcerer' && !spawnPaused && Date.now() >= ueCooldownEnd) {
-        spawnUltimateExplosion();
-        ueCooldownEnd = Date.now() + effectiveUeCooldown();
-        spawnPaused = true;
-        setTimeout(() => {
-            worms = worms.filter(w => {
-                killWorm(w);
-                return false;
-            });
-            // boss is intentionally NOT affected
-            spawnPaused = false;
-        }, 900);
-    }
-    // Power Stance deactivation
-    if (powerStanceActive && Date.now() >= powerStanceEnd) {
-        powerStanceActive = false;
-    }
-    // Auto Power Stance (sorc skill 211)
-    if (powerStanceUnlocked && sorcAutoPs() && !powerStanceActive && Date.now() >= powerStanceCooldownEnd) {
-        powerStanceActive      = true;
-        powerStanceEnd         = Date.now() + POWER_STANCE_DURATION_MS;
-        powerStanceCooldownEnd = powerStanceEnd + effectivePsCooldown();
     }
     // float damage numbers upward and expire
     dmgNumbers.forEach(d => { d.y -= 1; d.life--; });
@@ -2450,59 +2397,19 @@ function update() {
         document.getElementById('cd-fire-bar').style.width  = fbRemaining > 0 ? ((1 - fbRemaining / effectiveGfbCooldown()) * 100) + '%' : '100%';
         document.getElementById('cd-fire-text').textContent = fbRemaining > 0 ? (fbRemaining / 1000).toFixed(1) + 's' : 'Ready';
     }
-    // update UE + Power Stance buttons (Sorcerer only)
+    // update HMM + Sudden Death CD bars (Sorcerer only)
     if (ascendedClass === 'sorcerer') {
-        const ueRemaining = Math.max(0, ueCooldownEnd - Date.now());
-        const ueBtnEl = document.getElementById('ultimateExplosionBtn');
-        const ueIcon = `<img src="Ultimate_Explosion.gif" class="btn-icon">`;
-        if (!ueUnlocked) {
-            ueBtnEl.innerHTML = `${ueIcon} Ultimate Explosion (unlock in Skill Tree)`;
-            ueBtnEl.disabled = true;
-        } else if (ueRemaining > 0) {
-            ueBtnEl.innerHTML = `${ueIcon} Ultimate Explosion (${(ueRemaining / 1000).toFixed(1)}s)`;
-            ueBtnEl.disabled = true;
-        } else {
-            ueBtnEl.innerHTML = `${ueIcon} Ultimate Explosion`;
-            ueBtnEl.disabled = false;
+        if (sPts(201) >= 1) {
+            const hmmRemaining = Math.max(0, hmmCooldownEnd - Date.now());
+            document.getElementById('cd-hmm-bar').style.width  = hmmRemaining > 0 ? ((1 - hmmRemaining / HMM_COOLDOWN_MS) * 100) + '%' : '100%';
+            document.getElementById('cd-hmm-text').textContent = hmmRemaining > 0 ? (hmmRemaining / 1000).toFixed(1) + 's' : 'Ready';
         }
-        document.getElementById('cd-ue-bar').style.width  = ueUnlocked && ueRemaining > 0 ? ((1 - ueRemaining / effectiveUeCooldown()) * 100) + '%' : (ueUnlocked ? '100%' : '0%');
-        document.getElementById('cd-ue-text').textContent = !ueUnlocked ? 'Locked' : (ueRemaining > 0 ? (ueRemaining / 1000).toFixed(1) + 's' : 'Ready');
-        // Auto UE button
-        const autoUeEl = document.getElementById('autoUeBtn');
-        if (!autoUeUnlocked) {
-            autoUeEl.textContent = 'Auto UE (unlock in Skill Tree)';
-            autoUeEl.disabled = true;
-            autoUeEl.classList.remove('auto-on');
-        } else {
-            autoUeEl.textContent = autoUeEnabled ? 'Auto UE: ON' : 'Auto UE: OFF';
-            autoUeEl.disabled = false;
-            autoUeEl.classList.toggle('auto-on', autoUeEnabled);
+        if (sPts(212) >= 1) {
+            const sdRemaining = Math.max(0, suddenDeathCooldownEnd - Date.now());
+            const sdCd = sorcSuddenDeathCooldownMs();
+            document.getElementById('cd-sd-bar').style.width  = sdRemaining > 0 ? ((1 - sdRemaining / sdCd) * 100) + '%' : '100%';
+            document.getElementById('cd-sd-text').textContent = sdRemaining > 0 ? Math.ceil(sdRemaining / 1000) + 's' : 'Ready';
         }
-        // Power Stance button
-        const psRemaining = Math.max(0, powerStanceCooldownEnd - Date.now());
-        const psBtnEl = document.getElementById('powerStanceBtn');
-        if (!powerStanceUnlocked) {
-            psBtnEl.innerHTML = '&#9889; Power Stance (unlock in Skill Tree)';
-            psBtnEl.disabled = true;
-        } else if (powerStanceActive) {
-            const psLeft = Math.max(0, powerStanceEnd - Date.now());
-            psBtnEl.innerHTML = `&#9889; Power Stance: ACTIVE (${Math.ceil(psLeft / 1000)}s)`;
-            psBtnEl.disabled = true;
-        } else if (psRemaining > 0) {
-            psBtnEl.innerHTML = `&#9889; Power Stance (${Math.ceil(psRemaining / 1000)}s)`;
-            psBtnEl.disabled = true;
-        } else {
-            psBtnEl.innerHTML = '&#9889; Power Stance';
-            psBtnEl.disabled = false;
-        }
-        const postActiveRemaining = powerStanceActive ? effectivePsCooldown() : psRemaining;
-        document.getElementById('cd-ps-bar').style.width  = powerStanceUnlocked && postActiveRemaining > 0 ? ((1 - postActiveRemaining / effectivePsCooldown()) * 100) + '%' : ((powerStanceUnlocked && !powerStanceActive) ? '100%' : '0%');
-        document.getElementById('cd-ps-text').textContent = !powerStanceUnlocked ? 'Locked' : (powerStanceActive ? `Active (${Math.ceil(Math.max(0, powerStanceEnd - Date.now()) / 1000)}s)` : (psRemaining > 0 ? Math.ceil(psRemaining / 1000) + 's' : 'Ready'));
-        // Auto Power Stance button (auto-unlocked on ascension as sorcerer)
-        const autoPsEl = document.getElementById('autoPsBtn');
-        autoPsEl.textContent = autoPsEnabled ? 'Auto Power Stance: ON' : 'Auto Power Stance: OFF';
-        autoPsEl.disabled = false;
-        autoPsEl.classList.toggle('auto-on', autoPsEnabled);
     }
     // update Annihilation button (Knight only)
     if (ascendedClass === 'knight') {
@@ -2519,16 +2426,13 @@ function update() {
             anniBtnEl.innerHTML = `${anniIcon} Annihilation`;
             anniBtnEl.disabled = !boss || boss.isUber;
         }
-        // Auto Annihilation button (auto-unlocked on ascension as knight)
+        // Auto Annihilation button
         const autoAnniEl = document.getElementById('autoAnniBtn');
         autoAnniEl.textContent = autoAnniEnabled ? 'Auto Annihilation: ON' : 'Auto Annihilation: OFF';
         autoAnniEl.disabled = false;
         autoAnniEl.classList.toggle('auto-on', autoAnniEnabled);
         document.getElementById('cd-anni-bar').style.width  = annihilationUnlocked && anniRemaining > 0 ? ((1 - anniRemaining / effectiveAnniCooldown()) * 100) + '%' : (annihilationUnlocked ? '100%' : '0%');
         document.getElementById('cd-anni-text').textContent = !annihilationUnlocked ? 'Locked' : (anniRemaining > 0 ? Math.ceil(anniRemaining / 1000) + 's' : (boss ? 'Ready' : 'No boss'));
-        // Whirlwind CD bar — no longer used (skill removed)
-        const wwWrap = document.getElementById('cd-whirlwind-wrap');
-        if (wwWrap) wwWrap.style.display = 'none';
     }
     // cooldown bars
     const basicElapsed = Date.now() - lastBasicAttack;
@@ -2590,25 +2494,7 @@ document.getElementById('fireballBtn').addEventListener('click', () => {
     castGfb();
 });
 
-// ultimate explosion button
-const ueBtn = document.getElementById('ultimateExplosionBtn');
-ueBtn.addEventListener('click', () => {
-    if (ascendedClass !== 'sorcerer' || !ueUnlocked) return;
-    if (Date.now() < ueCooldownEnd) return;
-    spawnUltimateExplosion();
-    ueCooldownEnd = Date.now() + effectiveUeCooldown();
-    spawnPaused = true;
-    setTimeout(() => {
-        worms = worms.filter(w => {
-            killWorm(w);
-            return false;
-        });
-        // boss is immune to UE
-        spawnPaused = false;
-    }, 900);
-});
-
-// Annihilation button (Knight only — unlocked via Skill Tree, skill 104)
+// Annihilation button (Knight only — auto-unlocked on ascension)
 document.getElementById('annihilationBtn').addEventListener('click', () => {
     if (ascendedClass !== 'knight' || !annihilationUnlocked) return;
     if (!boss || boss.isUber || Date.now() < annihilationCooldownEnd) return;
@@ -2632,26 +2518,9 @@ document.getElementById('autoGfbBtn').addEventListener('click', () => {
     autoGfbEnabled = !autoGfbEnabled;
 });
 
-document.getElementById('autoUeBtn').addEventListener('click', () => {
-    if (!autoUeUnlocked) return;
-    autoUeEnabled = !autoUeEnabled;
-});
-
 document.getElementById('autoAnniBtn').addEventListener('click', () => {
-    if (kPts(105) < 1) return;
+    if (!annihilationUnlocked) return;
     autoAnniEnabled = !autoAnniEnabled;
-});
-
-document.getElementById('autoPsBtn').addEventListener('click', () => {
-    if (sPts(211) < 1) return;
-    autoPsEnabled = !autoPsEnabled;
-});
-
-document.getElementById('powerStanceBtn').addEventListener('click', () => {
-    if (!powerStanceUnlocked || powerStanceActive || Date.now() < powerStanceCooldownEnd) return;
-    powerStanceActive      = true;
-    powerStanceEnd         = Date.now() + POWER_STANCE_DURATION_MS;
-    powerStanceCooldownEnd = powerStanceEnd + effectivePsCooldown();
 });
 
 function loop() {

@@ -200,7 +200,8 @@ hr {
 
 .cd-bar-basic { background: linear-gradient(to right, #882222, #dd4444); }
 .cd-bar-fire  { background: linear-gradient(to right, #884400, #dd8800); }
-.cd-bar-ue    { background: linear-gradient(to right, #550088, #aa22ee); }
+.cd-bar-hmm   { background: linear-gradient(to right, #550088, #aa22ee); }
+.cd-bar-sd    { background: linear-gradient(to right, #880044, #ff00cc); }
 
 /* ── Buttons (base) ──────────────────────────────────────────── */
 #hud-left button,
