@@ -881,498 +881,428 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
     # POST ─────────────────────────────────────────────────────────
+    # ── POST route handlers ────────────────────────────────────────
+
+    def _post_register(self, body: dict) -> None:
+        username  = (body.get('username') or '').strip()
+        password  =  body.get('password') or ''
+        email_raw = (body.get('email') or '').strip().lower()
+        email     = email_raw if email_raw else None
+        if not re.fullmatch(r'[a-zA-Z0-9_]{3,20}', username):
+            return self.send_json(400, {'error': 'Username: 3–20 chars, letters/numbers/underscore.'})
+        if not (4 <= len(password) <= 100):
+            return self.send_json(400, {'error': 'Password must be 4–100 characters.'})
+        if email and not EMAIL_RE.fullmatch(email):
+            return self.send_json(400, {'error': 'Invalid email address.'})
+        salt = secrets.token_hex(16)
+        hsh  = hash_pwd(password, salt)
+        with _write_lock:
+            conn = db()
+            try:
+                conn.execute(
+                    'INSERT INTO players (username,password_hash,salt,email) VALUES (?,?,?,?)',
+                    (username, hsh, salt, email)
+                )
+                conn.commit()
+            except Exception as e:
+                if not (isinstance(e, sqlite3.IntegrityError) or 'UNIQUE constraint failed' in str(e)):
+                    raise
+                if email and 'players.email' in str(e):
+                    return self.send_json(409, {'error': 'Email address already registered to another account.'})
+                return self.send_json(409, {'error': 'Username already taken.'})
+            player = conn.execute(
+                f'SELECT {_PLAYER_ALL_COLS} FROM players WHERE username=?', (username,)
+            ).fetchone()
+            assert player is not None
+            token = secrets.token_hex(32)
+            conn.execute('INSERT INTO sessions (token,player_id) VALUES (?,?)', (token, player['id']))
+            conn.commit()
+        _cache_session(token, player['id'])
+        _cache_player_data(player)
+        self.send_json(200, {'token': token, 'player': _player_public(player)})
+
+    def _post_login(self, body: dict) -> None:
+        username = (body.get('username') or '').strip()
+        password =  body.get('password') or ''
+        row = db().execute('SELECT * FROM players WHERE username=?', (username,)).fetchone()
+        if not row or not hmac.compare_digest(
+            hash_pwd(password, row['salt']), row['password_hash']
+        ):
+            return self.send_json(401, {'error': 'Invalid username or password.'})
+        token = secrets.token_hex(32)
+        with _write_lock:
+            conn = db()
+            conn.execute('INSERT INTO sessions (token,player_id) VALUES (?,?)', (token, row['id']))
+            raw = row['state']
+            try:
+                stored_state = json.loads(raw) if raw else {}
+            except Exception:
+                stored_state = {}
+            upgraded = _upgrade_state(stored_state)
+            if upgraded.get('stateVersion', 0) != (stored_state.get('stateVersion') or 0):
+                conn.execute(
+                    'UPDATE players SET state=? WHERE id=?',
+                    (json.dumps(upgraded), row['id'])
+                )
+            conn.commit()
+        _cache_session(token, row['id'])
+        player = db().execute(
+            f'SELECT {_PLAYER_ALL_COLS} FROM players WHERE id=?', (row['id'],)
+        ).fetchone()
+        assert player is not None
+        _cache_player_data(player)
+        self.send_json(200, {'token': token, 'player': _player_public(player)})
+
+    def _post_logout(self) -> None:
+        token = self.get_token()
+        if token:
+            _invalidate_session(token)
+            with _write_lock:
+                conn = db()
+                conn.execute('DELETE FROM sessions WHERE token=?', (token,))
+                conn.commit()
+        self.send_json(200, {'ok': True})
+
+    def _post_save(self, body: dict) -> None:
+        player = auth_player(self.get_token())
+        if not player:
+            return self.send_json(401, {'error': 'Not authenticated.'})
+        state = body.get('state')
+        if not isinstance(state, dict):
+            return self.send_json(400, {'error': 'Invalid state.'})
+        state = _upgrade_state(state)
+
+        reported_score = max(0, int(state.get('score') or 0))
+        reported_level = max(1, int(state.get('level') or 1))
+        reported_gold  = max(0, int(state.get('gold')  or 0))
+        reported_exp   = max(0, int(state.get('exp')   or 0))
+        now_ms = int(time.time() * 1000)
+
+        prev_score   = int(player['score']        or 0)
+        prev_level   = int(player['level']        or 1)
+        last_save_ms = int(player['last_save_ms'] or 0)
+        cheat_flags  = int(player['cheat_flags']  or 0)
+
+        _raw_prev = player.get('state')
+        _prev_state: dict = {}
+        if _raw_prev:
+            try:
+                _prev_state = json.loads(_raw_prev) if isinstance(_raw_prev, str) else _raw_prev
+            except Exception:
+                pass
+        prev_gold = max(0, int(_prev_state.get('gold') or 0))
+        prev_exp  = max(0, int(_prev_state.get('exp')  or 0))
+
+        elapsed_sec = min(
+            max(0.0, (now_ms - last_save_ms) / 1000.0),
+            ANTI_CHEAT_MAX_ELAPSED_SEC,
+        )
+
+        allowed_score_increase = max(ANTI_CHEAT_MIN_SCORE_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_SCORE_PER_SEC))
+        allowed_level_increase = max(ANTI_CHEAT_MIN_LEVEL_BURST, int(elapsed_sec * (ANTI_CHEAT_MAX_LEVELS_PER_MIN / 60.0)))
+        max_allowed_score = prev_score + allowed_score_increase
+        max_allowed_level = prev_level + allowed_level_increase
+        score = min(max(reported_score, prev_score), max_allowed_score)
+        level = min(max(reported_level, prev_level), max_allowed_level)
+
+        allowed_gold_increase = max(ANTI_CHEAT_MIN_GOLD_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_GOLD_PER_SEC))
+        max_allowed_gold = prev_gold + allowed_gold_increase
+        gold_val = min(max(reported_gold, prev_gold), max_allowed_gold)
+
+        allowed_exp_increase = max(ANTI_CHEAT_MIN_EXP_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_EXP_PER_SEC))
+        max_allowed_exp = prev_exp + allowed_exp_increase
+        exp_val = min(max(reported_exp, prev_exp), max_allowed_exp)
+
+        level_from_exp = _level_from_exp(exp_val)
+        level = max(prev_level, min(level, level_from_exp))
+
+        suspicious = (
+            reported_score > max_allowed_score or reported_level > max_allowed_level
+            or reported_gold > max_allowed_gold or reported_exp > max_allowed_exp
+        )
+        if suspicious:
+            cheat_flags += 1
+            print(
+                f"[anti-cheat] user={player['username']} flagged=#{cheat_flags} "
+                f"score(rep={reported_score},max={max_allowed_score}) "
+                f"level(rep={reported_level},max={max_allowed_level}) "
+                f"gold(rep={reported_gold},max={max_allowed_gold}) "
+                f"exp(rep={reported_exp},max={max_allowed_exp})"
+            )
+            if cheat_flags >= ANTI_CHEAT_BAN_THRESHOLD:
+                print(f"[anti-cheat] BANNED user={player['username']} after {cheat_flags} flags — deleting account")
+                with _write_lock:
+                    c = db()
+                    c.execute('DELETE FROM players WHERE id=?', (player['id'],))
+                    c.commit()
+                _player_data_cache.pop(player['id'], None)
+                self.send_json(403, {'error': 'banned', 'message': 'Your account has been permanently banned for cheating.'})
+                return
+
+        state['score'] = score
+        state['level'] = level
+        state['gold']  = gold_val
+        state['exp']   = exp_val
+
+        for _pts_key, _maxes in (
+            ('skillPoints',    _SKILL_MAXES_GENERAL),
+            ('knightSkillPts', _SKILL_MAXES_KNIGHT),
+            ('sorcSkillPts',   _SKILL_MAXES_SORC),
+        ):
+            _raw_pts = state.get(_pts_key)
+            if isinstance(_raw_pts, dict):
+                state[_pts_key] = {
+                    k: max(0, min(int(v or 0), _maxes.get(int(k), 10)))
+                    for k, v in _raw_pts.items()
+                    if str(k).lstrip('-').isdigit()
+                }
+
+        _unlocked = state.get('unlockedAreas')
+        if not isinstance(_unlocked, list):
+            _unlocked = ['Rookgaard']
+        _valid_unlocked = [a for a in _AREA_ORDER if a in _unlocked and level >= _AREA_LEVEL_REQS.get(a, 9999)]
+        if not _valid_unlocked:
+            _valid_unlocked = ['Rookgaard']
+        state['unlockedAreas'] = _valid_unlocked
+        if state.get('currentArea') not in _valid_unlocked:
+            state['currentArea'] = _valid_unlocked[-1]
+
+        new_total_clicks = max(0, int(state.get('totalClicks') or 0))
+        state_json = json.dumps(state)
+
+        cached_entry = _player_data_cache.get(player['id'])
+        if cached_entry:
+            cd, _cexp = cached_entry
+            cd.update(score=score, level=level, exp=exp_val, last_save_ms=now_ms,
+                      cheat_flags=cheat_flags, total_clicks=new_total_clicks,
+                      state=state_json)
+
+        pid   = player['id']
+        uname = player['username']
+        def _do_save(_sj=state_json, _sc=score, _lv=level, _ev=exp_val, _ts=now_ms,
+                     _cf=cheat_flags, _tc=new_total_clicks, _pid=pid, _un=uname):
+            try:
+                with _write_lock:
+                    c = db()
+                    c.execute(
+                        'UPDATE players SET state=?,score=?,level=?,exp=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
+                        (_sj, _sc, _lv, _ev, _ts, _cf, _tc, _pid)
+                    )
+                    c.commit()
+            except Exception as exc:
+                print(f'[save-async] player={_un} error: {exc}')
+        threading.Thread(target=_do_save, daemon=True).start()
+
+        self.send_json(200, {'ok': True, 'score': score, 'level': level, 'gold': gold_val, 'exp': exp_val, 'flagged': suspicious})
+
+    def _post_forgot_password(self, body: dict) -> None:
+        email = (body.get('email') or '').strip().lower()
+        if email and EMAIL_RE.fullmatch(email):
+            row = db().execute('SELECT id FROM players WHERE email=?', (email,)).fetchone()
+            print(f'[forgot-password] email={email!r} found={row is not None}')
+            if row:
+                token  = secrets.token_hex(32)
+                now_ms = int(time.time() * 1000)
+                with _write_lock:
+                    conn = db()
+                    conn.execute(
+                        'INSERT INTO password_reset_tokens (token,player_id,created_at_ms) VALUES (?,?,?)',
+                        (token, row['id'], now_ms)
+                    )
+                    conn.commit()
+                host      = self.headers.get('Host', 'localhost')
+                scheme    = 'https' if (GAME_URL or 'railway' in host) else 'http'
+                base      = GAME_URL or f'{scheme}://{host}'
+                reset_url = f'{base}/reset-password.html?token={token}'
+                _send_reset_email(email, reset_url)
+        self.send_json(200, {'ok': True})
+
+    def _post_reset_password(self, body: dict) -> None:
+        token    = (body.get('token') or '').strip()
+        password =  body.get('password') or ''
+        if not token:
+            return self.send_json(400, {'error': 'Token is required.'})
+        if not (4 <= len(password) <= 100):
+            return self.send_json(400, {'error': 'Password must be 4–100 characters.'})
+        now_ms    = int(time.time() * 1000)
+        expire_ms = now_ms - RESET_TOKEN_EXPIRY_MS
+        row = db().execute(
+            'SELECT player_id, used, created_at_ms FROM password_reset_tokens WHERE token=?',
+            (token,)
+        ).fetchone()
+        if not row or row['used'] or row['created_at_ms'] < expire_ms:
+            return self.send_json(400, {'error': 'This link is invalid or has expired.'})
+        salt = secrets.token_hex(16)
+        hsh  = hash_pwd(password, salt)
+        with _write_lock:
+            conn = db()
+            conn.execute('UPDATE players SET password_hash=?,salt=? WHERE id=?', (hsh, salt, row['player_id']))
+            conn.execute('UPDATE password_reset_tokens SET used=1 WHERE token=?', (token,))
+            conn.execute('DELETE FROM sessions WHERE player_id=?', (row['player_id'],))
+            conn.commit()
+        _evict_player(row['player_id'])
+        self.send_json(200, {'ok': True})
+
+    def _post_suggest(self, body: dict) -> None:
+        message = (body.get('message') or '').strip()
+        contact = (body.get('contact') or '').strip()[:100]
+        if not message:
+            return self.send_json(400, {'error': 'Message is required.'})
+        if len(message) > 2000:
+            return self.send_json(400, {'error': 'Message too long (max 2000 chars).'})
+        now_ms = int(time.time() * 1000)
+        with _write_lock:
+            conn = db()
+            conn.execute(
+                'INSERT INTO suggestions (message,contact,created_at_ms) VALUES (?,?,?)',
+                (message, contact or None, now_ms)
+            )
+            conn.commit()
+        print(f'[suggest] contact={contact!r} msg={message[:80]!r}')
+        threading.Thread(target=_send_suggest_notification, args=(message, contact), daemon=True).start()
+        self.send_json(200, {'ok': True})
+
+    def _post_chat_send(self, body: dict) -> None:
+        player = auth_player(self.get_token())
+        if not player:
+            return self.send_json(401, {'error': 'Login to chat.'})
+        text = (body.get('text') or '').strip()
+        if not text:
+            return self.send_json(400, {'error': 'Empty message.'})
+        if len(text) > 200:
+            return self.send_json(400, {'error': 'Message too long (max 200 chars).'})
+        now_ms = int(time.time() * 1000)
+        with _chat_lock:
+            last_ms = _chat_rate.get(player['username'], 0)
+            if now_ms - last_ms < 2000:
+                return self.send_json(429, {'error': 'Slow down! One message per 2 seconds.'})
+            _chat_rate[player['username']] = now_ms
+            msg = {'ts': now_ms, 'username': player['username'], 'text': text}
+            _chat_messages.append(msg)
+            for sub_q in list(_chat_subscribers):
+                try:
+                    sub_q.put_nowait(msg)
+                except Exception:
+                    pass
+        self.send_json(200, {'ok': True})
+
+    def _post_admin_delete_users(self, body: dict) -> None:
+        body_token = _normalize_token(str(body.get('adminToken', '')))
+        if not is_admin(self, body_token=body_token):
+            return self.send_json(401, {'error': 'Unauthorized.'})
+        usernames = body.get('usernames')
+        if not isinstance(usernames, list) or not usernames:
+            return self.send_json(400, {'error': 'usernames must be a non-empty array.'})
+        cleaned = sorted({str(u).strip() for u in usernames if str(u).strip()})
+        if not cleaned:
+            return self.send_json(400, {'error': 'No valid usernames provided.'})
+        placeholders = ','.join('?' for _ in cleaned)
+        with _write_lock:
+            conn = db()
+            rows = conn.execute(
+                f'SELECT id,username FROM players WHERE username IN ({placeholders}) ORDER BY username',
+                tuple(cleaned),
+            ).fetchall()
+            if not rows:
+                return self.send_json(200, {'deleted': [], 'missing': cleaned, 'sessionsDeleted': 0, 'playersDeleted': 0})
+            ids   = [r['id'] for r in rows]
+            found = [r['username'] for r in rows]
+            missing = [u for u in cleaned if u not in found]
+            id_ph = ','.join('?' for _ in ids)
+            conn.execute(f'DELETE FROM sessions WHERE player_id IN ({id_ph})', tuple(ids))
+            conn.execute(f'DELETE FROM password_reset_tokens WHERE player_id IN ({id_ph})', tuple(ids))
+            player_result = conn.execute(f'DELETE FROM players WHERE id IN ({id_ph})', tuple(ids))
+            conn.commit()
+        for pid in ids:
+            _evict_player(pid)
+        self.send_json(200, {'deleted': found, 'missing': missing, 'playersDeleted': player_result.rowcount})
+
+    def _post_admin_list_suggestions(self, body: dict) -> None:
+        body_token = _normalize_token(str(body.get('adminToken', '')))
+        if not is_admin(self, body_token=body_token):
+            return self.send_json(401, {'error': 'Unauthorized.'})
+        rows = db().execute(
+            'SELECT id,message,contact,created_at_ms FROM suggestions ORDER BY created_at_ms DESC'
+        ).fetchall()
+        self.send_json(200, {'count': len(rows), 'suggestions': [dict(r) for r in rows]})
+
+    def _post_admin_list_users(self, body: dict) -> None:
+        body_token = _normalize_token(str(body.get('adminToken', '')))
+        if not is_admin(self, body_token=body_token):
+            return self.send_json(401, {'error': 'Unauthorized.'})
+        rows = db().execute(
+            'SELECT username,score,level,cheat_flags FROM players ORDER BY score DESC,level DESC,username ASC'
+        ).fetchall()
+        players = [{'username': r['username'], 'score': int(r['score'] or 0),
+                    'level': int(r['level'] or 1), 'cheatFlags': int(r['cheat_flags'] or 0)}
+                   for r in rows]
+        self.send_json(200, {'count': len(players), 'players': players})
+
+    def _post_admin_get_player_state(self, body: dict) -> None:
+        body_token = _normalize_token(str(body.get('adminToken', '')))
+        if not is_admin(self, body_token=body_token):
+            return self.send_json(401, {'error': 'Unauthorized.'})
+        username = (body.get('username') or '').strip()
+        if not username:
+            return self.send_json(400, {'error': 'username is required.'})
+        row = db().execute(
+            'SELECT username,score,level,cheat_flags,last_save_ms,state FROM players WHERE username=?',
+            (username,)
+        ).fetchone()
+        if not row:
+            return self.send_json(404, {'error': 'Player not found.'})
+        raw_state = row['state']
+        try:
+            parsed_state = json.loads(raw_state) if raw_state else None
+        except Exception:
+            parsed_state = raw_state
+        self.send_json(200, {
+            'username':   row['username'],
+            'score':      int(row['score'] or 0),
+            'level':      int(row['level'] or 1),
+            'cheatFlags': int(row['cheat_flags'] or 0),
+            'lastSaveMs': int(row['last_save_ms'] or 0),
+            'state':      parsed_state,
+        })
+
+    def _post_admin_reset_db(self, body: dict) -> None:
+        body_token = _normalize_token(str(body.get('adminToken', '')))
+        if not is_admin(self, body_token=body_token):
+            return self.send_json(401, {'error': 'Unauthorized.'})
+        with _write_lock:
+            conn = db()
+            conn.execute('DELETE FROM sessions')
+            conn.execute('DELETE FROM password_reset_tokens')
+            player_result = conn.execute('DELETE FROM players')
+            conn.commit()
+        _session_cache.clear()
+        _player_data_cache.clear()
+        self.send_json(200, {'ok': True, 'playersDeleted': player_result.rowcount})
+
+    # ── POST dispatcher ────────────────────────────────────────────
+
     def do_POST(self):
         try:
             path = urlparse(self.path).path
             body = self.read_json() or {}
-
-            if path == '/api/register':
-                username  = (body.get('username') or '').strip()
-                password  =  body.get('password') or ''
-                email_raw = (body.get('email') or '').strip().lower()
-                email     = email_raw if email_raw else None
-                if not re.fullmatch(r'[a-zA-Z0-9_]{3,20}', username):
-                    return self.send_json(400, {'error': 'Username: 3–20 chars, letters/numbers/underscore.'})
-                if not (4 <= len(password) <= 100):
-                    return self.send_json(400, {'error': 'Password must be 4–100 characters.'})
-                if email and not EMAIL_RE.fullmatch(email):
-                    return self.send_json(400, {'error': 'Invalid email address.'})
-                salt  = secrets.token_hex(16)
-                hsh   = hash_pwd(password, salt)
-                with _write_lock:
-                    conn = db()
-                    try:
-                        conn.execute(
-                            'INSERT INTO players (username,password_hash,salt,email) VALUES (?,?,?,?)',
-                            (username, hsh, salt, email)
-                        )
-                        conn.commit()
-                    except Exception as e:
-                        if not (isinstance(e, sqlite3.IntegrityError) or 'UNIQUE constraint failed' in str(e)):
-                            raise
-                        if email and 'players.email' in str(e):
-                            return self.send_json(409, {'error': 'Email address already registered to another account.'})
-                        return self.send_json(409, {'error': 'Username already taken.'})
-                    player = conn.execute(
-                        f'SELECT {_PLAYER_ALL_COLS} FROM players WHERE username=?', (username,)
-                    ).fetchone()
-                    assert player is not None
-                    token = secrets.token_hex(32)
-                    conn.execute('INSERT INTO sessions (token,player_id) VALUES (?,?)', (token, player['id']))
-                    conn.commit()
-                _cache_session(token, player['id'])
-                _cache_player_data(player)
-                self.send_json(200, {'token': token, 'player': _player_public(player)})
-
-            elif path == '/api/admin/delete-users':
-                body_token = _normalize_token(str(body.get('adminToken', '')))
-                if not is_admin(self, body_token=body_token):
-                    return self.send_json(401, {'error': 'Unauthorized.'})
-
-                usernames = body.get('usernames')
-                if not isinstance(usernames, list) or not usernames:
-                    return self.send_json(400, {'error': 'usernames must be a non-empty array.'})
-
-                cleaned = sorted({str(u).strip() for u in usernames if str(u).strip()})
-                if not cleaned:
-                    return self.send_json(400, {'error': 'No valid usernames provided.'})
-
-                placeholders = ','.join('?' for _ in cleaned)
-
-                with _write_lock:
-                    conn = db()
-                    rows = conn.execute(
-                        f'SELECT id,username FROM players WHERE username IN ({placeholders}) ORDER BY username',
-                        tuple(cleaned),
-                    ).fetchall()
-
-                    if not rows:
-                        return self.send_json(200, {'deleted': [], 'missing': cleaned, 'sessionsDeleted': 0, 'playersDeleted': 0})
-
-                    ids = [r['id'] for r in rows]
-                    found = [r['username'] for r in rows]
-                    missing = [u for u in cleaned if u not in found]
-
-                    id_placeholders = ','.join('?' for _ in ids)
-                    conn.execute(
-                        f'DELETE FROM sessions WHERE player_id IN ({id_placeholders})',
-                        tuple(ids),
-                    )
-                    conn.execute(
-                        f'DELETE FROM password_reset_tokens WHERE player_id IN ({id_placeholders})',
-                        tuple(ids),
-                    )
-                    player_result = conn.execute(
-                        f'DELETE FROM players WHERE id IN ({id_placeholders})',
-                        tuple(ids),
-                    )
-                    conn.commit()
-
-                for pid in ids:
-                    _evict_player(pid)
-
-                self.send_json(200, {
-                    'deleted': found,
-                    'missing': missing,
-                    'playersDeleted': player_result.rowcount,
-                })
-
-            elif path == '/api/admin/list-suggestions':
-                body_token = _normalize_token(str(body.get('adminToken', '')))
-                if not is_admin(self, body_token=body_token):
-                    return self.send_json(401, {'error': 'Unauthorized.'})
-                rows = db().execute(
-                    'SELECT id,message,contact,created_at_ms FROM suggestions ORDER BY created_at_ms DESC'
-                ).fetchall()
-                self.send_json(200, {
-                    'count': len(rows),
-                    'suggestions': [dict(r) for r in rows]
-                })
-
-            elif path == '/api/admin/list-users':
-                body_token = _normalize_token(str(body.get('adminToken', '')))
-                if not is_admin(self, body_token=body_token):
-                    return self.send_json(401, {'error': 'Unauthorized.'})
-
-                conn = db()
-                rows = conn.execute(
-                    'SELECT username,score,level,cheat_flags FROM players '
-                    'ORDER BY score DESC, level DESC, username ASC'
-                ).fetchall()
-
-                players = [
-                    {
-                        'username': r['username'],
-                        'score': int(r['score'] or 0),
-                        'level': int(r['level'] or 1),
-                        'cheatFlags': int(r['cheat_flags'] or 0),
-                    }
-                    for r in rows
-                ]
-
-                self.send_json(200, {'count': len(players), 'players': players})
-
-            elif path == '/api/admin/get-player-state':
-                body_token = _normalize_token(str(body.get('adminToken', '')))
-                if not is_admin(self, body_token=body_token):
-                    return self.send_json(401, {'error': 'Unauthorized.'})
-
-                username = (body.get('username') or '').strip()
-                if not username:
-                    return self.send_json(400, {'error': 'username is required.'})
-
-                row = db().execute(
-                    'SELECT username,score,level,cheat_flags,last_save_ms,state '
-                    'FROM players WHERE username=?',
-                    (username,)
-                ).fetchone()
-                if not row:
-                    return self.send_json(404, {'error': 'Player not found.'})
-
-                raw_state = row['state']
-                try:
-                    parsed_state = json.loads(raw_state) if raw_state else None
-                except Exception:
-                    parsed_state = raw_state  # return as-is if corrupt
-
-                self.send_json(200, {
-                    'username':   row['username'],
-                    'score':      int(row['score'] or 0),
-                    'level':      int(row['level'] or 1),
-                    'cheatFlags': int(row['cheat_flags'] or 0),
-                    'lastSaveMs': int(row['last_save_ms'] or 0),
-                    'state':      parsed_state,
-                })
-
-            elif path == '/api/admin/reset-db':
-                body_token = _normalize_token(str(body.get('adminToken', '')))
-                if not is_admin(self, body_token=body_token):
-                    return self.send_json(401, {'error': 'Unauthorized.'})
-
-                with _write_lock:
-                    conn = db()
-                    conn.execute('DELETE FROM sessions')
-                    conn.execute('DELETE FROM password_reset_tokens')
-                    player_result = conn.execute('DELETE FROM players')
-                    conn.commit()
-
-                # Flush all in-memory caches.
-                _session_cache.clear()
-                _player_data_cache.clear()
-
-                self.send_json(200, {
-                    'ok': True,
-                    'playersDeleted': player_result.rowcount,
-                })
-
-            elif path == '/api/login':
-                username = (body.get('username') or '').strip()
-                password =  body.get('password') or ''
-                row = db().execute('SELECT * FROM players WHERE username=?', (username,)).fetchone()
-                if not row or not hmac.compare_digest(
-                    hash_pwd(password, row['salt']), row['password_hash']
-                ):
-                    return self.send_json(401, {'error': 'Invalid username or password.'})
-                token = secrets.token_hex(32)
-                with _write_lock:
-                    conn = db()
-                    conn.execute('INSERT INTO sessions (token,player_id) VALUES (?,?)', (token, row['id']))
-                    # Upgrade stored state on login so the client receives the latest shape.
-                    raw = row['state']
-                    try:
-                        stored_state = json.loads(raw) if raw else {}
-                    except Exception:
-                        stored_state = {}
-                    upgraded = _upgrade_state(stored_state)
-                    if upgraded.get('stateVersion', 0) != (stored_state.get('stateVersion') or 0):
-                        conn.execute(
-                            'UPDATE players SET state=? WHERE id=?',
-                            (json.dumps(upgraded), row['id'])
-                        )
-                    conn.commit()
-                _cache_session(token, row['id'])
-                player = db().execute(
-                    f'SELECT {_PLAYER_ALL_COLS} FROM players WHERE id=?', (row['id'],)
-                ).fetchone()
-                assert player is not None
-                _cache_player_data(player)
-                self.send_json(200, {'token': token, 'player': _player_public(player)})
-
-            elif path == '/api/logout':
-                token = self.get_token()
-                if token:
-                    _invalidate_session(token)
-                    with _write_lock:
-                        conn = db()
-                        conn.execute('DELETE FROM sessions WHERE token=?', (token,))
-                        conn.commit()
-                self.send_json(200, {'ok': True})
-
-            elif path == '/api/save':
-                player = auth_player(self.get_token())
-                if not player:
-                    return self.send_json(401, {'error': 'Not authenticated.'})
-                state = body.get('state')
-                if not isinstance(state, dict):
-                    return self.send_json(400, {'error': 'Invalid state.'})
-                state = _upgrade_state(state)
-
-                reported_score = max(0, int(state.get('score') or 0))
-                reported_level = max(1, int(state.get('level') or 1))
-                reported_gold  = max(0, int(state.get('gold')  or 0))
-                reported_exp   = max(0, int(state.get('exp')   or 0))
-                now_ms = int(time.time() * 1000)
-
-                # Anti-cheat: use player cache — no extra DB query needed.
-                prev_score   = int(player['score']        or 0)
-                prev_level   = int(player['level']        or 1)
-                last_save_ms = int(player['last_save_ms'] or 0)
-                cheat_flags  = int(player['cheat_flags']  or 0)
-
-                # Parse previous state blob to get prev gold/exp.
-                _raw_prev = player.get('state')
-                _prev_state: dict = {}
-                if _raw_prev:
-                    try:
-                        _prev_state = json.loads(_raw_prev) if isinstance(_raw_prev, str) else _raw_prev
-                    except Exception:
-                        pass
-                prev_gold = max(0, int(_prev_state.get('gold') or 0))
-                prev_exp  = max(0, int(_prev_state.get('exp')  or 0))
-
-                # Cap elapsed time to prevent last_save_ms=0 loophole and bound offline gains.
-                elapsed_sec = min(
-                    max(0.0, (now_ms - last_save_ms) / 1000.0),
-                    ANTI_CHEAT_MAX_ELAPSED_SEC,
-                )
-
-                # ── Score & level rate limits ─────────────────────────────
-                allowed_score_increase = max(
-                    ANTI_CHEAT_MIN_SCORE_BURST,
-                    int(elapsed_sec * ANTI_CHEAT_MAX_SCORE_PER_SEC),
-                )
-                allowed_level_increase = max(
-                    ANTI_CHEAT_MIN_LEVEL_BURST,
-                    int(elapsed_sec * (ANTI_CHEAT_MAX_LEVELS_PER_MIN / 60.0)),
-                )
-                max_allowed_score = prev_score + allowed_score_increase
-                max_allowed_level = prev_level + allowed_level_increase
-                score = min(max(reported_score, prev_score), max_allowed_score)
-                level = min(max(reported_level, prev_level), max_allowed_level)
-
-                # ── Gold rate limit ───────────────────────────────────────
-                allowed_gold_increase = max(
-                    ANTI_CHEAT_MIN_GOLD_BURST,
-                    int(elapsed_sec * ANTI_CHEAT_MAX_GOLD_PER_SEC),
-                )
-                max_allowed_gold = prev_gold + allowed_gold_increase
-                gold_val = min(max(reported_gold, prev_gold), max_allowed_gold)
-
-                # ── EXP rate limit ────────────────────────────────────────
-                allowed_exp_increase = max(
-                    ANTI_CHEAT_MIN_EXP_BURST,
-                    int(elapsed_sec * ANTI_CHEAT_MAX_EXP_PER_SEC),
-                )
-                max_allowed_exp = prev_exp + allowed_exp_increase
-                exp_val = min(max(reported_exp, prev_exp), max_allowed_exp)
-
-                # ── Level must be consistent with validated exp ───────────
-                level_from_exp = _level_from_exp(exp_val)
-                level = max(prev_level, min(level, level_from_exp))
-
-                # ── Flag any suspicious save ──────────────────────────────
-                suspicious = (
-                    reported_score > max_allowed_score
-                    or reported_level > max_allowed_level
-                    or reported_gold  > max_allowed_gold
-                    or reported_exp   > max_allowed_exp
-                )
-                if suspicious:
-                    cheat_flags += 1
-                    print(
-                        f"[anti-cheat] user={player['username']} flagged=#{cheat_flags} "
-                        f"score(rep={reported_score},max={max_allowed_score}) "
-                        f"level(rep={reported_level},max={max_allowed_level}) "
-                        f"gold(rep={reported_gold},max={max_allowed_gold}) "
-                        f"exp(rep={reported_exp},max={max_allowed_exp})"
-                    )
-                    if cheat_flags >= ANTI_CHEAT_BAN_THRESHOLD:
-                        print(f"[anti-cheat] BANNED user={player['username']} after {cheat_flags} flags — deleting account")
-                        with _write_lock:
-                            c = db()
-                            c.execute('DELETE FROM players WHERE id=?', (player['id'],))
-                            c.commit()
-                        _player_data_cache.pop(player['id'], None)
-                        self.send_json(403, {'error': 'banned', 'message': 'Your account has been permanently banned for cheating.'})
-                        return
-
-                # ── Write validated values back into state ────────────────
-                state['score'] = score
-                state['level'] = level
-                state['gold']  = gold_val
-                state['exp']   = exp_val
-
-                # ── Clamp each skill to its defined max (prevents setting
-                #    skill points to arbitrary large values via console) ───
-                for _pts_key, _maxes in (
-                    ('skillPoints',    _SKILL_MAXES_GENERAL),
-                    ('knightSkillPts', _SKILL_MAXES_KNIGHT),
-                    ('sorcSkillPts',   _SKILL_MAXES_SORC),
-                ):
-                    _raw_pts = state.get(_pts_key)
-                    if isinstance(_raw_pts, dict):
-                        state[_pts_key] = {
-                            k: max(0, min(int(v or 0), _maxes.get(int(k), 10)))
-                            for k, v in _raw_pts.items()
-                            if str(k).lstrip('-').isdigit()
-                        }
-
-                # ── Validate area access against server-validated level ───
-                _unlocked = state.get('unlockedAreas')
-                if not isinstance(_unlocked, list):
-                    _unlocked = ['Rookgaard']
-                _valid_unlocked = [
-                    a for a in _AREA_ORDER
-                    if a in _unlocked and level >= _AREA_LEVEL_REQS.get(a, 9999)
-                ]
-                if not _valid_unlocked:
-                    _valid_unlocked = ['Rookgaard']
-                state['unlockedAreas'] = _valid_unlocked
-                if state.get('currentArea') not in _valid_unlocked:
-                    state['currentArea'] = _valid_unlocked[-1]
-
-                new_total_clicks = max(0, int(state.get('totalClicks') or 0))
-                state_json = json.dumps(state)
-
-                # Update player cache immediately so next request sees fresh anti-cheat state.
-                cached_entry = _player_data_cache.get(player['id'])
-                if cached_entry:
-                    cd, cexp = cached_entry
-                    cd.update(score=score, level=level, exp=exp_val, last_save_ms=now_ms,
-                              cheat_flags=cheat_flags, total_clicks=new_total_clicks,
-                              state=state_json)
-
-                # Write to Turso asynchronously — HTTP response returns immediately.
-                pid   = player['id']
-                uname = player['username']
-                def _do_save(_sj=state_json, _sc=score, _lv=level, _ev=exp_val, _ts=now_ms,
-                             _cf=cheat_flags, _tc=new_total_clicks, _pid=pid, _un=uname):
-                    try:
-                        with _write_lock:
-                            c = db()
-                            c.execute(
-                                'UPDATE players SET state=?,score=?,level=?,exp=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
-                                (_sj, _sc, _lv, _ev, _ts, _cf, _tc, _pid)
-                            )
-                            c.commit()
-                    except Exception as exc:
-                        print(f'[save-async] player={_un} error: {exc}')
-                threading.Thread(target=_do_save, daemon=True).start()
-
-                self.send_json(200, {'ok': True, 'score': score, 'level': level, 'gold': gold_val, 'exp': exp_val, 'flagged': suspicious})
-
-            elif path == '/api/forgot-password':
-                email = (body.get('email') or '').strip().lower()
-                # Always return 200 to prevent email enumeration.
-                if email and EMAIL_RE.fullmatch(email):
-                    row = db().execute(
-                        'SELECT id FROM players WHERE email=?', (email,)
-                    ).fetchone()
-                    print(f'[forgot-password] email={email!r} found={row is not None}')
-                    if row:
-                        token = secrets.token_hex(32)
-                        now_ms = int(time.time() * 1000)
-                        with _write_lock:
-                            conn = db()
-                            conn.execute(
-                                'INSERT INTO password_reset_tokens (token,player_id,created_at_ms) VALUES (?,?,?)',
-                                (token, row['id'], now_ms)
-                            )
-                            conn.commit()
-                        host   = self.headers.get('Host', 'localhost')
-                        scheme = 'https' if (GAME_URL or 'railway' in host) else 'http'
-                        base   = GAME_URL or f'{scheme}://{host}'
-                        reset_url = f'{base}/reset-password.html?token={token}'
-                        _send_reset_email(email, reset_url)
-                self.send_json(200, {'ok': True})
-
-            elif path == '/api/suggest':
-                message = (body.get('message') or '').strip()
-                contact = (body.get('contact') or '').strip()[:100]
-                if not message:
-                    return self.send_json(400, {'error': 'Message is required.'})
-                if len(message) > 2000:
-                    return self.send_json(400, {'error': 'Message too long (max 2000 chars).'})
-                now_ms = int(time.time() * 1000)
-                with _write_lock:
-                    conn = db()
-                    conn.execute(
-                        'INSERT INTO suggestions (message,contact,created_at_ms) VALUES (?,?,?)',
-                        (message, contact or None, now_ms)
-                    )
-                    conn.commit()
-                print(f'[suggest] contact={contact!r} msg={message[:80]!r}')
-                threading.Thread(target=_send_suggest_notification, args=(message, contact), daemon=True).start()
-                self.send_json(200, {'ok': True})
-
-            elif path == '/api/reset-password':
-                token    = (body.get('token') or '').strip()
-                password =  body.get('password') or ''
-                if not token:
-                    return self.send_json(400, {'error': 'Token is required.'})
-                if not (4 <= len(password) <= 100):
-                    return self.send_json(400, {'error': 'Password must be 4\u2013100 characters.'})
-                now_ms    = int(time.time() * 1000)
-                expire_ms = now_ms - RESET_TOKEN_EXPIRY_MS
-                row = db().execute(
-                    'SELECT player_id, used, created_at_ms FROM password_reset_tokens WHERE token=?',
-                    (token,)
-                ).fetchone()
-                if not row or row['used'] or row['created_at_ms'] < expire_ms:
-                    return self.send_json(400, {'error': 'This link is invalid or has expired.'})
-                salt = secrets.token_hex(16)
-                hsh  = hash_pwd(password, salt)
-                with _write_lock:
-                    conn = db()
-                    conn.execute(
-                        'UPDATE players SET password_hash=?,salt=? WHERE id=?',
-                        (hsh, salt, row['player_id'])
-                    )
-                    conn.execute(
-                        'UPDATE password_reset_tokens SET used=1 WHERE token=?',
-                        (token,)
-                    )
-                    # Invalidate all existing sessions for security.
-                    conn.execute('DELETE FROM sessions WHERE player_id=?', (row['player_id'],))
-                    conn.commit()
-                _evict_player(row['player_id'])
-                self.send_json(200, {'ok': True})
-
-            elif path == '/api/chat/send':
-                player = auth_player(self.get_token())
-                if not player:
-                    return self.send_json(401, {'error': 'Login to chat.'})
-                text = (body.get('text') or '').strip()
-                if not text:
-                    return self.send_json(400, {'error': 'Empty message.'})
-                if len(text) > 200:
-                    return self.send_json(400, {'error': 'Message too long (max 200 chars).'})
-                now_ms = int(time.time() * 1000)
-                with _chat_lock:
-                    # Rate-limit: 1 message per 2 seconds per user
-                    last_ms = _chat_rate.get(player['username'], 0)
-                    if now_ms - last_ms < 2000:
-                        return self.send_json(429, {'error': 'Slow down! One message per 2 seconds.'})
-                    _chat_rate[player['username']] = now_ms
-                    msg = {'ts': now_ms, 'username': player['username'], 'text': text}
-                    _chat_messages.append(msg)
-                    for sub_q in list(_chat_subscribers):
-                        try:
-                            sub_q.put_nowait(msg)
-                        except Exception:
-                            pass
-                self.send_json(200, {'ok': True})
-
+            _routes = {
+                '/api/register':                  lambda: self._post_register(body),
+                '/api/login':                     lambda: self._post_login(body),
+                '/api/logout':                    lambda: self._post_logout(),
+                '/api/save':                      lambda: self._post_save(body),
+                '/api/forgot-password':           lambda: self._post_forgot_password(body),
+                '/api/reset-password':            lambda: self._post_reset_password(body),
+                '/api/suggest':                   lambda: self._post_suggest(body),
+                '/api/chat/send':                 lambda: self._post_chat_send(body),
+                '/api/admin/delete-users':        lambda: self._post_admin_delete_users(body),
+                '/api/admin/list-suggestions':    lambda: self._post_admin_list_suggestions(body),
+                '/api/admin/list-users':          lambda: self._post_admin_list_users(body),
+                '/api/admin/get-player-state':    lambda: self._post_admin_get_player_state(body),
+                '/api/admin/reset-db':            lambda: self._post_admin_reset_db(body),
+            }
+            handler = _routes.get(path)
+            if handler:
+                handler()
             else:
                 self.send_json(404, {'error': 'Not found.'})
         except (BrokenPipeError, ConnectionResetError):
