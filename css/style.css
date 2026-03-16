@@ -72,14 +72,19 @@ body {
 }
 
 .nav-btn.nav-donate {
-    color: #ff6e40;
-    border-color: #7a3820;
+    color: #fff8f0;
+    background: #7a2e08 !important;
+    border-color: #c04a18;
+    font-weight: bold;
+    text-shadow: 0 0 6px #ff6e4044;
+    box-shadow: 0 0 6px #7a2e0888;
 }
 
 .nav-btn.nav-donate:hover {
-    background: #2a1208;
-    color: #ffaa80;
+    background: #a03a0a !important;
+    color: #fff;
     border-color: #ff6e40;
+    box-shadow: 0 0 12px #ff6e4055;
 }
 
 /* ── Pages ───────────────────────────────────────────────────── */
