@@ -27,10 +27,44 @@ ANTI_CHEAT_MAX_SCORE_PER_SEC = float(os.environ.get('ANTI_CHEAT_MAX_SCORE_PER_SE
 ANTI_CHEAT_MAX_LEVELS_PER_MIN = float(os.environ.get('ANTI_CHEAT_MAX_LEVELS_PER_MIN', '18'))
 ANTI_CHEAT_MIN_SCORE_BURST = int(os.environ.get('ANTI_CHEAT_MIN_SCORE_BURST', '500'))
 ANTI_CHEAT_MIN_LEVEL_BURST = int(os.environ.get('ANTI_CHEAT_MIN_LEVEL_BURST', '3'))
+# Gold and EXP rate limits (generous upper bounds — tune via env vars).
+# Based on max possible legitimate earn rates in the best area with all multipliers.
+ANTI_CHEAT_MAX_GOLD_PER_SEC  = float(os.environ.get('ANTI_CHEAT_MAX_GOLD_PER_SEC',  '15000'))
+ANTI_CHEAT_MIN_GOLD_BURST    = int(os.environ.get('ANTI_CHEAT_MIN_GOLD_BURST',    '10000'))
+ANTI_CHEAT_MAX_EXP_PER_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_EXP_PER_SEC',   '500000'))
+ANTI_CHEAT_MIN_EXP_BURST     = int(os.environ.get('ANTI_CHEAT_MIN_EXP_BURST',    '50000'))
+# Cap elapsed time considered per save (prevents last_save_ms=0 loophole and caps offline gains).
+ANTI_CHEAT_MAX_ELAPSED_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_ELAPSED_SEC',   str(8 * 3600)))
 
 def _normalize_token(value: str) -> str:
     # Railway/env values can accidentally include whitespace or wrapping quotes.
     return (value or '').strip().strip('"').strip("'")
+
+# ── Anti-cheat helpers ────────────────────────────────────────────
+# Area order mirrors AREAS in main.js; level requirements must stay in sync.
+_AREA_ORDER = [
+    'Rookgaard', 'Rotworm Cave', 'Cyclopolis', 'Hell Gate', 'Dragon Lair',
+    'Plains of Havoc', 'Demona', 'Goroma', 'Formogar Mines', 'Roshamuul', 'The Void',
+]
+_AREA_LEVEL_REQS: dict[str, int] = dict(zip(
+    _AREA_ORDER, [1, 8, 30, 50, 70, 100, 130, 175, 200, 250, 300]
+))
+
+# Skill point max per skill ID — mirrors max field in GENERAL_SKILLS / KNIGHT_SKILLS / SORC_SKILLS.
+_SKILL_MAXES_GENERAL: dict[int, int] = {k: 10 for k in [11,12,13,14, 21,22,23,24, 31,32,33,34]}
+_SKILL_MAXES_KNIGHT:  dict[int, int] = {k: 10 for k in range(101, 113)}
+_SKILL_MAXES_SORC:    dict[int, int] = {k: 10 for k in range(201, 213)}
+
+def _exp_for_level(x: int) -> int:
+    """Mirror of expForLevel() in main.js: f(x) = floor(50*(x³ - 6x² + 17x - 12) / 3)."""
+    return (50 * (x**3 - 6*x**2 + 17*x - 12)) // 3
+
+def _level_from_exp(exp: int) -> int:
+    """Return the highest level reachable with 'exp' total experience points."""
+    lv = 1
+    while lv < 10_000 and exp >= _exp_for_level(lv + 1):
+        lv += 1
+    return lv
 
 ADMIN_TOKEN = _normalize_token(os.environ.get('ADMIN_TOKEN', ''))
 
@@ -982,6 +1016,8 @@ class Handler(BaseHTTPRequestHandler):
 
                 reported_score = max(0, int(state.get('score') or 0))
                 reported_level = max(1, int(state.get('level') or 1))
+                reported_gold  = max(0, int(state.get('gold')  or 0))
+                reported_exp   = max(0, int(state.get('exp')   or 0))
                 now_ms = int(time.time() * 1000)
 
                 # Anti-cheat: use player cache — no extra DB query needed.
@@ -990,8 +1026,24 @@ class Handler(BaseHTTPRequestHandler):
                 last_save_ms = int(player['last_save_ms'] or 0)
                 cheat_flags  = int(player['cheat_flags']  or 0)
 
-                elapsed_sec = max(0.0, (now_ms - last_save_ms) / 1000.0)
+                # Parse previous state blob to get prev gold/exp.
+                _raw_prev = player.get('state')
+                _prev_state: dict = {}
+                if _raw_prev:
+                    try:
+                        _prev_state = json.loads(_raw_prev) if isinstance(_raw_prev, str) else _raw_prev
+                    except Exception:
+                        pass
+                prev_gold = max(0, int(_prev_state.get('gold') or 0))
+                prev_exp  = max(0, int(_prev_state.get('exp')  or 0))
 
+                # Cap elapsed time to prevent last_save_ms=0 loophole and bound offline gains.
+                elapsed_sec = min(
+                    max(0.0, (now_ms - last_save_ms) / 1000.0),
+                    ANTI_CHEAT_MAX_ELAPSED_SEC,
+                )
+
+                # ── Score & level rate limits ─────────────────────────────
                 allowed_score_increase = max(
                     ANTI_CHEAT_MIN_SCORE_BURST,
                     int(elapsed_sec * ANTI_CHEAT_MAX_SCORE_PER_SEC),
@@ -1000,23 +1052,83 @@ class Handler(BaseHTTPRequestHandler):
                     ANTI_CHEAT_MIN_LEVEL_BURST,
                     int(elapsed_sec * (ANTI_CHEAT_MAX_LEVELS_PER_MIN / 60.0)),
                 )
-
                 max_allowed_score = prev_score + allowed_score_increase
                 max_allowed_level = prev_level + allowed_level_increase
-
                 score = min(max(reported_score, prev_score), max_allowed_score)
                 level = min(max(reported_level, prev_level), max_allowed_level)
-                suspicious = (reported_score > max_allowed_score) or (reported_level > max_allowed_level)
+
+                # ── Gold rate limit ───────────────────────────────────────
+                allowed_gold_increase = max(
+                    ANTI_CHEAT_MIN_GOLD_BURST,
+                    int(elapsed_sec * ANTI_CHEAT_MAX_GOLD_PER_SEC),
+                )
+                max_allowed_gold = prev_gold + allowed_gold_increase
+                gold_val = min(max(reported_gold, prev_gold), max_allowed_gold)
+
+                # ── EXP rate limit ────────────────────────────────────────
+                allowed_exp_increase = max(
+                    ANTI_CHEAT_MIN_EXP_BURST,
+                    int(elapsed_sec * ANTI_CHEAT_MAX_EXP_PER_SEC),
+                )
+                max_allowed_exp = prev_exp + allowed_exp_increase
+                exp_val = min(max(reported_exp, prev_exp), max_allowed_exp)
+
+                # ── Level must be consistent with validated exp ───────────
+                level_from_exp = _level_from_exp(exp_val)
+                level = max(prev_level, min(level, level_from_exp))
+
+                # ── Flag any suspicious save ──────────────────────────────
+                suspicious = (
+                    reported_score > max_allowed_score
+                    or reported_level > max_allowed_level
+                    or reported_gold  > max_allowed_gold
+                    or reported_exp   > max_allowed_exp
+                )
                 if suspicious:
                     cheat_flags += 1
                     print(
                         f"[anti-cheat] user={player['username']} flagged=#{cheat_flags} "
-                        f"reported(score={reported_score},level={reported_level}) "
-                        f"allowed(score<={max_allowed_score},level<={max_allowed_level})"
+                        f"score(rep={reported_score},max={max_allowed_score}) "
+                        f"level(rep={reported_level},max={max_allowed_level}) "
+                        f"gold(rep={reported_gold},max={max_allowed_gold}) "
+                        f"exp(rep={reported_exp},max={max_allowed_exp})"
                     )
 
+                # ── Write validated values back into state ────────────────
                 state['score'] = score
                 state['level'] = level
+                state['gold']  = gold_val
+                state['exp']   = exp_val
+
+                # ── Clamp each skill to its defined max (prevents setting
+                #    skill points to arbitrary large values via console) ───
+                for _pts_key, _maxes in (
+                    ('skillPoints',    _SKILL_MAXES_GENERAL),
+                    ('knightSkillPts', _SKILL_MAXES_KNIGHT),
+                    ('sorcSkillPts',   _SKILL_MAXES_SORC),
+                ):
+                    _raw_pts = state.get(_pts_key)
+                    if isinstance(_raw_pts, dict):
+                        state[_pts_key] = {
+                            k: max(0, min(int(v or 0), _maxes.get(int(k), 10)))
+                            for k, v in _raw_pts.items()
+                            if str(k).lstrip('-').isdigit()
+                        }
+
+                # ── Validate area access against server-validated level ───
+                _unlocked = state.get('unlockedAreas')
+                if not isinstance(_unlocked, list):
+                    _unlocked = ['Rookgaard']
+                _valid_unlocked = [
+                    a for a in _AREA_ORDER
+                    if a in _unlocked and level >= _AREA_LEVEL_REQS.get(a, 9999)
+                ]
+                if not _valid_unlocked:
+                    _valid_unlocked = ['Rookgaard']
+                state['unlockedAreas'] = _valid_unlocked
+                if state.get('currentArea') not in _valid_unlocked:
+                    state['currentArea'] = _valid_unlocked[-1]
+
                 new_total_clicks = max(0, int(state.get('totalClicks') or 0))
                 state_json = json.dumps(state)
 

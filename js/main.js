@@ -1392,6 +1392,12 @@ function loadProgress(state) {
 
 async function saveProgress() {
     if (!authToken) return;
+    // Sanitize state variables before sending — prevents NaN/Infinity injection
+    // and catches trivial console-based manipulation of numeric globals.
+    if (!Number.isFinite(gold)  || gold  < 0) gold  = 0;
+    if (!Number.isFinite(exp)   || exp   < 0) exp   = 0;
+    if (!Number.isFinite(score) || score < 0) score = 0;
+    if (!Number.isFinite(level) || level < 1) level = 1;
     try {
         await fetch('/api/save', {
             method: 'POST',
