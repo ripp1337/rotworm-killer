@@ -1627,7 +1627,7 @@ async function fetchScoreboard() {
                 `<span class="sb-rank">#${i + 1}</span>` +
                 `<span class="sb-name">${escHtml(p.username)}</span>` +
                 `<span class="sb-class sb-class-${p.ascendedClass || 'nv'}">${_classLabel(p.ascendedClass)}</span>` +
-                `<span class="sb-score">${p.score}</span>` +
+                `<span class="sb-exp">${fmtCost(p.exp || 0)}</span>` +
                 `<span class="sb-level">lv${p.level}</span>`;
             el.appendChild(row);
         });
@@ -1642,7 +1642,7 @@ async function fetchScoreboard() {
                 `<span class="sb-rank">#${data.me.rank}</span>` +
                 `<span class="sb-name">${escHtml(data.me.username)}</span>` +
                 `<span class="sb-class sb-class-${data.me.ascendedClass || 'nv'}">${_classLabel(data.me.ascendedClass)}</span>` +
-                `<span class="sb-score">${data.me.score}</span>` +
+                `<span class="sb-exp">${fmtCost(data.me.exp || 0)}</span>` +
                 `<span class="sb-level">lv${data.me.level}</span>`;
             el.appendChild(row);
         }

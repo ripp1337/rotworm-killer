@@ -284,6 +284,10 @@ def init_db():
     if 'email' not in existing_cols:
         conn.execute('ALTER TABLE players ADD COLUMN email TEXT DEFAULT NULL')
         conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_players_email ON players(email) WHERE email IS NOT NULL')
+    if 'exp' not in existing_cols:
+        conn.execute('ALTER TABLE players ADD COLUMN exp INTEGER DEFAULT 0')
+        # Backfill from existing state JSON so current players get correct ranking immediately.
+        conn.execute("UPDATE players SET exp = CAST(COALESCE(json_extract(state, '$.exp'), 0) AS INTEGER) WHERE exp = 0")
 
     conn.commit()
     if not _USE_TURSO:
@@ -319,7 +323,7 @@ def _invalidate_player_sessions(player_id: int) -> None:
 _player_data_cache: dict = {}   # player_id -> (row_dict, expires_at)
 _PLAYER_DATA_CACHE_TTL = 3600.0  # 1 hour
 
-_PLAYER_ALL_COLS = 'id,username,score,level,state,last_save_ms,cheat_flags,total_clicks'
+_PLAYER_ALL_COLS = 'id,username,score,level,exp,state,last_save_ms,cheat_flags,total_clicks'
 
 def _cache_player_data(row) -> None:
     d = {k: row[k] for k in row.keys()}
@@ -751,9 +755,9 @@ class Handler(BaseHTTPRequestHandler):
                 active24 = conn.execute('SELECT COUNT(*) FROM players WHERE last_save_ms >= ?', (ms_24h,)).fetchone()[0]  # type: ignore[index]
 
                 rows = conn.execute(
-                    "SELECT username, score, level, total_clicks, "
+                    "SELECT username, score, level, exp, total_clicks, "
                     "json_extract(state, '$.ascendedClass') as ascendedClass "
-                    'FROM players ORDER BY score DESC, level DESC, username ASC'
+                    'FROM players ORDER BY exp DESC, level DESC, username ASC'
                 ).fetchall()
 
                 class_counts = {'nv': 0, 'knight': 0, 'sorcerer': 0}
@@ -767,6 +771,7 @@ class Handler(BaseHTTPRequestHandler):
                         'rank':          i + 1,
                         'username':      r['username'],
                         'score':         int(r['score'] or 0),
+                        'exp':           int(r['exp'] or 0),
                         'level':         int(r['level'] or 1),
                         'totalClicks':   int(r['total_clicks'] or 0),
                         'ascendedClass': cls,
@@ -784,9 +789,9 @@ class Handler(BaseHTTPRequestHandler):
             elif path == '/api/scoreboard':
                 conn  = db()
                 top10 = [dict(r) for r in conn.execute(
-                    "SELECT username, score, level, "
+                    "SELECT username, score, level, exp, "
                     "json_extract(state, '$.ascendedClass') as ascendedClass "
-                    'FROM players ORDER BY score DESC,level DESC LIMIT 10'
+                    'FROM players ORDER BY exp DESC,level DESC LIMIT 10'
                 ).fetchall()]
                 my_entry = None
                 player   = auth_player(self.get_token())
@@ -795,22 +800,22 @@ class Handler(BaseHTTPRequestHandler):
                     if not in_top:
                         row = conn.execute(
                             'SELECT COUNT(*)+1 AS rnk FROM players '
-                            'WHERE score>? OR (score=? AND level>?)',
-                            (player['score'], player['score'], player['level'])
+                            'WHERE exp>? OR (exp=? AND level>?)',
+                            (int(player['exp'] or 0), int(player['exp'] or 0), player['level'])
                         ).fetchone()
                         assert row is not None
                         state_blob = player.get('state')
                         my_class = None
                         if state_blob:
                             try:
-                                import json as _j
-                                my_class = _j.loads(state_blob).get('ascendedClass')
+                                my_class = json.loads(state_blob).get('ascendedClass')
                             except Exception:
                                 pass
                         my_entry = {
                             'rank':          row['rnk'],
                             'username':      player['username'],
                             'score':         player['score'],
+                            'exp':           int(player['exp'] or 0),
                             'level':         player['level'],
                             'ascendedClass': my_class,
                         }
@@ -1243,21 +1248,21 @@ class Handler(BaseHTTPRequestHandler):
                 cached_entry = _player_data_cache.get(player['id'])
                 if cached_entry:
                     cd, cexp = cached_entry
-                    cd.update(score=score, level=level, last_save_ms=now_ms,
+                    cd.update(score=score, level=level, exp=exp_val, last_save_ms=now_ms,
                               cheat_flags=cheat_flags, total_clicks=new_total_clicks,
                               state=state_json)
 
                 # Write to Turso asynchronously — HTTP response returns immediately.
                 pid   = player['id']
                 uname = player['username']
-                def _do_save(_sj=state_json, _sc=score, _lv=level, _ts=now_ms,
+                def _do_save(_sj=state_json, _sc=score, _lv=level, _ev=exp_val, _ts=now_ms,
                              _cf=cheat_flags, _tc=new_total_clicks, _pid=pid, _un=uname):
                     try:
                         with _write_lock:
                             c = db()
                             c.execute(
-                                'UPDATE players SET state=?,score=?,level=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
-                                (_sj, _sc, _lv, _ts, _cf, _tc, _pid)
+                                'UPDATE players SET state=?,score=?,level=?,exp=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
+                                (_sj, _sc, _lv, _ev, _ts, _cf, _tc, _pid)
                             )
                             c.commit()
                     except Exception as exc:

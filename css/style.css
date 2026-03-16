@@ -505,7 +505,7 @@ canvas {
 
 .sb-row {
     display: grid;
-    grid-template-columns: 20px 1fr 26px 34px 26px;
+    grid-template-columns: 20px 1fr 26px 38px 26px;
     gap: 2px;
     font-size: 9px;
     color: #8a7040;
@@ -524,7 +524,7 @@ canvas {
 .sb-class { text-align: center; font-size: 8px; font-weight: bold; color: #5a7080; }
 .sb-class-knight   { color: #c09030; }
 .sb-class-sorcerer { color: #8050c8; }
-.sb-score { text-align: right; }
+.sb-exp   { text-align: right; color: #a07840; }
 .sb-level { text-align: right; color: #6080a0; }
 .sb-sep   { font-size: 9px; color: #3a2408; }
 .sb-loading { font-size: 9px; color: #3a2408; text-align: center; padding: 4px; }

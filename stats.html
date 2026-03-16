@@ -359,7 +359,7 @@
                     <th class="num">#</th>
                     <th>Player</th>
                     <th>Class</th>
-                    <th class="num">Score</th>
+                    <th class="num">EXP</th>
                     <th class="num">Level</th>
                     <th class="num">Clicks</th>
                 </tr>
@@ -370,7 +370,7 @@
                 <td class="rank num ${rc}">${idx + 1}</td>
                 <td class="username">${escHtml(p.username)}</td>
                 <td class="${classCss(p.ascendedClass)}">${classLabel(p.ascendedClass)}</td>
-                <td class="num">${fmt(p.score)}</td>
+                <td class="num">${fmt(p.exp)}</td>
                 <td class="num">${fmt(p.level)}</td>
                 <td class="num clicks">${fmt(p.totalClicks)}</td>
             </tr>`;
