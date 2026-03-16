@@ -1613,6 +1613,36 @@ canvas {
 .stats-body {
     padding: 14px 18px 18px;
 }
+.stats-player-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.stats-player-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #f0c040;
+}
+.stats-player-class {
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #1e1408;
+    color: #8a7040;
+    border: 1px solid #3a2408;
+}
+.stats-class-knight   { color: #c09030; border-color: #7a5010; }
+.stats-class-sorcerer { color: #9060d8; border-color: #5030a0; }
+.stats-meta-row {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: #7a6030;
+    margin-bottom: 12px;
+}
+.stats-meta-row b { color: #c0a050; }
 .stats-section-title {
     font-size: 11px;
     font-weight: bold;

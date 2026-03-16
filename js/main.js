@@ -530,9 +530,12 @@ let totalUberBossesKilled = 0;  // lifetime uber boss kills
 let totalMaterialsGathered = 0; // lifetime items ever added to inventory
 let totalPotionsCrafted   = 0;  // lifetime potions crafted
 // Session counters (reset each page load — not persisted)
+const sessionStartTime      = Date.now();
 let sessionMonstersKilled   = 0;
 let sessionBossesKilled     = 0;
 let sessionUberBossesKilled = 0;
+let sessionGoldEarned       = 0;
+let sessionExpEarned        = 0;
 let fireballActive = false;
 let spawnPaused = false;
 let dmgNumbers = []; // floating damage numbers
@@ -1642,22 +1645,47 @@ async function fetchScoreboard() {
 // ── Personal Statistics ──────────────────────────────────────────
 function openStats() {
     const fmt = n => (n || 0).toLocaleString();
-    const totalBosses = totalBossesKilled + totalUberBossesKilled;
+    const fmtTime = ms => {
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    };
+    const sessionDuration = Date.now() - sessionStartTime;
+    const className = ascendedClass === 'knight'   ? 'Knight'
+                    : ascendedClass === 'sorcerer' ? 'Sorcerer'
+                    : 'No Vocation';
+    const totalBosses   = totalBossesKilled + totalUberBossesKilled;
     const sessionBosses = sessionBossesKilled + sessionUberBossesKilled;
     document.getElementById('stats-body').innerHTML = `
-        <div class="stats-section-title">This Session</div>
+        <div class="stats-player-header">
+            <span class="stats-player-name">${escHtml(authUsername || '?')}</span>
+            <span class="stats-player-class stats-class-${ascendedClass || 'nv'}">${className}</span>
+        </div>
+        <div class="stats-meta-row">
+            <span>Level <b>${fmt(level)}</b></span>
+            <span>Score <b>${fmt(score)}</b></span>
+            <span>Area <b>${escHtml(currentArea || 'Rookgaard')}</b></span>
+        </div>
+        <div class="stats-section-title">This Session &mdash; <span style="font-size:10px;font-weight:normal;color:#7a6030">${fmtTime(sessionDuration)} online</span></div>
         <div class="stats-grid">
             <span class="stats-label">Monsters killed</span><span class="stats-val">${fmt(sessionMonstersKilled)}</span>
             <span class="stats-label">Bosses killed</span><span class="stats-val">${fmt(sessionBossesKilled)}</span>
             <span class="stats-label">Uber bosses killed</span><span class="stats-val">${fmt(sessionUberBossesKilled)}</span>
-            <span class="stats-label">Total kills (session)</span><span class="stats-val">${fmt(sessionMonstersKilled + sessionBosses)}</span>
+            <span class="stats-label">Total kills</span><span class="stats-val">${fmt(sessionMonstersKilled + sessionBosses)}</span>
+            <span class="stats-label">Gold earned</span><span class="stats-val">${fmt(sessionGoldEarned)}</span>
+            <span class="stats-label">Experience earned</span><span class="stats-val">${fmt(sessionExpEarned)}</span>
         </div>
         <div class="stats-section-title" style="margin-top:14px">All Time</div>
         <div class="stats-grid">
             <span class="stats-label">Monsters killed</span><span class="stats-val">${fmt(totalMonstersKilled)}</span>
             <span class="stats-label">Bosses killed</span><span class="stats-val">${fmt(totalBossesKilled)}</span>
             <span class="stats-label">Uber bosses killed</span><span class="stats-val">${fmt(totalUberBossesKilled)}</span>
-            <span class="stats-label">Total kills (all time)</span><span class="stats-val">${fmt(totalMonstersKilled + totalBosses)}</span>
+            <span class="stats-label">Total kills</span><span class="stats-val">${fmt(totalMonstersKilled + totalBosses)}</span>
+            <span class="stats-label" style="margin-top:6px">Boss kill streak</span><span class="stats-val" style="margin-top:6px">${fmt(bossKillCounter)}</span>
             <span class="stats-label">Materials gathered</span><span class="stats-val">${fmt(totalMaterialsGathered)}</span>
             <span class="stats-label">Potions crafted</span><span class="stats-val">${fmt(totalPotionsCrafted)}</span>
             <span class="stats-label">Total clicks</span><span class="stats-val">${fmt(totalClicks)}</span>
@@ -1988,6 +2016,8 @@ function killWorm(w) {
     const goldGain = Math.floor(goldBase * skillGoldMult() * sorcGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
+    sessionGoldEarned += goldGain;
+    sessionExpEarned  += expGain;
     checkLevelUp();
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 18, value: expGain, color: 'white', life: 80 });
     dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 32, value: goldGain, color: '#f0c040', life: 80 });
@@ -2033,6 +2063,8 @@ function killBoss(b) {
     const goldGain = Math.floor(Math.floor((MOB_GOLD_MIN + MOB_GOLD_MAX) / 2) * _bossMult * skillGoldMult() * sorcGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
+    sessionGoldEarned += goldGain;
+    sessionExpEarned  += expGain;
     checkLevelUp();
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 18, value: expGain, color: '#ffd700', life: 100 });
     dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 32, value: goldGain, color: '#f0c040', life: 100 });
