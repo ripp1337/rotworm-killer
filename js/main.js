@@ -1335,7 +1335,7 @@ function getProgress() {
         currentArea, unlockedAreas,
         hmmCooldownEnd, arcaneWeakeningStacks, suddenDeathCooldownEnd, essenceGatheringEnd,
         comboStacks, flowStacks, clickOrderCount,
-        stateVersion: 4,
+        stateVersion: 7,
         savedAt: Date.now(),
     };
 }

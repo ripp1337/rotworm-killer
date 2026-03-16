@@ -469,16 +469,19 @@ def _upgrade_state(state: dict) -> dict:
 
     if v < 6:
         # v6 replaces general skill system (old IDs 1-12 → new IDs 11-34).
-        # Reset skillPoints so all players rebuild with the new tree.
-        state['skillPoints'] = {}
+        # Reset skillPoints only if it was the old integer format (not already migrated dict).
+        if not isinstance(state.get('skillPoints'), dict):
+            state['skillPoints'] = {}
         state.setdefault('firestormCharges', 0)
         state['stateVersion'] = 6
 
     if v < 7:
         # v7 replaces knight and sorcerer ascension skill trees (3×4, no level gating).
-        # Reset ascension skill points; re-derive class ability unlocks from ascendedClass.
-        state['knightSkillPts'] = {}
-        state['sorcSkillPts'] = {}
+        # Reset ascension skill points only if they hold old data (not already migrated dicts).
+        if not isinstance(state.get('knightSkillPts'), dict):
+            state['knightSkillPts'] = {}
+        if not isinstance(state.get('sorcSkillPts'), dict):
+            state['sorcSkillPts'] = {}
         cls = state.get('ascendedClass')
         if cls == 'sorcerer':
             state['ueUnlocked'] = True
