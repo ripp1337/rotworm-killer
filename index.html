@@ -80,10 +80,13 @@
                     <div class="cd-bar-bg"><div id="cd-anni-bar" class="cd-bar cd-bar-anni"></div></div>
                 </div>
                 <hr>
-                <div class="hud-section">Automation</div>
-                <button id="autoAttackBtn">Auto Attack (need lvl 20)</button>
-                <button id="bossFocusBtn">Boss Focus (unlock Auto first)</button>
-                <button id="autoGfbBtn">Auto Fireball (unlock in Skill Tree)</button>
+                <button id="skillTreeBtn" onclick="openSkillTree()">&#9643; Skill Tree</button>
+                <button id="backpackBtn" onclick="openInventory()">&#127890; Backpack</button>
+                <button id="craftingBtn" onclick="openCrafting()" disabled>&#9879; Crafting (lv.20)</button>
+                <div id="hud-potions-section" style="display:none">
+                    <div class="hud-section" style="margin-top:4px">Active Potions</div>
+                    <div id="hud-potions"></div>
+                </div>
                 <button id="autoAnniBtn" style="display:none">Auto Annihilation: OFF</button>
             </div>
 
@@ -117,14 +120,6 @@
                 </div>
                 <hr>
                 <button id="ascendBtn" disabled>&#9734; Ascend (need lvl 30)</button>
-                <button id="skillTreeBtn" onclick="openSkillTree()">&#9643; Skill Tree</button>
-                <button id="backpackBtn" onclick="openInventory()">&#127890; Backpack</button>
-                <button id="craftingBtn" onclick="openCrafting()" disabled>&#9879; Crafting (lv.20)</button>
-                <!-- Removed devFillMatsBtn for production -->
-                <div id="hud-potions-section" style="display:none">
-                    <div class="hud-section" style="margin-top:4px">Active Potions</div>
-                    <div id="hud-potions"></div>
-                </div>
                 <hr>
                 <div class="hud-section sb-header">
                     Top Killers
@@ -655,11 +650,11 @@
             <div class="class-choice-row">
                 <button class="class-btn class-btn-knight" onclick="doAscendAsClass('knight')">
                     <div class="class-btn-name">⚔ Knight</div>
-                    <div class="class-btn-desc">Might: +5 damage per skill point<br>Cleave, Whirlwind &amp; Execute via Skill Tree<br>Annihilation: instant boss kill (Skill Tree)</div>
+                    <div class="class-btn-desc">Powerful while playing actively.<br>Clicking drives your output through Combo Meter, Cleaving Blows &amp; Battlefield Purge.<br>Annihilation: instant boss kill (Skill Tree).</div>
                 </button>
                 <button class="class-btn class-btn-sorcerer" onclick="doAscendAsClass('sorcerer')">
                     <div class="class-btn-name">✦ Sorcerer</div>
-                    <div class="class-btn-desc">+2/+2 damage every 5 levels<br>Multi-cast Fireball from level 40<br>Ultimate Explosion: wipe all mobs (3 min CD)</div>
+                    <div class="class-btn-desc">Thrives on long AFK &amp; passive gameplay.<br>Heavy Magic Missile, Essence Gathering and Sudden Death deliver full output with zero manual input.<br>The true idle class.</div>
                 </button>
             </div>
             <p class="class-choice-warn">⚠ This choice is permanent and cannot be reversed.</p>

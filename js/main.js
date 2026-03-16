@@ -102,8 +102,8 @@ const AREAS = [
         mobGoldMin: 5,
         mobGoldMax: 15,
         mobSize: 20,
-        bossName: 'Vesperoth',
-        bossSprite: 'Vesperoth.gif',
+        bossName: 'Versperoth',
+        bossSprite: 'Versperoth.gif',
     },
     {
         id: 'Cyclopolis',
@@ -481,39 +481,6 @@ function updateHUD() {
         upgradeBtn.style.display = 'block';
     } else {
         document.getElementById('weaponUpgradeBtn').style.display = 'none';
-    }
-    // auto attack button
-    const autoBtn = document.getElementById('autoAttackBtn');
-    if (!autoUnlocked) {
-        autoBtn.textContent = 'Auto Attack (unlock in Skill Tree)';
-        autoBtn.disabled = true;
-        autoBtn.classList.remove('auto-on');
-    } else {
-        autoBtn.textContent = autoEnabled ? 'Auto: ON' : 'Auto: OFF';
-        autoBtn.disabled = false;
-        autoBtn.classList.toggle('auto-on', autoEnabled);
-    }
-    // boss focus button
-    const bossFocusBtn = document.getElementById('bossFocusBtn');
-    if (!bossFocusUnlocked) {
-        bossFocusBtn.textContent = 'Boss Focus (unlock in Skill Tree)';
-        bossFocusBtn.disabled = true;
-        bossFocusBtn.classList.remove('auto-on');
-    } else {
-        bossFocusBtn.textContent = 'Boss Focus: ON';
-        bossFocusBtn.disabled = true;
-        bossFocusBtn.classList.add('auto-on');
-    }
-    // auto fireball button
-    const autoGfbBtn = document.getElementById('autoGfbBtn');
-    if (!autoGfbUnlocked) {
-        autoGfbBtn.textContent = 'Auto Fireball (unlock in Skill Tree)';
-        autoGfbBtn.disabled = true;
-        autoGfbBtn.classList.remove('auto-on');
-    } else {
-        autoGfbBtn.textContent = autoGfbEnabled ? 'Auto Fireball: ON' : 'Auto Fireball: OFF';
-        autoGfbBtn.disabled = false;
-        autoGfbBtn.classList.toggle('auto-on', autoGfbEnabled);
     }
     // Class-specific button visibility
     const isSorcerer = ascendedClass === 'sorcerer';
@@ -1354,6 +1321,7 @@ function getProgress() {
         currentArea, unlockedAreas,
         hmmCooldownEnd, arcaneWeakeningStacks, suddenDeathCooldownEnd, essenceGatheringEnd,
         comboStacks, flowStacks, clickOrderCount,
+        stateVersion: 4,
         savedAt: Date.now(),
     };
 }
@@ -1414,8 +1382,8 @@ function loadProgress(state) {
         if (s.flowStacks            != null) flowStacks            = s.flowStacks;
         if (s.clickOrderCount       != null) clickOrderCount       = s.clickOrderCount;
         // Derive unlock flags from skill points (migration-safe)
-        if (skillPts(11) >= 1) { autoUnlocked = true; bossFocusUnlocked = true; }
-        if (skillPts(31) >= 1) { gfbUnlocked = true; autoGfbUnlocked = true; }
+        if (skillPts(11) >= 1) { autoUnlocked = true; bossFocusUnlocked = true; autoEnabled = true; }
+        if (skillPts(31) >= 1) { gfbUnlocked = true; autoGfbUnlocked = true; autoGfbEnabled = true; }
         // Annihilation is auto-unlocked for all knights on ascension
         if (ascendedClass === 'knight') { annihilationUnlocked = true; }
     } catch (_) {}
@@ -1528,7 +1496,7 @@ function simulateOffline(offlineSec, s) {
         }
 
         // Auto attack — 1 hit/sec
-        if (s.autoEnabled) {
+        if (s.autoEnabled || s.autoUnlocked) {
             if (bossAlive) {
                 bossCurrentHp -= avgDmg;
                 if (bossCurrentHp <= 0) doKillBoss();
@@ -1790,10 +1758,14 @@ function castGfb() {
         }, 300);
         return true;
     }
-    let t = candidates[0], bestCount = 0;
-    for (const c of candidates) {
-        const cnt = candidates.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
-        if (cnt > bestCount) { bestCount = cnt; t = c; }
+    // Boss priority: target boss directly if alive; otherwise pick best worm cluster
+    let t = boss || candidates[0];
+    if (!boss) {
+        let bestCount = 0;
+        for (const c of candidates) {
+            const cnt = candidates.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
+            if (cnt > bestCount) { bestCount = cnt; t = c; }
+        }
     }
     gold -= GFB_GOLD_COST;
     gfbCooldownEnd = Date.now() + effectiveGfbCooldown();
@@ -1852,7 +1824,7 @@ function spawnAttackEffect(x, y) {
     const size = 32;
     const rect = canvas.getBoundingClientRect();
     const img = document.createElement('img');
-    img.src = 'Attack_Effect_(Red).gif';
+    img.src = ascendedClass === 'knight' ? 'KNIGHT_EFFECT.gif' : 'Attack_Effect_(Red).gif';
     img.className = 'effect';
     img.style.left = (rect.left + x - size / 2) + 'px';
     img.style.top  = (rect.top  + y - size / 2) + 'px';
@@ -1860,6 +1832,34 @@ function spawnAttackEffect(x, y) {
     img.style.height = size + 'px';
     document.body.appendChild(img);
     setTimeout(() => img.remove(), 800);
+}
+
+function spawnMissileEffect(x, y) {
+    const size = 80;
+    const rect = canvas.getBoundingClientRect();
+    const img = document.createElement('img');
+    img.src = 'HMM.gif';
+    img.className = 'effect';
+    img.style.left = (rect.left + x - size / 2) + 'px';
+    img.style.top  = (rect.top  + y - size / 2) + 'px';
+    img.style.width  = size + 'px';
+    img.style.height = size + 'px';
+    document.body.appendChild(img);
+    setTimeout(() => img.remove(), 1000);
+}
+
+function spawnSuddenDeathEffect(x, y) {
+    const size = 120;
+    const rect = canvas.getBoundingClientRect();
+    const img = document.createElement('img');
+    img.src = 'SD.gif';
+    img.className = 'effect';
+    img.style.left = (rect.left + x - size / 2) + 'px';
+    img.style.top  = (rect.top  + y - size / 2) + 'px';
+    img.style.width  = size + 'px';
+    img.style.height = size + 'px';
+    document.body.appendChild(img);
+    setTimeout(() => img.remove(), 1500);
 }
 
 function spawnWorm() {
@@ -1885,7 +1885,7 @@ function spawnBoss() {
     const isUber  = skillUberBossEnabled() && bossKillCounter > 0 && bossKillCounter % UBER_BOSS_EVERY === 0;
     const baseSz  = ascended ? Math.round(BOSS_SIZE * 1.5) : BOSS_SIZE;
     const sz      = isUber ? baseSz * 2 : baseSz;
-    const hp     = isUber ? BOSS_HP   * 2 : BOSS_HP;
+    const hp     = isUber ? MOB_MAXHP * 20 : MOB_MAXHP * 10;
     const margin = sz + 8;
     boss = {
         x: margin + Math.random() * (canvas.width  - margin * 2),
@@ -1914,10 +1914,20 @@ function killWorm(w) {
     _wd.forEach(({ k, qty }) => { inventory[k] = (inventory[k] || 0) + qty; _wq += qty; });
     if (_wq > 0) dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size - 46, value: '+' + _wq, color: '#5599ff', life: 80 });
     bossSpawnCounter++;
-    // Spawn boss once per interval (based on kill count). Reset counter when boss appears.
-    if (!boss && bossSpawnCounter >= skillBossInterval()) {
-        bossSpawnCounter = 0;
-        spawnBoss();
+    // Boss spawn: first boss guaranteed after 10 kills; afterwards probabilistic per kill
+    if (!boss) {
+        const _dangerMult = potionDangerActive() ? 1.5 : 1.0;
+        if (bossSpawnCounter === 10 && bossKillCounter === 0) {
+            spawnBoss(); // first-ever boss: guaranteed after 10 kills
+        } else if (bossKillCounter > 0 || bossSpawnCounter > 10) {
+            const _uberEligible = skillUberBossEnabled() && bossKillCounter > 0 && bossKillCounter % UBER_BOSS_EVERY === 0;
+            const _r = Math.random();
+            if (_uberEligible && _r < 0.01 * _dangerMult) {
+                spawnBoss(); // uber boss (bossKillCounter % UBER_BOSS_EVERY === 0)
+            } else if (!_uberEligible && _r < Math.min(0.90, 0.02 * skillBossSpawnMult() * _dangerMult)) {
+                spawnBoss(); // regular boss
+            }
+        }
     }
     // Cooldown reset proc (legacy stub — skillCdResetEnabled always returns false)
     if (skillCdResetEnabled() && Math.random() < 0.01) {
@@ -1931,10 +1941,10 @@ function killWorm(w) {
 }
 
 function killBoss(b) {
-    score += BOSS_KILLS;
-    const rewardMult = b.isUber ? 2 : 1;
-    const expGain  = Math.floor(BOSS_EXP  * skillExpMult()  * rewardMult * potionExpMult());
-    const goldGain = Math.floor(BOSS_GOLD * skillGoldMult() * sorcGoldMult() * rewardMult * potionGoldMult());
+    score += b.isUber ? BOSS_KILLS * 2 : BOSS_KILLS;
+    const _bossMult = b.isUber ? 20 : 10;
+    const expGain  = Math.floor(MOB_EXP  * _bossMult * skillExpMult() * potionExpMult());
+    const goldGain = Math.floor(Math.floor((MOB_GOLD_MIN + MOB_GOLD_MAX) / 2) * _bossMult * skillGoldMult() * sorcGoldMult() * potionGoldMult());
     exp  += expGain;
     gold += goldGain;
     checkLevelUp();
@@ -2226,7 +2236,7 @@ canvas.addEventListener('click', e => {
 function update() {
     if (!spawnPaused && Math.random() < (potionMadnessActive() ? 0.2 : 0.02)) spawnWorm();
     // auto attack logic — merged worm + boss targeting (probabilistic, A1 skill)
-    if (autoEnabled) {
+    if (autoUnlocked) {
         const now = Date.now();
         if (now - lastAutoAttack >= effectiveAutoCooldown()) {
             lastAutoAttack = now;
@@ -2310,6 +2320,7 @@ function update() {
     // Auto Annihilation (auto-unlocked on knight ascension)
     if (knightAutoAnniOn() && annihilationUnlocked && boss && !boss.isUber && Date.now() >= annihilationCooldownEnd) {
         annihilationCooldownEnd = Date.now() + effectiveAnniCooldown();
+        spawnAttackEffect(boss.x, boss.y);
         killBoss(boss);
     }
     // Heavy Magic Missile (Sorcerer S1): auto-fires every 20s
@@ -2329,6 +2340,7 @@ function update() {
                 }
                 target.hp -= d;
                 dmgNumbers.push({ x: target.x + (Math.random()*20-10), y: target.y - target.size, value: d, color: '#9900ff', life: 60 });
+                spawnMissileEffect(target.x, target.y);
             };
             _fireHmm(_hmmTarget, _hmmIsBoss);
             if (_hmmIsBoss) { if (boss && boss.hp <= 0) killBoss(boss); }
@@ -2368,11 +2380,11 @@ function update() {
         const sdDmg = Math.ceil(boss.maxHp * 1.0 * sorcBossDmgMult() * sorcWeakeningBonusMult() * sorcEssenceGatheringMult());
         boss.hp -= sdDmg;
         dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size - 16, value: sdDmg, color: '#ff00cc', life: 80 });
-        spawnAttackEffect(boss.x, boss.y); // visual: hit effect on boss
+        spawnSuddenDeathEffect(boss.x, boss.y);
         if (boss.hp <= 0) killBoss(boss);
     }
     // auto GFB logic
-    if (autoGfbEnabled && gfbUnlocked && (worms.length > 0 || boss) && !fireballActive && !spawnPaused &&
+    if (autoGfbUnlocked && gfbUnlocked && (worms.length > 0 || boss) && !fireballActive && !spawnPaused &&
             Date.now() >= gfbCooldownEnd && gold >= GFB_GOLD_COST) {
         castGfb();
     }
@@ -2497,24 +2509,9 @@ document.getElementById('fireballBtn').addEventListener('click', () => {
 document.getElementById('annihilationBtn').addEventListener('click', () => {
     if (ascendedClass !== 'knight' || !annihilationUnlocked) return;
     if (!boss || boss.isUber || Date.now() < annihilationCooldownEnd) return;
+    spawnAttackEffect(boss.x, boss.y);
     annihilationCooldownEnd = Date.now() + effectiveAnniCooldown();
     killBoss(boss);
-});
-
-// auto attack button — pure toggle (unlock via Skill Tree)
-document.getElementById('autoAttackBtn').addEventListener('click', () => {
-    if (!autoUnlocked) return;
-    autoEnabled = !autoEnabled;
-    if (!autoEnabled) autoTarget = null;
-});
-
-// boss focus button — always-on once unlocked via Skill Tree (no click action)
-document.getElementById('bossFocusBtn').addEventListener('click', () => {});
-
-// auto fireball button — toggle (unlock via Skill Tree, skill 12)
-document.getElementById('autoGfbBtn').addEventListener('click', () => {
-    if (!autoGfbUnlocked) return;
-    autoGfbEnabled = !autoGfbEnabled;
 });
 
 document.getElementById('autoAnniBtn').addEventListener('click', () => {
