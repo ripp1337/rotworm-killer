@@ -387,7 +387,7 @@ let weaponIndex = 0; // current weapon
 
 function basicDmgMin()  { return WEAPONS[weaponIndex].min + knightDmgMinBonus() + sorcDmgMinBonus(); }
 function basicDmgMax()  { return WEAPONS[weaponIndex].max + knightDmgMaxBonus() + sorcDmgMaxBonus(); }
-function rollBasicDmg() { return basicDmgMin() + Math.floor(Math.random() * (basicDmgMax() - basicDmgMin() + 1)); }
+function rollBasicDmg() { return Math.ceil((basicDmgMin() + Math.floor(Math.random() * (basicDmgMax() - basicDmgMin() + 1))) * sorcEssenceGatheringMult()); }
 function rollAutoDmg()  { return Math.ceil(rollBasicDmg() * skillAutoDmgMult()); }
 
 // Knight click combat
@@ -521,7 +521,7 @@ function updateHUD() {
     document.getElementById('fireballBtn').style.display  = gfbUnlocked ? '' : 'none';
     document.getElementById('cd-fire-wrap').style.display  = gfbUnlocked ? '' : 'none';
     document.getElementById('cd-hmm-wrap').style.display  = isSorcerer && sPts(201) >= 1 ? '' : 'none';
-    document.getElementById('cd-sd-wrap').style.display   = isSorcerer && sPts(212) >= 1 ? '' : 'none';
+    document.getElementById('cd-sd-wrap').style.display   = isSorcerer && sPts(211) >= 1 ? '' : 'none';
     document.getElementById('annihilationBtn').style.display      = isKnight   ? '' : 'none';
     document.getElementById('cd-anni-wrap').style.display         = isKnight   ? '' : 'none';
     document.getElementById('autoAnniBtn').style.display          = isKnight   ? '' : 'none';
@@ -567,18 +567,19 @@ const GFB_COOLDOWN_MS    = 20000;  // 20s base (reduced by Fireball CDR skill)
 const GFB_GOLD_COST      = 0;      // free to cast
 const GFB_UNLOCK_LEVEL   = 4;
 const GFB_UNLOCK_GOLD    = 100;
-const HMM_COOLDOWN_MS    = 20000;  // Heavy Magic Missile: 20s (Sorcerer S1)
-const SUDDEN_DEATH_COOLDOWN_MS = 600000; // Sudden Death: 10 min base (Sorcerer S12, reduced by S13)
+const HMM_COOLDOWN_MS    = 20000;  // Light/Heavy Magic Missile: 20s (Sorcerer S1)
+const SUDDEN_DEATH_COOLDOWN_MS = 600000; // Sudden Death: 10 min base (Sorcerer S11, reduced per level)
 let gfbUnlocked     = false;
 let lastBasicAttack = 0;   // timestamp of last basic hit
 let gfbCooldownEnd  = 0;   // timestamp when GFB is ready again
-let firestormCharges = 0;  // Firestorm Charge counter (C3 skill)
+// firestormCharges removed — C3 is now Fireball Annihilation (instant-kill chance)
 
-// Sorcerer Heavy Magic Missile + Obliteration Beam state
+// Sorcerer Heavy Magic Missile state
 let hmmCooldownEnd = 0;
-let hmmHitCounter  = 0;              // total HMM fires (Cataclysm every 5, Titan Slayer every 3)
+let hmmHitCounter  = 0;              // total HMM fires
 let arcaneWeakeningStacks = 0;       // S10 Arcane Weakening stacks on current boss
 let suddenDeathCooldownEnd = 0;
+let essenceGatheringEnd = 0;         // S12 Essence Gathering double-damage buff expiry
 
 // Knight combo state (legacy, kept for save migration only)
 let comboStacks        = 0;
@@ -951,20 +952,20 @@ function craftPotion(id) {
 // 3 columns × 4 rows, 10 points each. No level requirements — only prereq chain.
 const GENERAL_SKILLS = [
     // Column A — Automation
-    { id: 11, col: 1, row: 1, name: 'Auto-Attack',        max: 10, prereqs: [],   costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                       desc: '+3% auto-attack chance per second per point (30% at max)' },
-    { id: 12, col: 1, row: 2, name: 'Auto-Attack Damage', max: 10, prereqs: [11], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                  desc: '+6% auto-attack damage per point (+60% at max). Requires 1pt Auto-Attack' },
-    { id: 13, col: 1, row: 3, name: 'Multi-Target',       max: 10, prereqs: [12], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],        desc: '+5% chance per point to also hit a second monster (+50% at max). Requires 1pt Auto-Attack Damage' },
-    { id: 14, col: 1, row: 4, name: 'Hyper Automation',   max: 10, prereqs: [13], costs: [500000,1000000,2000000,4000000,8000000,12000000,16000000,20000000,25000000,30000000],  desc: '+4% attack frequency, +4% auto damage, +2% chain-attack chance per point. Requires 1pt Multi-Target' },
+    { id: 11, col: 1, row: 1, name: 'Auto-Attack',        max: 10, prereqs: [],   costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                                          desc: 'Unlocks auto-attack. Reduces auto-attack cooldown by 0.04s per point (0.50s → 0.10s at max)' },
+    { id: 12, col: 1, row: 2, name: 'Auto-Attack Damage', max: 10, prereqs: [11], costs: [1000,2000,4000,8000,16000,32000,64000,128000,256000,512000],                                               desc: '+10% auto-attack damage per point (+100% at max). Requires 1pt Auto-Attack' },
+    { id: 13, col: 1, row: 3, name: 'Multi-Target',       max: 10, prereqs: [12], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                           desc: '+10% chance per point to hit a 2nd monster (100% at max). Requires 1pt Auto-Attack Damage' },
+    { id: 14, col: 1, row: 4, name: 'Hyper Automation',   max: 10, prereqs: [13], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],               desc: '+10% auto-attack damage per point, +10% chance to hit a 3rd target (100% at max). Requires 1pt Multi-Target' },
     // Column B — More Numbers
-    { id: 21, col: 2, row: 1, name: 'Wealth Training',    max: 10, prereqs: [],   costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                       desc: '+5% gold gain per point (+50% at max)' },
-    { id: 22, col: 2, row: 2, name: 'Exp. Mastery',       max: 10, prereqs: [21], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                  desc: '+5% experience gain per point (+50% at max). Requires 1pt Wealth Training' },
-    { id: 23, col: 2, row: 3, name: 'Material Harvesting',max: 10, prereqs: [22], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],        desc: '+3% essence drop chance, +2% drop quantity per point. Requires 1pt Exp. Mastery' },
-    { id: 24, col: 2, row: 4, name: 'Boss Attraction',    max: 10, prereqs: [23], costs: [500000,1000000,2000000,4000000,8000000,12000000,16000000,20000000,25000000,30000000],  desc: '+2% boss spawn rate, +3% boss loot, +1% extra boss chance per point. Requires 1pt Material Harvesting' },
+    { id: 21, col: 2, row: 1, name: 'Wealth Training',    max: 10, prereqs: [],   costs: [1000,2000,4000,8000,16000,32000,64000,128000,256000,512000],                                               desc: '+5% gold gain per point (+50% at max)' },
+    { id: 22, col: 2, row: 2, name: 'Exp. Mastery',       max: 10, prereqs: [21], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                                    desc: '+5% experience gain per point (+50% at max). Requires 1pt Wealth Training' },
+    { id: 23, col: 2, row: 3, name: 'Material Harvesting',max: 10, prereqs: [22], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                           desc: '+3% essence drop chance, +2% drop quantity per point. Requires 1pt Exp. Mastery' },
+    { id: 24, col: 2, row: 4, name: 'Boss Attraction',    max: 10, prereqs: [23], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],               desc: '+2% boss spawn rate, +3% boss loot, +1% extra boss chance per point. Requires 1pt Material Harvesting' },
     // Column C — Fireball
-    { id: 31, col: 3, row: 1, name: 'Fireball Mastery',   max: 10, prereqs: [],   costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                       desc: 'Unlocks Fireball (always auto-casts). Base 10% HP dmg +5%/pt (60% at max). 20s base cooldown' },
-    { id: 32, col: 3, row: 2, name: 'Fireball CDR',       max: 10, prereqs: [31], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                  desc: '-1s fireball cooldown per point (min 10s). Requires 1pt Fireball Mastery' },
-    { id: 33, col: 3, row: 3, name: 'Firestorm Charge',   max: 10, prereqs: [32], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],        desc: '+3% chance per fireball cast to gain a charge. At 5 charges: Firestorm (2× dmg, hits all). Requires 1pt Fireball CDR' },
-    { id: 34, col: 3, row: 4, name: 'Ember of Cataclysm', max: 10, prereqs: [33], costs: [500000,1000000,2000000,4000000,8000000,12000000,16000000,20000000,25000000,30000000],  desc: '+1% boss spawn chance per fireball, +2% boss loot per point. Requires 1pt Firestorm Charge' },
+    { id: 31, col: 3, row: 1, name: 'Fireball Mastery',   max: 10, prereqs: [],   costs: [1000,2000,4000,8000,16000,32000,64000,128000,256000,512000],                                               desc: 'Unlocks Fireball (always auto-casts). Base 10% HP dmg +5%/pt (60% at max). 20s base cooldown' },
+    { id: 32, col: 3, row: 2, name: 'Fireball CDR',       max: 10, prereqs: [31], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                                    desc: '-1s fireball cooldown per point (min 10s). Requires 1pt Fireball Mastery' },
+    { id: 33, col: 3, row: 3, name: 'Fireball Annihilation', max: 10, prereqs: [32], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                      desc: '+3% chance per fireball hit to instantly kill all non-boss monsters (30% at max). Requires 1pt Fireball CDR' },
+    { id: 34, col: 3, row: 4, name: 'Ember of Renewal',   max: 10, prereqs: [33], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],               desc: '+2% chance per point for fireball to instantly reset its cooldown on kill (20% at max). Requires 1pt Fireball Annihilation' },
 ];
 
 let skillPoints = {};
@@ -994,23 +995,22 @@ function buySkill(id) {
 
 // ── General skill effect helpers ──────────────────────────────────────────────
 // Column A — Automation
-function skillAutoProb()          { return skillPts(11) * 0.03; }                           // A1: 3%/pt per tick
-function skillAutoDmgMult()       { return 1 + skillPts(12) * 0.06 + skillPts(14) * 0.04; } // A2+A4 damage bonus
-function skillMultiTargetChance() { return skillPts(13) * 0.05; }                           // A3: +5%/pt extra target
-function skillAutoFreqMult()      { return Math.max(0.2, 1 - skillPts(14) * 0.04); }        // A4: -4%/pt cooldown
-function skillChainChance()       { return skillPts(14) * 0.02; }                           // A4: chain-attack after kill
+// A1: CDR now handled inside effectiveAutoCooldown() — no separate probability model
+function skillAutoDmgMult()       { return 1 + (skillPts(12) + skillPts(14)) * 0.10; }     // A2+A4: +10%/pt each
+function skillMultiTargetChance() { return skillPts(13) * 0.10; }                           // A3: +10%/pt 2nd target
+function skillThirdTargetChance() { return skillPts(14) * 0.10; }                           // A4: +10%/pt 3rd target
 // Column B — More Numbers
 function skillGoldMult()          { return 1 + skillPts(21) * 0.05; }                       // B1
 function skillExpMult()           { return 1 + skillPts(22) * 0.05; }                       // B2
 function skillMatDropMult()       { return 1 + skillPts(23) * 0.03; }                       // B3 drop chance
 function skillMatQtyMult()        { return 1 + skillPts(23) * 0.02; }                       // B3 quantity
 function skillBossSpawnMult()     { return 1 + skillPts(24) * 0.02; }                       // B4 spawn rate
-function skillBossLootMult()      { return 1 + skillPts(24) * 0.03 + skillPts(34) * 0.02; }// B4+C4 boss loot
+function skillBossLootMult()      { return 1 + skillPts(24) * 0.03; }                       // B4 boss loot (C4 removed)
 function skillExtraBossChance()   { return skillPts(24) * 0.01; }                           // B4 extra boss on kill
 // Column C — Fireball
 function skillFbDmgFrac()         { return (10 + skillPts(31) * 5) / 100; }                 // C1: 10%+5%/pt max HP
-function skillFbChargeChance()    { return skillPts(33) * 0.03; }                           // C3: 3%/pt per cast
-function skillEmberBossChance()   { return skillPts(34) * 0.01; }                           // C4: boss spawn on fb kills
+function skillFbAnnihilateChance(){ return skillPts(33) * 0.03; }                           // C3: 3%/pt instant kill
+function skillEmberResetChance()  { return skillPts(34) * 0.02; }                           // C4: 2%/pt CD reset on kill
 // Compatibility stubs
 function skillMonsterCap()        { return 10 + (potionMadnessActive() ? 10 : 0); }
 function skillBossInterval()      { return Math.max(5, Math.floor(BOSS_EVERY / skillBossSpawnMult() * (potionDangerActive() ? 0.75 : 1.0))); }
@@ -1023,20 +1023,20 @@ function skillCdResetEnabled()    { return false; }
 // costs[] = gold cost per level [lvl1, lvl2, ...]
 const KNIGHT_SKILLS = [
     // Column 1 — Click Damage Path
-    { id: 101, col: 1, row: 1, name: 'Strike Training',       max: 10, prereqs: [],    costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                           desc: '+20% click damage per point (+200% at max)' },
-    { id: 102, col: 1, row: 2, name: 'Precision Execution',   max: 10, prereqs: [101], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                        desc: '+1%/pt of target max HP as bonus click damage (+10% at max). Requires 1pt Strike Training' },
-    { id: 103, col: 1, row: 3, name: 'Cleaving Blows',        max: 10, prereqs: [102], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],              desc: 'Every click deals AoE +1%/pt max HP damage to all non-boss enemies (+10% at max). Requires 1pt Precision Execution' },
-    { id: 104, col: 1, row: 4, name: 'Double Strike Instinct',max: 10, prereqs: [103], costs: [500000,1000000,2000000,4000000,8000000,12000000,16000000,20000000,25000000,30000000],         desc: '+3%/pt chance to strike twice (30% at max). Requires 1pt Cleaving Blows' },
+    { id: 101, col: 1, row: 1, name: 'Strike Training',       max: 10, prereqs: [],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                                       desc: '+20% click damage per point (+200% at max)' },
+    { id: 102, col: 1, row: 2, name: 'Precision Execution',   max: 10, prereqs: [101], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                             desc: '+1%/pt of target max HP as bonus click damage (+10% at max). Requires 1pt Strike Training' },
+    { id: 103, col: 1, row: 3, name: 'Cleaving Blows',        max: 10, prereqs: [102], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],                   desc: 'Every click deals AoE +1%/pt max HP damage to all non-boss enemies (+10% at max). Requires 1pt Precision Execution' },
+    { id: 104, col: 1, row: 4, name: 'Double Strike Instinct',max: 10, prereqs: [103], costs: [10000000,20000000,40000000,80000000,160000000,320000000,640000000,1280000000,2560000000,5120000000],          desc: '+3%/pt chance to strike twice (30% at max). Requires 1pt Cleaving Blows' },
     // Column 2 — Speed / Multi-Target / Cooldowns
-    { id: 105, col: 2, row: 1, name: 'Combo Meter',           max: 10, prereqs: [],    costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                           desc: 'Reduces manual attack cooldown by 0.04s per point (0.50s \u2192 0.10s at max)' },
-    { id: 106, col: 2, row: 2, name: 'Adrenaline Reset',      max: 10, prereqs: [105], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                        desc: '+2%/pt chance to fully reset manual attack cooldown on any kill (20% at max). Requires 1pt Combo Meter' },
-    { id: 107, col: 2, row: 3, name: 'Sweeping Strikes',      max: 10, prereqs: [106], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],              desc: '+3%/pt chance for manual attacks to also hit +1 extra monster (30% at max). Requires 1pt Adrenaline Reset' },
-    { id: 108, col: 2, row: 4, name: 'Whirlwind Extension',   max: 10, prereqs: [107], costs: [500000,1000000,2000000,4000000,8000000,12000000,16000000,20000000,25000000,30000000],         desc: '+2%/pt chance to hit +2 additional monsters (20% at max, stacks with Sweeping Strikes for up to 3 extra). Requires 1pt Sweeping Strikes' },
+    { id: 105, col: 2, row: 1, name: 'Combo Meter',           max: 10, prereqs: [],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                                       desc: 'Reduces manual attack cooldown by 0.04s per point (0.50s \u2192 0.10s at max)' },
+    { id: 106, col: 2, row: 2, name: 'Adrenaline Reset',      max: 10, prereqs: [105], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                             desc: '+2%/pt chance to fully reset manual attack cooldown on any kill (20% at max). Requires 1pt Combo Meter' },
+    { id: 107, col: 2, row: 3, name: 'Sweeping Strikes',      max: 10, prereqs: [106], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],                   desc: '+3%/pt chance for manual attacks to also hit +1 extra monster (30% at max). Requires 1pt Adrenaline Reset' },
+    { id: 108, col: 2, row: 4, name: 'Whirlwind Extension',   max: 10, prereqs: [107], costs: [10000000,20000000,40000000,80000000,160000000,320000000,640000000,1280000000,2560000000,5120000000],          desc: '+2%/pt chance to hit +2 additional monsters (20% at max, stacks with Sweeping Strikes). Requires 1pt Sweeping Strikes' },
     // Column 3 — Boss / Uber Boss Destruction
-    { id: 109, col: 3, row: 1, name: 'Decapitation Chance',   max: 10, prereqs: [],    costs: [1000000,2000000,4000000,8000000,12000000,16000000,20000000,24000000,28000000,32000000],       desc: '+0.5%/pt chance to instantly kill a boss or uber boss on click (5% at max)' },
-    { id: 110, col: 3, row: 2, name: 'Endless Challenge',     max: 10, prereqs: [109], costs: [2000000,4000000,8000000,12000000,16000000,20000000,24000000,28000000,32000000,40000000],      desc: '+1%/pt chance to instantly spawn the next uber boss after killing a boss (10% at max). Requires 1pt Decapitation Chance' },
-    { id: 111, col: 3, row: 3, name: 'Battlefield Purge',     max: 10, prereqs: [110], costs: [5000000,7500000,10000000,12500000,15000000,17500000,20000000,22500000,25000000,30000000],     desc: '+5%/pt chance to kill all remaining non-boss enemies after a boss kill (50% at max). Requires 1pt Endless Challenge' },
-    { id: 112, col: 3, row: 4, name: 'Momentum Overdrive',    max: 10, prereqs: [111], costs: [10000000,12000000,14000000,16000000,18000000,20000000,22000000,24000000,26000000,30000000],   desc: 'Each manual click permanently increases weapon damage multiplier by +0.0001%/pt (0.001% at max). Requires 1pt Battlefield Purge' },
+    { id: 109, col: 3, row: 1, name: 'Decapitation Chance',   max: 10, prereqs: [],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                                       desc: '+0.5%/pt chance to instantly kill a boss or uber boss on click (5% at max)' },
+    { id: 110, col: 3, row: 2, name: 'Endless Challenge',     max: 10, prereqs: [109], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                             desc: '+1%/pt chance to instantly spawn the next uber boss after killing a boss (10% at max). Requires 1pt Decapitation Chance' },
+    { id: 111, col: 3, row: 3, name: 'Battlefield Purge',     max: 10, prereqs: [110], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],                   desc: '+5%/pt chance to kill all remaining non-boss enemies after a boss kill (50% at max). Requires 1pt Endless Challenge' },
+    { id: 112, col: 3, row: 4, name: 'Momentum Overdrive',    max: 10, prereqs: [111], costs: [10000000,20000000,40000000,80000000,160000000,320000000,640000000,1280000000,2560000000,5120000000],          desc: 'Each manual click permanently increases weapon damage multiplier by +0.0001%/pt (0.001% at max). Requires 1pt Battlefield Purge' },
 ];
 
 let knightSkillPts = {};
@@ -1066,22 +1066,21 @@ function knightComboMaxStacks()  { return 0; } // legacy stub — combo system r
 // ── Sorcerer skill tree ───────────────────────────────────────────
 // costs[] = gold cost per level [lvl1, lvl2, ...]
 const SORC_SKILLS = [
-    // Column 1 — Heavy Magic Missile
-    { id: 201, col: 1, row: 1, name: 'Heavy Magic Missile',  max: 10, prereqs: [],       costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                 desc: 'Unlocks Heavy Magic Missile: auto-fires every 20s dealing (10+5×pts)% of monster max HP' },
-    { id: 202, col: 1, row: 2, name: 'Missile Empowerment',    max: 10, prereqs: [201],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],              desc: '+4% Heavy Magic Missile damage per point (+40% at max). Requires 1pt Heavy Magic Missile' },
-    { id: 203, col: 1, row: 3, name: 'Triple Missile Chance',  max: 10, prereqs: [202],    costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],    desc: '+5% chance per point to fire 2 extra missiles (50% at max). Requires 1pt Missile Empowerment' },
-    { id: 204, col: 1, row: 4, name: 'Ultimate Explosion',     max: 10, prereqs: [203],    costs: [500000,1000000,2000000,4000000,8000000,12000000,16000000,20000000,25000000,30000000], desc: 'Each HMM has a chance to instantly kill all non-boss enemies on screen (+1.5%/pt, 15% at max). Requires 1pt Triple Missile Chance' },
+    // Column 1 — Magic Missile
+    { id: 201, col: 1, row: 1, name: 'Light Magic Missile',    max: 10, prereqs: [],       costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],               desc: 'Unlocks Light Magic Missile: auto-fires every 20s dealing (10+5\u00d7pts)% of monster max HP' },
+    { id: 202, col: 1, row: 2, name: 'Heavy Magic Missile',    max: 10, prereqs: [201],    costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],     desc: '+4% Magic Missile damage per point (+40% at max). Requires 1pt Light Magic Missile' },
+    { id: 203, col: 1, row: 3, name: 'Triple Missile Chance',  max: 10, prereqs: [202],    costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000], desc: '+5% chance per point to fire 2 extra missiles (50% at max). Requires 1pt Heavy Magic Missile' },
+    { id: 204, col: 1, row: 4, name: 'Ultimate Explosion',     max: 10, prereqs: [203],    costs: [10000000,20000000,40000000,80000000,160000000,320000000,640000000,1280000000,2560000000,5120000000], desc: 'Each HMM has a chance to instantly kill all non-boss enemies on screen (+1.5%/pt, 15% at max). Requires 1pt Triple Missile Chance' },
     // Column 2 — Loot / Crafting / Potions
-    { id: 205, col: 2, row: 1, name: 'Arcane Fortune',         max: 10, prereqs: [],       costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                  desc: '+1% gold gained per point (+10% at max)' },
-    { id: 206, col: 2, row: 2, name: 'Mystic Salvaging',       max: 10, prereqs: [205],    costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],              desc: '+1% crafting material drop chance per point (+10% at max). Requires 1pt Arcane Fortune' },
-    { id: 207, col: 2, row: 3, name: 'Arcane Extraction',      max: 10, prereqs: [206],    costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],    desc: '+2% potion duration per point (+20% at max). Requires 1pt Mystic Salvaging' },
-    { id: 208, col: 2, row: 4, name: 'Grand Alchemist',        max: 10, prereqs: [207],    costs: [500000,1000000,2000000,4000000,8000000,12000000,16000000,20000000,25000000,30000000], desc: 'Each boss kill has +1%/pt chance to activate a random potion effect (10% at max). Requires 1pt Arcane Extraction' },
+    { id: 205, col: 2, row: 1, name: 'Arcane Fortune',         max: 10, prereqs: [],       costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],               desc: '+1% gold gained per point (+10% at max)' },
+    { id: 206, col: 2, row: 2, name: 'Mystic Salvaging',       max: 10, prereqs: [205],    costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],     desc: '+1% crafting material drop chance per point (+10% at max). Requires 1pt Arcane Fortune' },
+    { id: 207, col: 2, row: 3, name: 'Arcane Extraction',      max: 10, prereqs: [206],    costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000], desc: '+2% potion duration per point (+20% at max). Requires 1pt Mystic Salvaging' },
+    { id: 208, col: 2, row: 4, name: 'Grand Alchemist',        max: 10, prereqs: [207],    costs: [10000000,20000000,40000000,80000000,160000000,320000000,640000000,1280000000,2560000000,5120000000], desc: 'Each boss kill has +1%/pt chance to activate a random potion effect (10% at max). Requires 1pt Arcane Extraction' },
     // Column 3 — Boss Killer
-    { id: 209, col: 3, row: 1, name: 'Bane of Titans',         max: 10, prereqs: [],       costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],    desc: '+2% damage dealt to bosses per point (+20% at max)' },
-    { id: 210, col: 3, row: 2, name: 'Arcane Weakening',       max: 10, prereqs: [209],    costs: [500000,1000000,2000000,4000000,8000000,12000000,16000000,20000000,25000000,30000000], desc: 'Bosses hit by HMM take increased damage: +2%/pt per stack (max 10 stacks, +20% at max). Requires 1pt Bane of Titans' },
-    { id: 211, col: 3, row: 3, name: 'Titan Slayer',           max: 10, prereqs: [210],    costs: [1000000,2000000,4000000,8000000,12000000,16000000,20000000,24000000,28000000,32000000], desc: 'Every 3rd HMM deals +10%/pt bonus boss max HP damage (+100% at max). Requires 1pt Arcane Weakening' },
-    { id: 212, col: 3, row: 4, name: 'Sudden Death',           max: 10, prereqs: [211],    costs: [2000000,4000000,8000000,12000000,16000000,20000000,24000000,28000000,32000000,40000000], desc: 'Every 10 min unleashes Sudden Death: deals 10–100% of boss/uber-boss max HP. Requires 1pt Titan Slayer' },
-    { id: 213, col: 3, row: 5, name: 'Sudden Death Mastery',   max: 10, prereqs: [212],    costs: [5000000,7500000,10000000,12500000,15000000,17500000,20000000,22500000,25000000,30000000], desc: 'Reduces Sudden Death cooldown from 10 min to 5 min at max. Requires 1pt Sudden Death' },
+    { id: 209, col: 3, row: 1, name: 'Bane of Titans',         max: 10, prereqs: [],       costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],               desc: '+2% damage dealt to bosses per point (+20% at max)' },
+    { id: 210, col: 3, row: 2, name: 'Arcane Weakening',       max: 10, prereqs: [209],    costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],     desc: 'Bosses hit by HMM take increased damage: +2%/pt per stack (max 10 stacks, +20% at max). Requires 1pt Bane of Titans' },
+    { id: 211, col: 3, row: 3, name: 'Sudden Death',           max: 10, prereqs: [210],    costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000], desc: 'Fires every max(150s, 600s\u2212pts\u00d745s), dealing 100% of boss max HP. Requires 1pt Arcane Weakening' },
+    { id: 212, col: 3, row: 4, name: 'Essence Gathering',      max: 10, prereqs: [211],    costs: [10000000,20000000,40000000,80000000,160000000,320000000,640000000,1280000000,2560000000,5120000000], desc: 'Boss kill grants double damage for 30s (+3s/pt, 60s at max). Requires 1pt Sudden Death' },
 ];
 
 let sorcSkillPts = {};
@@ -1115,8 +1114,9 @@ function sorcPotionDurMult()         { return 1 + sPts(207) * 0.02; }           
 function sorcGrandAlchemistChance()  { return sPts(208) * 0.01; }                 // S8: +1%/pt chance per boss kill for random potion
 function sorcBossDmgMult()           { return 1 + sPts(209) * 0.02; }             // S9: +2%/pt boss damage
 function sorcWeakeningBonusMult()    { return 1 + arcaneWeakeningStacks * sPts(210) * 0.02; } // S10: +2%/pt per stack
-function sorcTitanSlayerDmgFrac()    { return sPts(211) * 0.10; }                 // S11: +10%/pt bonus boss max HP
-function sorcSuddenDeathCooldownMs() { return Math.max(300000, 600000 - sPts(213) * 30000); } // S13: 10min→5min at max
+function sorcSuddenDeathCooldownMs() { return Math.max(150000, 600000 - sPts(211) * 45000); } // S11: 10min→2.5min at max
+function sorcEssenceGatheringMult()  { return (ascendedClass === 'sorcerer' && sPts(212) >= 1 && Date.now() < essenceGatheringEnd) ? 2 : 1; }
+function sorcEssenceDuration()       { return 30000 + sPts(212) * 3000; }                      // S12: 30s+3s/pt (60s at max)
 // Legacy stubs (old spells auto-unlocked on ascension, no longer skill-gated)
 function sorcDoubleGfb()    { return false; }                                    // GFB double removed
 function sorcGfbUpgraded()  { return false; }                                    // GFB upgrade removed
@@ -1278,7 +1278,7 @@ function renderSorcPane() {
     let html = '<div class="st-grid">';
     for (let col = 1; col <= 3; col++) {
         html += '<div class="st-col">';
-        const maxRow = col === 3 ? 5 : 4; // column 3 has 5 rows (S9–S13)
+        const maxRow = 4; // all columns have 4 rows
         for (let row = 1; row <= maxRow; row++) {
             const skill = SORC_SKILLS.find(s => s.col === col && s.row === row);
             if (!skill) { html += `<div class="st-node st-node-empty"></div>`; continue; }
@@ -1327,7 +1327,7 @@ function effectiveBasicCooldown() {
     let cd = Math.max(100, BASIC_COOLDOWN_MS - kPts(105) * 40); // K5 Combo Meter: -40ms/pt (0.50s → 0.10s at max)
     return cd * potionCdrMult();
 }
-function effectiveAutoCooldown()  { return AUTO_COOLDOWN_MS * skillAutoFreqMult() * potionCdrMult(); }
+function effectiveAutoCooldown()  { return Math.max(100, 500 - skillPts(11) * 40) * potionCdrMult(); }  // A1: -40ms/pt (500→100ms)
 function effectiveGfbCooldown()   { return Math.max(10000, GFB_COOLDOWN_MS - skillPts(32) * 1000) * potionCdrMult(); }
 function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * potionCdrMult(); }
 
@@ -1352,8 +1352,7 @@ function getProgress() {
         potionLargeWealthEnd, potionLargeWisdomEnd, potionLargeSwiftnessEnd,
         potionMadnessEnd, potionDangerEnd,
         currentArea, unlockedAreas,
-        firestormCharges,
-        hmmCooldownEnd, arcaneWeakeningStacks, suddenDeathCooldownEnd,
+        hmmCooldownEnd, arcaneWeakeningStacks, suddenDeathCooldownEnd, essenceGatheringEnd,
         comboStacks, flowStacks, clickOrderCount,
         savedAt: Date.now(),
     };
@@ -1406,11 +1405,11 @@ function loadProgress(state) {
         if (s.potionDangerEnd       != null) potionDangerEnd       = s.potionDangerEnd;
         if (s.currentArea           != null) currentArea           = s.currentArea;
         if (s.unlockedAreas         != null) unlockedAreas         = Array.isArray(s.unlockedAreas) ? s.unlockedAreas : ['Rookgaard'];
-        if (s.firestormCharges      != null) firestormCharges       = s.firestormCharges;
         if (s.hmmCooldownEnd        != null) hmmCooldownEnd        = s.hmmCooldownEnd;
         if (s.arcaneWeakeningStacks != null) arcaneWeakeningStacks = s.arcaneWeakeningStacks;
         if (s.suddenDeathCooldownEnd      != null) suddenDeathCooldownEnd      = s.suddenDeathCooldownEnd;
         if (s.obliterationBeamCooldownEnd   != null) suddenDeathCooldownEnd      = s.obliterationBeamCooldownEnd; // legacy migration
+        if (s.essenceGatheringEnd     != null) essenceGatheringEnd     = s.essenceGatheringEnd;
         if (s.comboStacks           != null) comboStacks           = s.comboStacks;
         if (s.flowStacks            != null) flowStacks            = s.flowStacks;
         if (s.clickOrderCount       != null) clickOrderCount       = s.clickOrderCount;
@@ -1771,8 +1770,26 @@ function castGfb() {
     const candidates = [...worms, ...(boss ? [boss] : [])];
     if (candidates.length === 0) return false;
     const upgraded = sorcGfbUpgraded();
-    const isFirestorm = firestormCharges >= 5;
     const radius = 200;
+    // C3: Fireball Annihilation — instantly kill all non-boss enemies
+    if (skillFbAnnihilateChance() > 0 && Math.random() < skillFbAnnihilateChance()) {
+        gold -= GFB_GOLD_COST;
+        gfbCooldownEnd = Date.now() + effectiveGfbCooldown();
+        const t = candidates[0];
+        spawnEffect(t.x, t.y, radius);
+        spawnPaused = true;
+        setTimeout(() => {
+            const fbKills = worms.length;
+            worms.forEach(w => killWorm(w));
+            worms = [];
+            spawnUltimateExplosion();
+            if (fbKills > 0 && skillEmberResetChance() > 0 && Math.random() < skillEmberResetChance()) {
+                gfbCooldownEnd = 0;
+            }
+            spawnPaused = false;
+        }, 300);
+        return true;
+    }
     let t = candidates[0], bestCount = 0;
     for (const c of candidates) {
         const cnt = candidates.filter(o => Math.hypot(o.x - c.x, o.y - c.y) < radius).length;
@@ -1780,41 +1797,27 @@ function castGfb() {
     }
     gold -= GFB_GOLD_COST;
     gfbCooldownEnd = Date.now() + effectiveGfbCooldown();
-    // Firestorm charge management
-    if (isFirestorm) {
-        firestormCharges = 0;
-    } else if (skillFbChargeChance() > 0 && Math.random() < skillFbChargeChance()) {
-        firestormCharges++;
-    }
     spawnEffect(t.x, t.y, radius);
     spawnPaused = true;
     const fx = t.x, fy = t.y;
     setTimeout(() => {
-        let firestormKills = 0;
+        let fbKills = 0;
         worms = worms.filter(w => {
             const dx = w.x - fx, dy = w.y - fy;
-            const inRange = isFirestorm || Math.hypot(dx, dy) < radius;
-            if (inRange) {
-                if (upgraded) { killWorm(w); firestormKills++; return false; }
-                const fbDmg = Math.ceil(MOB_MAXHP * skillFbDmgFrac() * (isFirestorm ? 2 : 1));
+            if (Math.hypot(dx, dy) < radius) {
+                if (upgraded) { killWorm(w); fbKills++; return false; }
+                const fbDmg = Math.ceil(MOB_MAXHP * skillFbDmgFrac() * sorcEssenceGatheringMult());
                 w.hp -= fbDmg;
                 dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: '#8b0000', life: 60 });
-                if (w.hp <= 0) { killWorm(w); firestormKills++; return false; }
+                if (w.hp <= 0) { killWorm(w); fbKills++; return false; }
             }
             return true;
         });
-        if (upgraded && boss && sorcVolatileBlast()) {
-            // Volatile Blast: always hits boss for 50% max HP regardless of range
-            const vbDmg = Math.floor(boss.maxHp * 0.5);
-            boss.hp -= vbDmg;
-            dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#8b0000', life: 60 });
-            if (boss.hp <= 0) killBoss(boss);
+        // C4: Ember of Renewal — chance to reset fireball CD after kills
+        if (fbKills > 0 && skillEmberResetChance() > 0 && Math.random() < skillEmberResetChance()) {
+            gfbCooldownEnd = 0;
         }
-        // C4: Ember boss spawn after Firestorm kills
-        if (isFirestorm && firestormKills > 0 && !boss && skillEmberBossChance() > 0 && Math.random() < skillEmberBossChance()) {
-            spawnBoss();
-        }
-        // Double Fireball (sorc skill 203) — fire a second fireball at next best cluster
+        // Double Fireball (sorc skill) — fire a second fireball at next best cluster
         if (sorcDoubleGfb() && (worms.length > 0 || boss)) {
             const alive2 = [...worms, ...(boss ? [boss] : [])];
             let t2 = alive2[0], best2 = 0;
@@ -1829,19 +1832,13 @@ function castGfb() {
                     const dx = w.x - gx, dy = w.y - gy;
                     if (Math.hypot(dx, dy) < radius) {
                         if (upgraded) { killWorm(w); return false; }
-                        const fbDmg = Math.ceil(MOB_MAXHP * skillFbDmgFrac());
+                        const fbDmg = Math.ceil(MOB_MAXHP * skillFbDmgFrac() * sorcEssenceGatheringMult());
                         w.hp -= fbDmg;
                         dmgNumbers.push({ x: w.x + (Math.random()*20-10), y: w.y - w.size, value: fbDmg, color: '#8b0000', life: 60 });
                         if (w.hp <= 0) { killWorm(w); return false; }
                     }
                     return true;
                 });
-                if (upgraded && boss && sorcVolatileBlast()) {
-                    const vbDmg = Math.floor(boss.maxHp * 0.5);
-                    boss.hp -= vbDmg;
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: vbDmg, color: '#8b0000', life: 60 });
-                    if (boss.hp <= 0) killBoss(boss);
-                }
                 spawnPaused = false;
             }, 300);
         } else {
@@ -1979,6 +1976,11 @@ function killBoss(b) {
     // Extra boss spawn (B4)
     if (skillExtraBossChance() > 0 && Math.random() < skillExtraBossChance()) {
         spawnBoss();
+    }
+    // S12 Essence Gathering: boss kill grants double damage buff
+    if (ascendedClass === 'sorcerer' && sPts(212) > 0) {
+        essenceGatheringEnd = Date.now() + sorcEssenceDuration();
+        dmgNumbers.push({ x: b.x + (Math.random()*20-10), y: b.y - b.size - 60, value: '2\u00d7 DMG', color: '#ff88ff', life: 120 });
     }
 }
 
@@ -2228,76 +2230,80 @@ function update() {
         const now = Date.now();
         if (now - lastAutoAttack >= effectiveAutoCooldown()) {
             lastAutoAttack = now;
-            if (Math.random() < skillAutoProb()) {
-                const hitTargets = [];
-                if (bossFocusUnlocked && boss) {
-                    // boss focus: always hit boss first when alive
+            const hitTargets = [];
+            if (bossFocusUnlocked && boss) {
+                // boss focus: always hit boss first when alive
+                const dmg = rollAutoDmg();
+                boss.hp -= dmg;
+                spawnAttackEffect(boss.x, boss.y);
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#8b0000', life: 60 });
+                if (boss.hp <= 0) killBoss(boss);
+            } else if (worms.length > 0) {
+                if (!autoTarget || !worms.includes(autoTarget)) autoTarget = _pickAutoTarget();
+                if (autoTarget) {
                     const dmg = rollAutoDmg();
-                    boss.hp -= dmg;
-                    spawnAttackEffect(boss.x, boss.y);
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#8b0000', life: 60 });
-                    if (boss.hp <= 0) killBoss(boss);
-                } else if (worms.length > 0) {
-                    if (!autoTarget || !worms.includes(autoTarget)) autoTarget = _pickAutoTarget();
-                    if (autoTarget) {
-                        const dmg = rollAutoDmg();
-                        autoTarget.hp -= dmg;
-                        spawnAttackEffect(autoTarget.x, autoTarget.y);
-                        dmgNumbers.push({ x: autoTarget.x + (Math.random()*20-10), y: autoTarget.y - autoTarget.size, value: dmg, color: '#8b0000', life: 60 });
-                        hitTargets.push(autoTarget);
-                        if (autoTarget.hp <= 0) {
-                            killWorm(autoTarget);
-                            worms = worms.filter(w => w !== autoTarget);
-                            autoTarget = _pickAutoTarget();
-                            // Chain kill (A4) — instant kill another worm on kill proc
-                            if (skillChainChance() > 0 && Math.random() < skillChainChance() && worms.length > 0) {
-                                const chainTarget = _pickAutoTarget();
-                                if (chainTarget) {
-                                    killWorm(chainTarget);
-                                    worms = worms.filter(w => w !== chainTarget);
-                                    autoTarget = _pickAutoTarget();
-                                }
-                            }
-                        }
-                        // Multi-target (A3) — hit a second worm
-                        if (skillMultiTargetChance() > 0 && Math.random() < skillMultiTargetChance()) {
-                            const second = _pickAutoTarget(hitTargets);
-                            if (second) {
-                                const dmg2 = rollAutoDmg();
-                                second.hp -= dmg2;
-                                spawnAttackEffect(second.x, second.y);
-                                dmgNumbers.push({ x: second.x + (Math.random()*20-10), y: second.y - second.size, value: dmg2, color: '#8b0000', life: 60 });
-                                hitTargets.push(second);
-                                if (second.hp <= 0) {
-                                    killWorm(second);
-                                    worms = worms.filter(w => w !== second);
-                                    if (autoTarget && !worms.includes(autoTarget)) autoTarget = worms.length > 0 ? worms[0] : null;
-                                }
-                            }
-                        }
-                        // Extra Auto Target (knight skill 103) — hit one more worm
-                        if (knightExtraAutoTarget()) {
-                            const third = _pickAutoTarget(hitTargets);
-                            if (third) {
-                                const dmg3 = rollAutoDmg();
-                                third.hp -= dmg3;
-                                spawnAttackEffect(third.x, third.y);
-                                dmgNumbers.push({ x: third.x + (Math.random()*20-10), y: third.y - third.size, value: dmg3, color: '#8b0000', life: 60 });
-                                if (third.hp <= 0) {
-                                    killWorm(third);
-                                    worms = worms.filter(w => w !== third);
-                                }
+                    autoTarget.hp -= dmg;
+                    spawnAttackEffect(autoTarget.x, autoTarget.y);
+                    dmgNumbers.push({ x: autoTarget.x + (Math.random()*20-10), y: autoTarget.y - autoTarget.size, value: dmg, color: '#8b0000', life: 60 });
+                    hitTargets.push(autoTarget);
+                    if (autoTarget.hp <= 0) {
+                        killWorm(autoTarget);
+                        worms = worms.filter(w => w !== autoTarget);
+                        autoTarget = _pickAutoTarget();
+                    }
+                    // Multi-target (A3) — hit a second worm
+                    if (skillMultiTargetChance() > 0 && Math.random() < skillMultiTargetChance()) {
+                        const second = _pickAutoTarget(hitTargets);
+                        if (second) {
+                            const dmg2 = rollAutoDmg();
+                            second.hp -= dmg2;
+                            spawnAttackEffect(second.x, second.y);
+                            dmgNumbers.push({ x: second.x + (Math.random()*20-10), y: second.y - second.size, value: dmg2, color: '#8b0000', life: 60 });
+                            hitTargets.push(second);
+                            if (second.hp <= 0) {
+                                killWorm(second);
+                                worms = worms.filter(w => w !== second);
+                                if (autoTarget && !worms.includes(autoTarget)) autoTarget = worms.length > 0 ? worms[0] : null;
                             }
                         }
                     }
-                } else if (boss) {
-                    // no worms — attack boss even without boss focus
-                    const dmg = rollAutoDmg();
-                    boss.hp -= dmg;
-                    spawnAttackEffect(boss.x, boss.y);
-                    dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#8b0000', life: 60 });
-                    if (boss.hp <= 0) killBoss(boss);
+                    // Third target (A4) — hit a third worm
+                    if (skillThirdTargetChance() > 0 && Math.random() < skillThirdTargetChance()) {
+                        const thirdA4 = _pickAutoTarget(hitTargets);
+                        if (thirdA4) {
+                            const dmg3 = rollAutoDmg();
+                            thirdA4.hp -= dmg3;
+                            spawnAttackEffect(thirdA4.x, thirdA4.y);
+                            dmgNumbers.push({ x: thirdA4.x + (Math.random()*20-10), y: thirdA4.y - thirdA4.size, value: dmg3, color: '#8b0000', life: 60 });
+                            hitTargets.push(thirdA4);
+                            if (thirdA4.hp <= 0) {
+                                killWorm(thirdA4);
+                                worms = worms.filter(w => w !== thirdA4);
+                            }
+                        }
+                    }
+                    // Extra Auto Target (knight skill 103) — hit one more worm
+                    if (knightExtraAutoTarget()) {
+                        const extra = _pickAutoTarget(hitTargets);
+                        if (extra) {
+                            const dmg4 = rollAutoDmg();
+                            extra.hp -= dmg4;
+                            spawnAttackEffect(extra.x, extra.y);
+                            dmgNumbers.push({ x: extra.x + (Math.random()*20-10), y: extra.y - extra.size, value: dmg4, color: '#8b0000', life: 60 });
+                            if (extra.hp <= 0) {
+                                killWorm(extra);
+                                worms = worms.filter(w => w !== extra);
+                            }
+                        }
+                    }
                 }
+            } else if (boss) {
+                // no worms — attack boss even without boss focus
+                const dmg = rollAutoDmg();
+                boss.hp -= dmg;
+                spawnAttackEffect(boss.x, boss.y);
+                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size, value: dmg, color: '#8b0000', life: 60 });
+                if (boss.hp <= 0) killBoss(boss);
             }
         }
     }
@@ -2316,7 +2322,7 @@ function update() {
             const _hmmIsBoss = _hmmTarget === boss;
             const _fireHmm = (target, isBoss2) => {
                 const baseHp = isBoss2 ? target.maxHp : MOB_MAXHP;
-                let d = Math.ceil(baseHp * sorcHmmDmgFrac() * sorcHmmDmgMult());
+                let d = Math.ceil(baseHp * sorcHmmDmgFrac() * sorcHmmDmgMult() * sorcEssenceGatheringMult());
                 if (isBoss2) {
                     d = Math.ceil(d * sorcBossDmgMult() * sorcWeakeningBonusMult());
                     if (sPts(210) > 0) arcaneWeakeningStacks = Math.min(10, arcaneWeakeningStacks + 1);
@@ -2353,20 +2359,13 @@ function update() {
                     }
                 }
             }
-            // S11 Titan Slayer: every 3rd HMM also deals bonus damage to boss
-            if (sPts(211) > 0 && boss && hmmHitCounter % 3 === 0) {
-                const tsDmg = Math.ceil(boss.maxHp * sorcTitanSlayerDmgFrac() * sorcBossDmgMult() * sorcWeakeningBonusMult());
-                boss.hp -= tsDmg;
-                dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size - 10, value: tsDmg, color: '#cc00ff', life: 70 });
-                if (boss.hp <= 0) killBoss(boss);
-            }
+
         }
     }
-    // Sudden Death (Sorcerer S12): boss-only nuke every 10 min (reduced by S13 Sudden Death Mastery)
-    if (ascendedClass === 'sorcerer' && sPts(212) >= 1 && boss && Date.now() >= suddenDeathCooldownEnd) {
+    // Sudden Death (Sorcerer S11): boss-only nuke, fires every max(150s, 600s-pts×45s), deals 100% boss maxHP
+    if (ascendedClass === 'sorcerer' && sPts(211) >= 1 && boss && Date.now() >= suddenDeathCooldownEnd) {
         suddenDeathCooldownEnd = Date.now() + sorcSuddenDeathCooldownMs();
-        const sdFrac = 0.10 + Math.random() * 0.90; // random 10–100% of boss max HP
-        const sdDmg = Math.ceil(boss.maxHp * sdFrac * sorcBossDmgMult() * sorcWeakeningBonusMult());
+        const sdDmg = Math.ceil(boss.maxHp * 1.0 * sorcBossDmgMult() * sorcWeakeningBonusMult() * sorcEssenceGatheringMult());
         boss.hp -= sdDmg;
         dmgNumbers.push({ x: boss.x + (Math.random()*20-10), y: boss.y - boss.size - 16, value: sdDmg, color: '#ff00cc', life: 80 });
         spawnAttackEffect(boss.x, boss.y); // visual: hit effect on boss
@@ -2404,7 +2403,7 @@ function update() {
             document.getElementById('cd-hmm-bar').style.width  = hmmRemaining > 0 ? ((1 - hmmRemaining / HMM_COOLDOWN_MS) * 100) + '%' : '100%';
             document.getElementById('cd-hmm-text').textContent = hmmRemaining > 0 ? (hmmRemaining / 1000).toFixed(1) + 's' : 'Ready';
         }
-        if (sPts(212) >= 1) {
+        if (sPts(211) >= 1) {
             const sdRemaining = Math.max(0, suddenDeathCooldownEnd - Date.now());
             const sdCd = sorcSuddenDeathCooldownMs();
             document.getElementById('cd-sd-bar').style.width  = sdRemaining > 0 ? ((1 - sdRemaining / sdCd) * 100) + '%' : '100%';
