@@ -33,6 +33,7 @@ ANTI_CHEAT_MAX_GOLD_PER_SEC  = float(os.environ.get('ANTI_CHEAT_MAX_GOLD_PER_SEC
 ANTI_CHEAT_MIN_GOLD_BURST    = int(os.environ.get('ANTI_CHEAT_MIN_GOLD_BURST',    '10000'))
 ANTI_CHEAT_MAX_EXP_PER_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_EXP_PER_SEC',   '500000'))
 ANTI_CHEAT_MIN_EXP_BURST     = int(os.environ.get('ANTI_CHEAT_MIN_EXP_BURST',    '50000'))
+ANTI_CHEAT_BAN_THRESHOLD     = int(os.environ.get('ANTI_CHEAT_BAN_THRESHOLD',    '3'))
 # Cap elapsed time considered per save (prevents last_save_ms=0 loophole and caps offline gains).
 ANTI_CHEAT_MAX_ELAPSED_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_ELAPSED_SEC',   str(8 * 3600)))
 
@@ -1093,6 +1094,15 @@ class Handler(BaseHTTPRequestHandler):
                         f"gold(rep={reported_gold},max={max_allowed_gold}) "
                         f"exp(rep={reported_exp},max={max_allowed_exp})"
                     )
+                    if cheat_flags >= ANTI_CHEAT_BAN_THRESHOLD:
+                        print(f"[anti-cheat] BANNED user={player['username']} after {cheat_flags} flags — deleting account")
+                        with _write_lock:
+                            c = db()
+                            c.execute('DELETE FROM players WHERE id=?', (player['id'],))
+                            c.commit()
+                        _player_data_cache.pop(player['id'], None)
+                        self.send_json(403, {'error': 'banned', 'message': 'Your account has been permanently banned for cheating.'})
+                        return
 
                 # ── Write validated values back into state ────────────────
                 state['score'] = score

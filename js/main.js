@@ -1415,6 +1415,14 @@ async function saveProgress() {
             if (typeof _d.level === 'number' && _d.level < level) level = _d.level;
             if (typeof _d.gold  === 'number' && _d.gold  < gold)  gold  = _d.gold;
             if (typeof _d.exp   === 'number' && _d.exp   < exp)   exp   = _d.exp;
+        } else if (_res.status === 403) {
+            const _d = await _res.json().catch(() => ({}));
+            clearInterval(_saveTimer);
+            clearInterval(_sbTimer);
+            localStorage.removeItem('rk_token');
+            localStorage.removeItem('rk_username');
+            alert(_d.message || 'Your account has been banned.');
+            location.reload();
         }
     } catch (_) {}
 }
