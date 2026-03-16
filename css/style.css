@@ -200,7 +200,8 @@ hr {
 
 .cd-bar-basic { background: linear-gradient(to right, #882222, #dd4444); }
 .cd-bar-fire  { background: linear-gradient(to right, #884400, #dd8800); }
-.cd-bar-ue    { background: linear-gradient(to right, #550088, #aa22ee); }
+.cd-bar-hmm   { background: linear-gradient(to right, #550088, #aa22ee); }
+.cd-bar-sd    { background: linear-gradient(to right, #880044, #ff00cc); }
 
 /* ── Buttons (base) ──────────────────────────────────────────── */
 #hud-left button,
@@ -1645,6 +1646,7 @@ canvas {
 }
 .craft-icon { font-size: 18px; }
 .craft-name { font-size: 12px; font-weight: bold; color: #f0c040; }
+.craft-badge { margin-left: auto; font-size: 10px; font-weight: bold; color: #f0c040; background: rgba(240, 192, 64, 0.18); border: 1px solid rgba(240, 192, 64, 0.5); padding: 2px 6px; border-radius: 6px; }
 
 .craft-desc { font-size: 10px; color: #7a6030; margin-bottom: 6px; }
 
