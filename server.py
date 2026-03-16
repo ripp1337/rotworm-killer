@@ -121,15 +121,45 @@ class _TursoCursor:
         desc = self._cur.description
         return [_DictRow(desc, r) for r in self._cur.fetchall()]
 
+def _turso_reconnect() -> '_TursoConn':
+    """Create a fresh Turso connection, replacing the global one."""
+    global _turso_conn
+    print('[turso] reconnecting after stale stream...')
+    try:
+        if _turso_conn is not None:
+            try:
+                _turso_conn.close()
+            except Exception:
+                pass
+    except Exception:
+        pass
+    raw = libsql.connect(str(DB_PATH), sync_url=TURSO_URL, auth_token=TURSO_AUTH_TOKEN)
+    raw.sync()
+    _turso_conn = _TursoConn(raw)
+    print('[turso] reconnected.')
+    return _turso_conn
+
 class _TursoConn:
     """Connection wrapper that adds sqlite3.Row-style column-name access."""
     def __init__(self, raw):
         self._raw = raw
         self.row_factory = None  # present so assignment doesn't fail
     def execute(self, sql, params=()):
-        return _TursoCursor(self._raw.execute(sql, params))
+        try:
+            return _TursoCursor(self._raw.execute(sql, params))
+        except Exception as e:
+            if 'stream not found' in str(e) or 'stream' in str(e).lower():
+                fresh = _turso_reconnect()
+                return _TursoCursor(fresh._raw.execute(sql, params))
+            raise
     def commit(self):
-        self._raw.commit()
+        try:
+            self._raw.commit()
+        except Exception as e:
+            if 'stream not found' in str(e) or 'stream' in str(e).lower():
+                _turso_reconnect()
+            else:
+                raise
     def sync(self):
         self._raw.sync()
     def close(self):
@@ -307,8 +337,10 @@ _chat_rate: dict = {}           # username -> last send timestamp (ms)
 
 def db() -> _TursoConn | sqlite3.Connection:
     if _USE_TURSO:
+        if _turso_conn is None:
+            _turso_reconnect()
         assert _turso_conn is not None
-        return _turso_conn  # single global connection — no per-request libsql overhead
+        return _turso_conn  # single global connection — auto-reconnects on stream expiry
     if not hasattr(_tls, 'conn'):
         _tls.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
         _tls.conn.row_factory = sqlite3.Row
