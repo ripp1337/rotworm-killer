@@ -103,6 +103,11 @@ class _DictRow:
         return self._values[self._keys.index(key)]
     def keys(self):
         return self._keys
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except (KeyError, ValueError):
+            return default
     def __iter__(self):
         return iter(self._values)
 
@@ -386,7 +391,8 @@ def auth_player(token: str):
             ).fetchone()
             if row:
                 _cache_player_data(row)
-            return row
+                return _get_cached_player_data(player_id)
+            return None
         del _session_cache[token]  # expired
     # Slow path: first request for this session — check DB.
     row = db().execute('SELECT player_id FROM sessions WHERE token=?', (token,)).fetchone()
@@ -402,7 +408,8 @@ def auth_player(token: str):
     ).fetchone()
     if row:
         _cache_player_data(row)
-    return row
+        return _get_cached_player_data(player_id)
+    return None
 
 # ── State versioning ──────────────────────────────────────────────
 LATEST_STATE_VERSION = 7
