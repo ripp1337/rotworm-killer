@@ -1157,7 +1157,7 @@ class Handler(BaseHTTPRequestHandler):
                         print(f'[save-async] player={_un} error: {exc}')
                 threading.Thread(target=_do_save, daemon=True).start()
 
-                self.send_json(200, {'ok': True, 'score': score, 'level': level, 'flagged': suspicious})
+                self.send_json(200, {'ok': True, 'score': score, 'level': level, 'gold': gold_val, 'exp': exp_val, 'flagged': suspicious})
 
             elif path == '/api/forgot-password':
                 email = (body.get('email') or '').strip().lower()

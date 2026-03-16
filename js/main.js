@@ -1398,7 +1398,7 @@ async function saveProgress() {
     if (!Number.isFinite(score) || score < 0) score = 0;
     if (!Number.isFinite(level) || level < 1) level = 1;
     try {
-        await fetch('/api/save', {
+        const _res = await fetch('/api/save', {
             method: 'POST',
             keepalive: true,
             headers: {
@@ -1407,6 +1407,15 @@ async function saveProgress() {
             },
             body: JSON.stringify({ state: getProgress() }),
         });
+        // Reconcile client state with server-authoritative clamped values.
+        // This corrects any console manipulation within one save cycle (≤30s).
+        if (_res.ok) {
+            const _d = await _res.json();
+            if (typeof _d.score === 'number' && _d.score < score) score = _d.score;
+            if (typeof _d.level === 'number' && _d.level < level) level = _d.level;
+            if (typeof _d.gold  === 'number' && _d.gold  < gold)  gold  = _d.gold;
+            if (typeof _d.exp   === 'number' && _d.exp   < exp)   exp   = _d.exp;
+        }
     } catch (_) {}
 }
 
