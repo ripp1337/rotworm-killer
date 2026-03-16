@@ -440,7 +440,6 @@ function checkLevelUp() {
 }
 
 function updateHUD() {
-    console.log('updateHUD called', { weaponIndex, weapon: WEAPONS[weaponIndex], img: document.getElementById('hud-weapon-img') });
     const expNeeded = expForLevel(level + 1);
     const expCurrent = expForLevel(level);
     const progress = (exp - expCurrent) / (expNeeded - expCurrent);
