@@ -165,6 +165,7 @@ export function handleGameClick(e) {
 }
 
 // Auto-attack (dispatched from canvas loop)
+let _lastAutoSaveMs = 0;
 window.addEventListener('autoAttack', () => {
     const area   = getAreaById(S.currentArea);
     const target = _pickTarget();
@@ -176,6 +177,13 @@ window.addEventListener('autoAttack', () => {
 
     spawnFloatingDmg(target.x + target.size / 2, target.y, dmg, { isBoss });
     _checkKill(target, area, Date.now());
+
+    // Save to DB at most once every 30 s during auto-attack so area unlock works
+    const now = Date.now();
+    if (now - _lastAutoSaveMs > 30_000) {
+        _lastAutoSaveMs = now;
+        saveProgress();
+    }
 });
 
 // ── Pick the monster that was clicked (hit-test) ──────────────────
@@ -192,13 +200,13 @@ function _pickClickedTarget(e) {
     // Boss takes priority (larger target)
     if (S.boss) {
         const b = S.boss;
-        if (cx >= b.x - b.size && cx <= b.x + b.size &&
-            cy >= b.y - b.size && cy <= b.y + b.size) return b;
+        if (cx >= b.x && cx <= b.x + b.size &&
+            cy >= b.y && cy <= b.y + b.size) return b;
     }
     // Check worms — prefer lowest HP among clicked ones
     const hit = S.worms.filter(w =>
-        cx >= w.x - w.size && cx <= w.x + w.size &&
-        cy >= w.y - w.size && cy <= w.y + w.size
+        cx >= w.x && cx <= w.x + w.size &&
+        cy >= w.y && cy <= w.y + w.size
     );
     if (hit.length === 0) return null;
     return hit.reduce((a, b) => a.hp < b.hp ? a : b);

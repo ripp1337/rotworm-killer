@@ -71,8 +71,8 @@ function _setAreaInfo() {
             btn.textContent = 'All areas unlocked';
             btn.disabled    = true;
         } else {
-            btn.textContent = `Unlock ${next.id} (${_fmt(next.unlockCost)}g, Lv${next.levelReq})`;
-            btn.disabled    = S.gold < next.unlockCost || S.level < next.levelReq
+            btn.textContent = `Unlock ${next.id} (${_fmt(next.goldCost)}g, Lv${next.levelReq})`;
+            btn.disabled    = S.gold < next.goldCost || S.level < next.levelReq
                               || S.unlockedAreas.includes(next.id);
         }
     }

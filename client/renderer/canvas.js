@@ -4,7 +4,7 @@ import { S } from '../systems/state.js';
 import { AREAS, getAreaById, getAreaIndex } from '../data/areas.js';
 import { TILE } from '../data/constants.js';
 import {
-    effectiveBasicCooldown, effectiveAutoCooldown,
+    effectiveBasicCooldown, effectiveAutoCooldown, skillPts,
 } from '../systems/skills.js';
 import { fillToMaxMonsters, checkSpawnBoss } from '../systems/spawner.js';
 import { syncSpriteLayer }  from './sprites.js';
@@ -68,9 +68,9 @@ export function update(dtSec) {
     const area = getAreaById(S.currentArea);
     if (!area) return;
 
-    // Auto-attack tick
+    // Auto-attack tick — fires if A1 skill is unlocked (or manual toggle enabled)
     const now = Date.now();
-    if (S.autoEnabled && now >= S.nextAutoAttackMs) {
+    if ((skillPts(11) >= 1 || S.autoEnabled) && now >= S.nextAutoAttackMs) {
         S.nextAutoAttackMs = now + effectiveAutoCooldown();
         // dispatch a synthetic auto-attack event (handled in main.js)
         window.dispatchEvent(new CustomEvent('autoAttack'));

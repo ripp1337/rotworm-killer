@@ -16,6 +16,7 @@ export const AREAS = [
         mobGoldMax:  4,
         bossName:    'Cave Rat',
         bossSprite:  'Cave_Rat.gif',
+        bossHp:      150,
         lootChance:  0.05,
     },
     {
@@ -32,6 +33,7 @@ export const AREAS = [
         mobGoldMax:  15,
         bossName:    'Vesperoth',
         bossSprite:  'Vesperoth.gif',
+        bossHp:      600,
         lootChance:  0.08,
     },
     {
@@ -48,6 +50,7 @@ export const AREAS = [
         mobGoldMax:  30,
         bossName:    'Behemoth',
         bossSprite:  'Behemoth.gif',
+        bossHp:      2600,
         lootChance:  0.10,
     },
     {
@@ -64,6 +67,7 @@ export const AREAS = [
         mobGoldMax:  50,
         bossName:    'Bonebeast',
         bossSprite:  'Bonebeast.gif',
+        bossHp:      4000,
         lootChance:  0.14,
     },
     {
@@ -80,6 +84,7 @@ export const AREAS = [
         mobGoldMax:  60,
         bossName:    'Dragon Lord',
         bossSprite:  'Dragon_Lord.gif',
+        bossHp:      10000,
         lootChance:  0.18,
     },
     {
@@ -96,6 +101,7 @@ export const AREAS = [
         mobGoldMax:  80,
         bossName:    'Mamma Long Legs',
         bossSprite:  'Unwanted.gif',
+        bossHp:      13000,
         lootChance:  0.22,
     },
     {
@@ -112,6 +118,7 @@ export const AREAS = [
         mobGoldMax:  100,
         bossName:    'Infernalist',
         bossSprite:  'Infernalist.gif',
+        bossHp:      40000,
         lootChance:  0.28,
     },
     {
@@ -128,6 +135,7 @@ export const AREAS = [
         mobGoldMax:  125,
         bossName:    'Orshabaal',
         bossSprite:  'Weakened_Demon.gif',
+        bossHp:      80000,
         lootChance:  0.34,
     },
     {
@@ -144,6 +152,7 @@ export const AREAS = [
         mobGoldMax:  150,
         bossName:    'Massacre',
         bossSprite:  'Arbaziloth.gif',
+        bossHp:      120000,
         lootChance:  0.38,
     },
     {
@@ -160,6 +169,7 @@ export const AREAS = [
         mobGoldMax:  300,
         bossName:    'Sight of Surrender',
         bossSprite:  'Sight_of_Surrender.gif',
+        bossHp:      180000,
         lootChance:  0.43,
     },
     {
@@ -176,6 +186,7 @@ export const AREAS = [
         mobGoldMax:  500,
         bossName:    'Devovorga',
         bossSprite:  'Devovorga.gif',
+        bossHp:      300000,
         lootChance:  0.48,
     },
 ];
