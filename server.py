@@ -1101,7 +1101,7 @@ class Handler(BaseHTTPRequestHandler):
         if not _save_ok:
             print(f'[save] player={uname} FAILED after 3 attempts — progress may be lost')
 
-        self.send_json(200, {'ok': True, 'score': score, 'level': level, 'gold': gold_val, 'exp': exp_val, 'flagged': suspicious})
+        self.send_json(200, {'ok': True, 'score': score, 'level': level, 'gold': gold_val, 'exp': exp_val})
 
     def _post_forgot_password(self, body: dict) -> None:
         email = (body.get('email') or '').strip().lower()
