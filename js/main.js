@@ -82,8 +82,8 @@ const AREAS = [
         mobSprite: 'Rat.gif',
         mobHp: 15,
         mobExp: 10,
-        mobGoldMin: 2,
-        mobGoldMax: 4,
+        mobGoldMin: 3,
+        mobGoldMax: 7,
         mobSize: 36,
         bossName: 'Cave Rat',
         bossSprite: 'Cave_Rat.gif',
@@ -99,8 +99,8 @@ const AREAS = [
         mobSprite: 'Rotworm.gif',
         mobHp: 60,
         mobExp: 40,
-        mobGoldMin: 5,
-        mobGoldMax: 15,
+        mobGoldMin: 13,
+        mobGoldMax: 29,
         mobSize: 20,
         bossName: 'Versperoth',
         bossSprite: 'Versperoth.gif',
@@ -114,9 +114,9 @@ const AREAS = [
         mobName: 'Cyclops',
         mobSprite: 'Cyclops.gif',
         mobHp: 260,
-        mobExp: 150,
-        mobGoldMin: 10,
-        mobGoldMax: 30,
+        mobExp: 180,
+        mobGoldMin: 47,
+        mobGoldMax: 109,
         mobSize: 40,
         bossName: 'Behemoth',
         bossSprite: 'Behemoth.gif',
@@ -130,9 +130,9 @@ const AREAS = [
         mobName: 'Demon Skeleton',
         mobSprite: 'Demon_Skeleton.gif',
         mobHp: 400,
-        mobExp: 240,
-        mobGoldMin: 20,
-        mobGoldMax: 50,
+        mobExp: 260,
+        mobGoldMin: 72,
+        mobGoldMax: 168,
         mobSize: 42,
         hpBarOffset: 18,
         bossName: 'Bonebeast',
@@ -147,9 +147,9 @@ const AREAS = [
         mobName: 'Dragon',
         mobSprite: 'Dragon.gif',
         mobHp: 1000,
-        mobExp: 700,
-        mobGoldMin: 30,
-        mobGoldMax: 60,
+        mobExp: 660,
+        mobGoldMin: 120,
+        mobGoldMax: 280,
         mobSize: 48,
         bossName: 'Dragon Lord',
         bossSprite: 'Dragon_Lord.gif',
@@ -163,9 +163,9 @@ const AREAS = [
         mobName: 'Giant Spider',
         mobSprite: 'Giant_Spider.gif',
         mobHp: 1300,
-        mobExp: 900,
-        mobGoldMin: 40,
-        mobGoldMax: 80,
+        mobExp: 860,
+        mobGoldMin: 156,
+        mobGoldMax: 364,
         mobSize: 40,
         bossName: 'Mamma Long Legs',
         bossSprite: 'Unwanted.gif',
@@ -179,9 +179,9 @@ const AREAS = [
         mobName: 'Warlock',
         mobSprite: 'Warlock.gif',
         mobHp: 4000,
-        mobExp: 3000,
-        mobGoldMin: 50,
-        mobGoldMax: 100,
+        mobExp: 2640,
+        mobGoldMin: 360,
+        mobGoldMax: 840,
         bossName: 'Infernalist',
         bossSprite: 'Infernalist.gif',
     },
@@ -194,9 +194,9 @@ const AREAS = [
         mobName: 'Demon',
         mobSprite: 'Demon.gif',
         mobHp: 8000,
-        mobExp: 6000,
-        mobGoldMin: 75,
-        mobGoldMax: 125,
+        mobExp: 5280,
+        mobGoldMin: 720,
+        mobGoldMax: 1680,
         mobSize: 40,
         bossName: 'Weakened Demon',
         bossSprite: 'Weakened_Demon.gif',
@@ -210,9 +210,9 @@ const AREAS = [
         mobName: 'Juggernaut',
         mobSprite: 'Juggernaut.gif',
         mobHp: 12000,
-        mobExp: 9000,
-        mobGoldMin: 100,
-        mobGoldMax: 150,
+        mobExp: 7920,
+        mobGoldMin: 720,
+        mobGoldMax: 1680,
         mobSize: 40,
         bossName: 'Arbaziloth',
         bossSprite: 'Arbaziloth.gif',
@@ -226,9 +226,9 @@ const AREAS = [
         mobName: 'Guzzlemaw',
         mobSprite: 'Guzzlemaw.gif',
         mobHp: 18000,
-        mobExp: 14000,
-        mobGoldMin: 200,
-        mobGoldMax: 300,
+        mobExp: 11880,
+        mobGoldMin: 1080,
+        mobGoldMax: 2520,
         mobSize: 40,
         bossName: 'Sight of Surrender',
         bossSprite: 'Sight_of_Surrender.gif',
@@ -242,9 +242,9 @@ const AREAS = [
         mobName: 'Void Emissary',
         mobSprite: 'The_Unarmored_Voidborn.gif',
         mobHp: 30000,
-        mobExp: 20000,
-        mobGoldMin: 300,
-        mobGoldMax: 500,
+        mobExp: 19800,
+        mobGoldMin: 1800,
+        mobGoldMax: 4200,
         mobSize: 40,
         bossName: 'Devovorga',
         bossSprite: 'Devovorga.gif',
@@ -541,7 +541,7 @@ let spawnPaused = false;
 let dmgNumbers = []; // floating damage numbers
 
 const BASIC_COOLDOWN_MS  = 500;    // 0.5s
-const GFB_COOLDOWN_MS    = 20000;  // 20s base (reduced by Fireball CDR skill)
+const GFB_COOLDOWN_MS    = 15000;  // 15s base (reduced by Fireball CDR skill)
 const GFB_GOLD_COST      = 0;      // free to cast
 const GFB_UNLOCK_LEVEL   = 4;
 const GFB_UNLOCK_GOLD    = 100;
@@ -594,7 +594,7 @@ let _lastCraftRenderSec = -1;
 
 const AUTO_UNLOCK_LEVEL = 5;
 const AUTO_UNLOCK_GOLD  = 0;
-const AUTO_COOLDOWN_MS  = 1000; // fixed 1s, unaffected by upgrades
+const AUTO_COOLDOWN_MS  = 800;  // 0.8s base (reduced by Auto-Attack skill)
 let autoUnlocked   = false;
 let autoEnabled    = false;
 let autoTarget     = null;
@@ -925,13 +925,14 @@ function craftPotion(id) {
     _setPotionEnd(id, Math.max(now, currentEnd) + duration);
 
     renderCrafting();
+    saveProgress();
 }
 
 // ── Skill Tree ─────────────────────────────────────────────────────────────────
 // 3 columns × 4 rows, 10 points each. No level requirements — only prereq chain.
 const GENERAL_SKILLS = [
     // Column A — Automation
-    { id: 11, col: 1, row: 1, name: 'Auto-Attack',        max: 10, prereqs: [],   costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                                          desc: 'Unlocks auto-attack. Reduces auto-attack cooldown by 0.04s per point (0.50s → 0.10s at max)' },
+    { id: 11, col: 1, row: 1, name: 'Auto-Attack',        max: 10, prereqs: [],   costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                                          desc: 'Unlocks auto-attack. Reduces auto-attack cooldown by 0.04s per point (0.80s → 0.40s at max)' },
     { id: 12, col: 1, row: 2, name: 'Auto-Attack Damage', max: 10, prereqs: [11], costs: [1000,2000,4000,8000,16000,32000,64000,128000,256000,512000],                                               desc: '+10% auto-attack damage per point (+100% at max). Requires 1pt Auto-Attack' },
     { id: 13, col: 1, row: 3, name: 'Multi-Target',       max: 10, prereqs: [12], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                           desc: '+10% chance per point to hit a 2nd monster (100% at max). Requires 1pt Auto-Attack Damage' },
     { id: 14, col: 1, row: 4, name: 'Hyper Automation',   max: 10, prereqs: [13], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],               desc: '+10% auto-attack damage per point, +10% chance to hit a 3rd target (100% at max). Requires 1pt Multi-Target' },
@@ -941,8 +942,8 @@ const GENERAL_SKILLS = [
     { id: 23, col: 2, row: 3, name: 'Material Harvesting',max: 10, prereqs: [22], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                           desc: '+3% essence drop chance, +2% drop quantity per point. Requires 1pt Exp. Mastery' },
     { id: 24, col: 2, row: 4, name: 'Boss Attraction',    max: 10, prereqs: [23], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],               desc: '+2% boss spawn rate, +3% boss loot, +1% extra boss chance per point. Requires 1pt Material Harvesting' },
     // Column C — Fireball
-    { id: 31, col: 3, row: 1, name: 'Fireball Mastery',   max: 10, prereqs: [],   costs: [1000,2000,4000,8000,16000,32000,64000,128000,256000,512000],                                               desc: 'Unlocks Fireball (always auto-casts). Base 10% HP dmg +5%/pt (60% at max). 20s base cooldown' },
-    { id: 32, col: 3, row: 2, name: 'Fireball CDR',       max: 10, prereqs: [31], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                                    desc: '-1s fireball cooldown per point (min 10s). Requires 1pt Fireball Mastery' },
+    { id: 31, col: 3, row: 1, name: 'Fireball Mastery',   max: 10, prereqs: [],   costs: [1000,2000,4000,8000,16000,32000,64000,128000,256000,512000],                                               desc: 'Unlocks Fireball (always auto-casts). Base 10% HP dmg +5%/pt (60% at max). 15s base cooldown' },
+    { id: 32, col: 3, row: 2, name: 'Fireball CDR',       max: 10, prereqs: [31], costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],                                    desc: '-0.7s fireball cooldown per point (min 8s). Requires 1pt Fireball Mastery' },
     { id: 33, col: 3, row: 3, name: 'Fireball Annihilation', max: 10, prereqs: [32], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                      desc: '+3% chance per fireball hit to instantly kill all non-boss monsters (30% at max). Requires 1pt Fireball CDR' },
     { id: 34, col: 3, row: 4, name: 'Ember of Renewal',   max: 10, prereqs: [33], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],               desc: '+2% chance per point for fireball to instantly reset its cooldown on kill (20% at max). Requires 1pt Fireball Annihilation' },
 ];
@@ -970,6 +971,7 @@ function buySkill(id) {
     if (id === 11 && skillPts(11) === 1) { autoUnlocked = true; bossFocusUnlocked = true; autoEnabled = true; autoTarget = _pickAutoTarget(); }
     if (id === 31 && skillPts(31) === 1) { gfbUnlocked = true; autoGfbUnlocked = true; autoGfbEnabled = true; }
     renderSkillTree();
+    saveProgress();
 }
 
 // ── General skill effect helpers ──────────────────────────────────────────────
@@ -1033,6 +1035,7 @@ function buyKnightSkill(id) {
     gold -= (skill.costs[kPts(skill.id)] ?? 0);
     knightSkillPts[id] = (knightSkillPts[id] || 0) + 1;
     renderSkillTree();
+    saveProgress();
 }
 
 // Knight effect helpers
@@ -1077,6 +1080,7 @@ function buySorcSkill(id) {
     gold -= (skill.costs[sPts(skill.id)] ?? 0);
     sorcSkillPts[id] = (sorcSkillPts[id] || 0) + 1;
     renderSkillTree();
+    saveProgress();
 }
 
 // Sorc effect helpers
@@ -1306,8 +1310,8 @@ function effectiveBasicCooldown() {
     let cd = Math.max(100, BASIC_COOLDOWN_MS - kPts(105) * 40); // K5 Combo Meter: -40ms/pt (0.50s → 0.10s at max)
     return cd * potionCdrMult();
 }
-function effectiveAutoCooldown()  { return Math.max(100, 500 - skillPts(11) * 40) * potionCdrMult(); }  // A1: -40ms/pt (500→100ms)
-function effectiveGfbCooldown()   { return Math.max(10000, GFB_COOLDOWN_MS - skillPts(32) * 1000) * potionCdrMult(); }
+function effectiveAutoCooldown()  { return Math.max(400, 800 - skillPts(11) * 40) * potionCdrMult(); }  // A1: -40ms/pt (800→400ms)
+function effectiveGfbCooldown()   { return Math.max(8000, GFB_COOLDOWN_MS - skillPts(32) * 700) * potionCdrMult(); }
 function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * potionCdrMult(); }
 
 // ── Progress save / load ─────────────────────────────────────────
@@ -1804,7 +1808,26 @@ async function initAuth() {
     document.getElementById('login-modal').style.display = 'flex';
 }
 
-window.addEventListener('beforeunload', () => { saveProgress(); });
+window.addEventListener('beforeunload', () => {
+    // Use sendBeacon for reliable fire-and-forget save on tab close / refresh.
+    // Regular fetch() is not guaranteed to complete during page unload.
+    if (!authToken) return;
+    const payload = JSON.stringify({ state: getProgress(), _token: authToken });
+    const sent = navigator.sendBeacon
+        ? navigator.sendBeacon('/api/save', new Blob(
+            [payload],
+            { type: 'application/json' },
+          ))
+        : false;
+    // Fallback: synchronous XHR if sendBeacon is unavailable (rare).
+    if (!sent) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/save', false); // synchronous
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + authToken);
+        try { xhr.send(payload); } catch (_) {}
+    }
+});
 
 function spawnEffect(x, y, radius) {
     const tileSize = 100; // native gif size
@@ -2609,6 +2632,7 @@ weaponUpgradeBtn.addEventListener('click', () => {
     if (!next || gold < next.cost || level < next.minLevel) return;
     gold -= next.cost;
     weaponIndex++;
+    saveProgress();
 });
 
 // Area unlock button

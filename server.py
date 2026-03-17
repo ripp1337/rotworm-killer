@@ -20,6 +20,7 @@ from email.mime.multipart import MIMEMultipart
 import collections
 import queue as _queue_mod
 import os
+from concurrent.futures import ThreadPoolExecutor
 import tempfile
 PORT    = int(os.environ.get('PORT', 3000))
 STATIC  = Path(__file__).parent
@@ -178,6 +179,9 @@ class _TursoConn:
             if ('stream not found' in e_str or 'stream' in e_str.lower() or
                     e_type == 'PanicException' or 'unwrap' in e_str.lower()):
                 _turso_reconnect()
+                # The uncommitted write was on the now-dead connection and is lost.
+                # Raise so callers know the commit failed and must retry the write.
+                raise RuntimeError('Turso stream expired during commit; caller must retry.') from e
             else:
                 raise
     def sync(self):
@@ -645,7 +649,22 @@ MIME = {
 
 # ── Server (suppress harmless Railway health-probe noise) ────────────
 class _Server(ThreadingHTTPServer):
-    import sys as _sys
+    # Use a bounded thread pool instead of unbounded thread-per-request.
+    # ThreadingHTTPServer default spawns a new OS thread for every connection;
+    # under load (or slow saves) this exhausts the process thread limit and
+    # raises "can't start new thread". 64 workers handles concurrent players
+    # while staying well within Railway's limits.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._pool = ThreadPoolExecutor(max_workers=64)
+
+    def process_request(self, request, client_address):
+        self._pool.submit(self.process_request_thread, request, client_address)
+
+    def server_close(self):
+        self._pool.shutdown(wait=False)
+        super().server_close()
+
     def handle_error(self, request, client_address):
         import sys
         exc = sys.exc_info()[1]
@@ -964,7 +983,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, {'ok': True})
 
     def _post_save(self, body: dict) -> None:
-        player = auth_player(self.get_token())
+        # Accept token from body to support navigator.sendBeacon (can't set headers).
+        token = self.get_token() or _normalize_token(str(body.get('_token') or ''))
+        player = auth_player(token)
         if not player:
             return self.send_json(401, {'error': 'Not authenticated.'})
         state = body.get('state')
@@ -1007,7 +1028,13 @@ class Handler(BaseHTTPRequestHandler):
 
         allowed_gold_increase = max(ANTI_CHEAT_MIN_GOLD_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_GOLD_PER_SEC))
         max_allowed_gold = prev_gold + allowed_gold_increase
-        gold_val = min(max(reported_gold, prev_gold), max_allowed_gold)
+        # Gold can legitimately decrease (spending). Only rate-limit and flag increases.
+        if reported_gold <= prev_gold:
+            gold_val = reported_gold
+            gold_suspicious = False
+        else:
+            gold_val = min(reported_gold, max_allowed_gold)
+            gold_suspicious = reported_gold > max_allowed_gold
 
         allowed_exp_increase = max(ANTI_CHEAT_MIN_EXP_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_EXP_PER_SEC))
         max_allowed_exp = prev_exp + allowed_exp_increase
@@ -1018,7 +1045,7 @@ class Handler(BaseHTTPRequestHandler):
 
         suspicious = (
             reported_score > max_allowed_score or reported_level > max_allowed_level
-            or reported_gold > max_allowed_gold or reported_exp > max_allowed_exp
+            or gold_suspicious or reported_exp > max_allowed_exp
         )
         if suspicious:
             cheat_flags += 1
@@ -1079,19 +1106,27 @@ class Handler(BaseHTTPRequestHandler):
 
         pid   = player['id']
         uname = player['username']
-        def _do_save(_sj=state_json, _sc=score, _lv=level, _ev=exp_val, _ts=now_ms,
-                     _cf=cheat_flags, _tc=new_total_clicks, _pid=pid, _un=uname):
+        # Synchronous save with retry — ensures progress is durable before responding.
+        # An async daemon thread risks being killed on Railway redeploy/restart,
+        # silently losing the save even though the client received HTTP 200.
+        _save_ok = False
+        for _attempt in range(3):
             try:
                 with _write_lock:
                     c = db()
                     c.execute(
                         'UPDATE players SET state=?,score=?,level=?,exp=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
-                        (_sj, _sc, _lv, _ev, _ts, _cf, _tc, _pid)
+                        (state_json, score, level, exp_val, now_ms, cheat_flags, new_total_clicks, pid)
                     )
                     c.commit()
+                _save_ok = True
+                break
             except Exception as exc:
-                print(f'[save-async] player={_un} error: {exc}')
-        threading.Thread(target=_do_save, daemon=True).start()
+                print(f'[save] player={uname} attempt={_attempt + 1} error: {exc}')
+                if _attempt < 2:
+                    time.sleep(0.05)
+        if not _save_ok:
+            print(f'[save] player={uname} FAILED after 3 attempts — progress may be lost')
 
         self.send_json(200, {'ok': True, 'score': score, 'level': level, 'gold': gold_val, 'exp': exp_val, 'flagged': suspicious})
 
