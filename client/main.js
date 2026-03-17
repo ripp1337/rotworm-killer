@@ -149,7 +149,8 @@ export function handleGameClick(e) {
     const target = _pickClickedTarget(e);
     if (!target) return;   // clicked empty space — don't consume cooldown
 
-    _lastClickMs = now;
+    _lastClickMs       = now;
+    S.lastBasicAttack  = now;
     S.totalClicks++;
 
     const area   = getAreaById(S.currentArea);
@@ -240,6 +241,8 @@ function _checkKill(target, area, now) {
     if (isBoss) {
         S.boss = null;
         S.bossKillCounter++;
+        if (isUber) S.totalUberBossesKilled++;
+        else        S.totalBossesKilled++;
         S.arcaneWeakeningStacks = 0;
     } else {
         S.worms = S.worms.filter(w => w.id !== target.id);
@@ -255,6 +258,17 @@ function _checkKill(target, area, now) {
     S.gold  += g;
     S.exp   += e;
     S.score += isBoss ? 100 : 10;
+
+    // Stats tracking
+    S.totalGoldGenerated += g;
+    const _now5 = Date.now();
+    if (!S.statsWindowStart || _now5 - S.statsWindowStart > 300_000) {
+        S.statsWindowStart = _now5;
+        S.statsWindowGold  = 0;
+        S.statsWindowExp   = 0;
+    }
+    S.statsWindowGold += g;
+    S.statsWindowExp  += e;
 
     // Floating reward numbers above the killed entity
     const rx = target.x + target.size / 2;
@@ -351,6 +365,32 @@ function _bindUI() {
     });
     _on('btnLogout', 'click', doLogout);
 
+    // Stats modal
+    _on('btnStats', 'click', () => {
+        const body = document.getElementById('stats-modal-body');
+        if (body) {
+            const _f = n => n.toLocaleString('de-DE');
+            const now5 = Date.now();
+            const elapsed = S.statsWindowStart
+                ? Math.min(5, ((now5 - S.statsWindowStart) / 60_000)).toFixed(1)
+                : '0.0';
+            body.innerHTML = `
+                <div><strong>Total monsters killed:</strong> ${_f(S.totalMonstersKilled)}</div>
+                <div><strong>Boss kills:</strong> ${_f(S.totalBossesKilled)}</div>
+                <div><strong>Uber boss kills:</strong> ${_f(S.totalUberBossesKilled)}</div>
+                <div><strong>Total clicks:</strong> ${_f(S.totalClicks)}</div>
+                <div><strong>Potions crafted:</strong> ${_f(S.totalPotionsCrafted)}</div>
+                <div><strong>Total gold generated:</strong> ${_f(S.totalGoldGenerated)}</div>
+                <hr style="border-color:#5a4020;margin:8px 0">
+                <div style="color:#aaa; font-size:11px">Last ${elapsed} min window:</div>
+                <div><strong>Gold earned:</strong> ${_f(S.statsWindowGold)}</div>
+                <div><strong>EXP earned:</strong> ${_f(S.statsWindowExp)}</div>
+            `;
+        }
+        const m = document.getElementById('stats-modal');
+        if (m) m.style.display = 'flex';
+    });
+
     // Game canvas click
     document.getElementById('gameCanvas')?.addEventListener('click', handleGameClick);
     document.getElementById('spriteLayer')?.addEventListener('click', handleGameClick);
@@ -416,12 +456,6 @@ function _bindUI() {
     document.getElementById('chat-input')?.addEventListener('keydown', e => {
         if (e.key === 'Enter') { sendChat(e.target.value); e.target.value = ''; }
     });
-
-    // Auto GFB toggle
-    _on('chkAutoGfb', 'change', e => { S.autoGfbEnabled = e.target.checked; });
-
-    // Auto attack toggle
-    _on('chkAutoAttack', 'change', e => { S.autoEnabled = e.target.checked; });
 
     // Modal close buttons
     document.querySelectorAll('[data-close-modal]').forEach(btn => {

@@ -71,9 +71,8 @@ export function castGfb(now, area) {
     return { results, center: bestCenter };
 }
 
-// Auto GFB (fires automatically when off cooldown if autoGfbEnabled)
+// Auto GFB (fires automatically when off cooldown if skill is unlocked)
 export function tickAutoGfb(now, area) {
-    if (!S.autoGfbEnabled) return null;
     return castGfb(now, area);
 }
 

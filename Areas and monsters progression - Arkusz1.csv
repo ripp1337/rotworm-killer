@@ -1,6 +1,6 @@
 Area,Level required,Pay to go there,Floor,Monster,Monster picture (.gif),Monster hp,Monster exp,Monster gold min,Monster gold max,Boss,Boss picture (.gif),Crafting materials,Boss crafting materials
 Rookgaard,1 (starting area),0 (starting area),Lush_Grass,Rat,Rat,15,10,2,4,Cave Rat,Cave_Rat,None,None
-Rotworm Cave,8,100,Muddy_Floor_(Dark),Rotworm,Rotworm,60,40,5,15,Vesperoth,Vesperoth,"Lump of Dirt, Rotworm Fang, Worm",Gland
+Rotworm Cave,8,100,Muddy_Floor_(Dark),Rotworm,Rotworm,60,40,5,15,Versperoth,Versperoth,"Lump of Dirt, Rotworm Fang, Worm",Gland
 Cyclopolis,30,5000,Gravel,Cyclops,Cyclops,260,150,10,30,Behemoth,Behemoth,"Cyclops Toe, Wolf Tooth Chain, Cyclops Eye",Battle Stone
 Hell Gate,50,50000,Stone_Floor_(Grey),Demon Skeleton,Demon_Skeleton,400,240,20,50,Bonebeast,Bonebeast,"Bone, Skull, Skeletal Hand",Candle
 Dragon Lair,70,100000,Earth_Ground,Dragon,Dragon,1000,700,30,60,Dragon Lord,Dragon_Lord,"Dragon Ham, Dragon Leather, Dragon Scale",Dragon Claw

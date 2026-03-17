@@ -32,10 +32,21 @@ function _setHpBar() {
 
 function _setAbilityButtons() {
     const gfbUnlocked = skillPts(31) >= 1 || S.gfbUnlocked;
-    const gfbBtn  = document.getElementById('btnGfb');
-    const gfbWrap = document.getElementById('cd-fire-wrap');
-    if (gfbBtn)  gfbBtn.style.display  = gfbUnlocked ? '' : 'none';
-    if (gfbWrap) gfbWrap.style.display = gfbUnlocked ? '' : 'none';
+    const hmmUnlocked = skillPts(32) >= 1;
+    const sdUnlocked  = skillPts(33) >= 1;
+
+    const _show = (id, visible) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = visible ? '' : 'none';
+    };
+    const autoUnlocked = skillPts(11) >= 1;
+    _show('cd-auto-wrap',   autoUnlocked);
+    _show('btnGfb',         gfbUnlocked);
+    _show('cd-fire-wrap',   gfbUnlocked);
+    _show('btnHmm',         hmmUnlocked);
+    _show('cd-hmm-wrap',    hmmUnlocked);
+    _show('btnSuddenDeath', sdUnlocked);
+    _show('cd-sd-wrap',     sdUnlocked);
 }
 
 function _setExpBar() {
@@ -63,8 +74,8 @@ function _setWeaponInfo() {
             btn.textContent = 'Max weapon';
             btn.disabled    = true;
         } else {
-            btn.textContent = `Upgrade to ${next.name} (${_fmt(next.cost)}g, Lv${next.levelReq})`;
-            btn.disabled    = S.gold < next.cost || S.level < next.levelReq;
+            btn.textContent = `Upgrade to ${next.name} (${_fmt(next.cost)}g)`;
+            btn.disabled    = S.gold < next.cost;
         }
     }
 }
@@ -108,21 +119,44 @@ function _setMobCount() {
 }
 
 function _setCooldownBars() {
-    // GFB cooldown
-    _setCdBar('cdGfb', S.gfbCooldownEnd, 15000);
+    const now = Date.now();
+
+    // Basic click cooldown
+    const basicCd  = effectiveBasicCooldown();
+    const basicEnd = S.lastBasicAttack + basicCd;
+    _setCdBar('cdBasic', basicEnd, basicCd, now);
+    _setCdText('cd-basic-text', basicEnd, now);
+
+    // Auto-attack cooldown
+    _setCdBar('cdAuto', S.nextAutoAttackMs, effectiveAutoCooldown(), now);
+    _setCdText('cd-auto-text', S.nextAutoAttackMs, now);
+
+    // Fireball cooldown
+    _setCdBar('cdGfb', S.gfbCooldownEnd, 15000, now);
+    _setCdText('cd-fire-text', S.gfbCooldownEnd, now);
+
     // HMM cooldown
-    _setCdBar('cdHmm', S.hmmCooldownEnd, 10000);
+    _setCdBar('cdHmm', S.hmmCooldownEnd, 10000, now);
+    _setCdText('cd-hmm-text', S.hmmCooldownEnd, now);
+
     // Sudden Death cooldown
-    _setCdBar('cdSuddenDeath', S.suddenDeathCooldownEnd, 600000);
+    _setCdBar('cdSuddenDeath', S.suddenDeathCooldownEnd, 600000, now);
+    _setCdText('cd-sd-text', S.suddenDeathCooldownEnd, now);
 }
 
-function _setCdBar(id, endMs, totalMs) {
-    const el  = document.getElementById(id);
+function _setCdBar(id, endMs, totalMs, now) {
+    const el = document.getElementById(id);
     if (!el) return;
-    const now = Date.now();
     const remaining = Math.max(0, endMs - now);
     const pct = remaining > 0 ? (remaining / totalMs) * 100 : 0;
     el.style.width = `${pct.toFixed(1)}%`;
+}
+
+function _setCdText(id, endMs, now) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const remaining = Math.max(0, endMs - now);
+    el.textContent = remaining > 0 ? `${(remaining / 1000).toFixed(1)}s` : 'Ready';
 }
 
 // ── Weapon upgrade button ─────────────────────────────────────────

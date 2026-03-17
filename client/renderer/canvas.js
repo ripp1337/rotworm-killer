@@ -83,14 +83,14 @@ export function update(dtSec) {
 
     // Auto-attack tick — fires if A1 skill is unlocked (or manual toggle enabled)
     const now = Date.now();
-    if ((skillPts(11) >= 1 || S.autoEnabled) && now >= S.nextAutoAttackMs) {
+    if (skillPts(11) >= 1 && now >= S.nextAutoAttackMs) {
         S.nextAutoAttackMs = now + effectiveAutoCooldown();
         // dispatch a synthetic auto-attack event (handled in main.js)
         window.dispatchEvent(new CustomEvent('autoAttack'));
     }
 
     // Auto-GFB tick — fires automatically if C1 is unlocked and off-cooldown
-    if (S.autoGfbEnabled || skillPts(31) >= 1) {
+    if (skillPts(31) >= 1) {
         const cast = tickAutoGfb(now, area);
         if (cast) window.dispatchEvent(new CustomEvent('autoGfbFired', { detail: cast }));
     }

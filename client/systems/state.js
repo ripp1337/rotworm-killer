@@ -73,7 +73,13 @@ export const S = {
     totalUberBossesKilled:  0,
     totalMaterialsGathered: 0,
     totalPotionsCrafted:    0,
+    totalGoldGenerated:     0,
     momentumClicks:         0,
+
+    // ── 5-minute stats window ────────────────────────────────────
+    statsWindowGold:  0,
+    statsWindowExp:   0,
+    statsWindowStart: 0,
 
     // ── Feature flags ─────────────────────────────────────────────
     autoEnabled:    false,

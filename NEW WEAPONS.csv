@@ -1,0 +1,31 @@
+Name,Min Damage,Max Damage,Cost,Level
+Club,3,8,0,1
+Rapier,5,10,50,2
+Mace,7,12,200,4
+Longsword,9,14,500,5
+Clerical Mace,11,16,1000,7
+Orcish Axe,13,18,2500,10
+Dwarven Axe,15,22,5000,12
+Fire Sword,18,25,10000,14
+Skull Staff,20,27,20000,17
+Fire Axe,22,30,50000,20
+Giant Sword,25,35,100000,25
+Queen's Sceptre,30,40,150000,30
+Stonecutter Axe,40,55,200000,35
+Thunder Hammer,55,70,500000,40
+Magic Longsword,70,100,1000000,50
+War Axe,85,120,2500000,60
+Bright Sword,100,140,5000000,70
+Dragon Hammer,120,170,10000000,80
+Warlord Sword,140,200,20000000,90
+Great Axe,160,230,35000000,100
+Arcane Staff,190,270,50000000,120
+Silver Mace,220,310,75000000,130
+Guardian Halberd,260,360,100000000,150
+Twin Axe,300,420,150000000,175
+Pharaoh Sword,350,500,200000000,200
+War Hammer,420,600,300000000,220
+Magic Sword,500,720,500000000,240
+Hammer of Wrath,600,850,750000000,250
+Enchanted Staff,700,1000,1000000000,275
+Ice Rapier,900,1300,2500000000,300

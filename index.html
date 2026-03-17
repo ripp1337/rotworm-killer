@@ -63,6 +63,10 @@
                     <div class="cd-label"><span>Cooldown</span><span id="cd-basic-text">Ready</span></div>
                     <div class="cd-bar-bg"><div id="cdBasic" class="cd-bar cd-bar-basic"></div></div>
                 </div>
+                <div class="cd-wrap" id="cd-auto-wrap" style="display:none">
+                    <div class="cd-label"><span>Auto-attack CD</span><span id="cd-auto-text">Ready</span></div>
+                    <div class="cd-bar-bg"><div id="cdAuto" class="cd-bar cd-bar-basic"></div></div>
+                </div>
                 <hr>
                 <div class="hud-section">Spells</div>
                 <button id="btnGfb" style="display:none">🔥 Fireball</button>
@@ -90,7 +94,6 @@
                     <div id="hud-potions"></div>
                 </div>
                 <label style="display:none" id="autoGfbWrap"><input type="checkbox" id="chkAutoGfb"> Auto Fireball</label>
-                <label><input type="checkbox" id="chkAutoAttack"> Auto Attack</label>
             </div>
 
             <!-- Canvas -->
@@ -551,6 +554,18 @@
             <p>Join the <a href="https://discord.gg/2NsBBAE8" target="_blank" rel="noopener noreferrer">Rotworm Killer Discord</a> to chat with other players, share feedback, and get notified about updates.</p>
 
             <p class="about-credit">Sprites &amp; inspiration from <a href="https://www.tibia.com" target="_blank" rel="noopener noreferrer">Tibia</a> by CipSoft. Thank you, CipSoft, for creating a game that shaped so many of us.</p>
+        </div>
+    </div>
+
+    <!-- Stats modal -->
+    <div id="stats-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:1001; justify-content:center; align-items:center;">
+        <div class="modal-box" style="min-width:320px; max-width:420px; padding:20px;">
+            <div class="st-modal-header">
+                <span class="st-modal-title">📊 Personal Statistics</span>
+                <button class="st-close-btn" data-close-modal="stats-modal">✕</button>
+            </div>
+            <div id="stats-modal-body" style="margin-top:12px; font-size:13px; line-height:1.8; color:#c8a84b;">
+            </div>
         </div>
     </div>
 
