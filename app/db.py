@@ -234,6 +234,14 @@ def init_db():
     # ── Column migrations (add any columns introduced after initial deploy) ──
     _migrate_columns(conn)
 
+    # For Turso embedded replicas, sync() pushes local DDL changes to the remote.
+    if USE_TURSO:
+        try:
+            conn.sync()
+            print('[migration] Post-migration sync to Turso complete.')
+        except Exception as e:
+            print(f'[migration] Post-migration sync failed: {e}')
+
     if not USE_TURSO:
         conn.close()
 
@@ -272,8 +280,20 @@ def _migrate_columns(conn) -> None:
         try:
             conn.execute(f'ALTER TABLE players ADD COLUMN {col} {definition}')
             conn.commit()
-        except Exception:
-            pass  # column already exists — ignore
+            print(f'[migration] Added column: players.{col}')
+        except Exception as e:
+            err = str(e).lower()
+            if 'duplicate column' not in err and 'already exists' not in err:
+                # Real error — log it so we can see it in Railway logs
+                print(f'[migration] WARN could not add players.{col}: {e}')
+
+    # Log the final schema so we can verify columns exist in Railway logs
+    try:
+        cur = conn.execute('PRAGMA table_info(players)')
+        cols = [row[1] for row in cur.fetchall()]
+        print(f'[migration] players columns after migration: {cols}')
+    except Exception as e:
+        print(f'[migration] Could not read table_info: {e}')
 
 
 # ── EXP / level helpers ────────────────────────────────────────────
