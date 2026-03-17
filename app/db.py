@@ -241,6 +241,16 @@ def init_db():
 def _migrate_columns(conn) -> None:
     """Add columns that may be missing in databases created before v3."""
     new_cols = [
+        # Core columns — may be absent in very old schemas
+        ('email',                   'TEXT    DEFAULT NULL'),
+        ('score',                   'INTEGER DEFAULT 0'),
+        ('level',                   'INTEGER DEFAULT 1'),
+        ('exp',                     'INTEGER DEFAULT 0'),
+        ('gold',                    'INTEGER DEFAULT 0'),
+        ('weapon_index',            'INTEGER DEFAULT 0'),
+        ('skill_pts',               "TEXT    DEFAULT '{}'"),
+        ('ascended',                'INTEGER DEFAULT 0'),
+        # v3+ columns
         ('knight_pts',              "TEXT    DEFAULT '{}'"),
         ('sorc_pts',                "TEXT    DEFAULT '{}'"),
         ('ascended_class',          'TEXT    DEFAULT NULL'),
