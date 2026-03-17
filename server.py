@@ -25,22 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 import tempfile
 PORT    = int(os.environ.get('PORT', 3000))
 STATIC  = Path(__file__).parent
-ANTI_CHEAT_MAX_SCORE_PER_SEC = float(os.environ.get('ANTI_CHEAT_MAX_SCORE_PER_SEC', '80'))
-ANTI_CHEAT_MAX_LEVELS_PER_MIN = float(os.environ.get('ANTI_CHEAT_MAX_LEVELS_PER_MIN', '18'))
-ANTI_CHEAT_MIN_SCORE_BURST = int(os.environ.get('ANTI_CHEAT_MIN_SCORE_BURST', '500'))
-ANTI_CHEAT_MIN_LEVEL_BURST = int(os.environ.get('ANTI_CHEAT_MIN_LEVEL_BURST', '3'))
-# Gold and EXP rate limits (generous upper bounds — tune via env vars).
-# Recalculated for 20260317 balance: The Void gold avg=3000/mob, max multipliers
-# (B1 +50%, S5 +10%, large gold potion +50%) = 2.475x. Auto at 200ms = 5 mobs/sec
-# + HMM multi-target hits. True max ≈ 37,000 gold/sec; limit set to 60,000 for headroom.
-# EXP: The Void 19800/mob × 2.25x mults × 5/sec ≈ 222,750 exp/sec; limit 600,000.
-ANTI_CHEAT_MAX_GOLD_PER_SEC  = float(os.environ.get('ANTI_CHEAT_MAX_GOLD_PER_SEC',  '60000'))
-ANTI_CHEAT_MIN_GOLD_BURST    = int(os.environ.get('ANTI_CHEAT_MIN_GOLD_BURST',    '80000'))
-ANTI_CHEAT_MAX_EXP_PER_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_EXP_PER_SEC',   '600000'))
-ANTI_CHEAT_MIN_EXP_BURST     = int(os.environ.get('ANTI_CHEAT_MIN_EXP_BURST',    '500000'))
-ANTI_CHEAT_BAN_THRESHOLD     = int(os.environ.get('ANTI_CHEAT_BAN_THRESHOLD',    '10'))
-# Cap elapsed time considered per save (prevents last_save_ms=0 loophole and caps offline gains).
-ANTI_CHEAT_MAX_ELAPSED_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_ELAPSED_SEC',   str(8 * 3600)))
+
 
 def _normalize_token(value: str) -> str:
     # Railway/env values can accidentally include whitespace or wrapping quotes.
@@ -1049,78 +1034,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(400, {'error': 'Invalid state.'})
         state = _upgrade_state(state)
 
-        reported_score = max(0, int(state.get('score') or 0))
-        reported_level = max(1, int(state.get('level') or 1))
-        reported_gold  = max(0, int(state.get('gold')  or 0))
-        reported_exp   = max(0, int(state.get('exp')   or 0))
+        score = max(0, int(state.get('score') or 0))
+        level = max(1, int(state.get('level') or 1))
+        gold_val = max(0, int(state.get('gold') or 0))
+        exp_val  = max(0, int(state.get('exp')  or 0))
         now_ms = int(time.time() * 1000)
-
-        prev_score   = int(player['score']        or 0)
-        prev_level   = int(player['level']        or 1)
-        last_save_ms = int(player['last_save_ms'] or 0)
-        cheat_flags  = int(player['cheat_flags']  or 0)
-
-        _raw_prev = player.get('state')
-        _prev_state: dict = {}
-        if _raw_prev:
-            try:
-                _prev_state = json.loads(_raw_prev) if isinstance(_raw_prev, str) else _raw_prev
-            except Exception:
-                pass
-        prev_gold = max(0, int(_prev_state.get('gold') or 0))
-        prev_exp  = max(0, int(_prev_state.get('exp')  or 0))
-
-        elapsed_sec = min(
-            max(0.0, (now_ms - last_save_ms) / 1000.0),
-            ANTI_CHEAT_MAX_ELAPSED_SEC,
-        )
-
-        allowed_score_increase = max(ANTI_CHEAT_MIN_SCORE_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_SCORE_PER_SEC))
-        allowed_level_increase = max(ANTI_CHEAT_MIN_LEVEL_BURST, int(elapsed_sec * (ANTI_CHEAT_MAX_LEVELS_PER_MIN / 60.0)))
-        max_allowed_score = prev_score + allowed_score_increase
-        max_allowed_level = prev_level + allowed_level_increase
-        score = min(max(reported_score, prev_score), max_allowed_score)
-        level = min(max(reported_level, prev_level), max_allowed_level)
-
-        allowed_gold_increase = max(ANTI_CHEAT_MIN_GOLD_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_GOLD_PER_SEC))
-        max_allowed_gold = prev_gold + allowed_gold_increase
-        # Gold can legitimately decrease (spending). Only rate-limit and flag increases.
-        if reported_gold <= prev_gold:
-            gold_val = reported_gold
-            gold_suspicious = False
-        else:
-            gold_val = min(reported_gold, max_allowed_gold)
-            gold_suspicious = reported_gold > max_allowed_gold
-
-        allowed_exp_increase = max(ANTI_CHEAT_MIN_EXP_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_EXP_PER_SEC))
-        max_allowed_exp = prev_exp + allowed_exp_increase
-        exp_val = min(max(reported_exp, prev_exp), max_allowed_exp)
-
-        level_from_exp = _level_from_exp(exp_val)
-        level = max(prev_level, min(level, level_from_exp))
-
-        suspicious = (
-            reported_score > max_allowed_score or reported_level > max_allowed_level
-            or gold_suspicious or reported_exp > max_allowed_exp
-        )
-        if suspicious:
-            cheat_flags += 1
-            print(
-                f"[anti-cheat] user={player['username']} flagged=#{cheat_flags} "
-                f"score(rep={reported_score},max={max_allowed_score}) "
-                f"level(rep={reported_level},max={max_allowed_level}) "
-                f"gold(rep={reported_gold},max={max_allowed_gold}) "
-                f"exp(rep={reported_exp},max={max_allowed_exp})"
-            )
-            if cheat_flags >= ANTI_CHEAT_BAN_THRESHOLD:
-                print(f"[anti-cheat] BANNED user={player['username']} after {cheat_flags} flags — deleting account")
-                with _write_lock:
-                    c = db()
-                    c.execute('DELETE FROM players WHERE id=?', (player['id'],))
-                    c.commit()
-                _player_data_cache.pop(player['id'], None)
-                self.send_json(403, {'error': 'banned', 'message': 'Your account has been permanently banned for cheating.'})
-                return
 
         state['score'] = score
         state['level'] = level
@@ -1157,8 +1075,7 @@ class Handler(BaseHTTPRequestHandler):
         if cached_entry:
             cd, _cexp = cached_entry
             cd.update(score=score, level=level, exp=exp_val, last_save_ms=now_ms,
-                      cheat_flags=cheat_flags, total_clicks=new_total_clicks,
-                      state=state_json)
+                      total_clicks=new_total_clicks, state=state_json)
 
         pid   = player['id']
         uname = player['username']
@@ -1171,8 +1088,8 @@ class Handler(BaseHTTPRequestHandler):
                 with _write_lock:
                     c = db()
                     c.execute(
-                        'UPDATE players SET state=?,score=?,level=?,exp=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
-                        (state_json, score, level, exp_val, now_ms, cheat_flags, new_total_clicks, pid)
+                        'UPDATE players SET state=?,score=?,level=?,exp=?,last_save_ms=?,total_clicks=? WHERE id=?',
+                        (state_json, score, level, exp_val, now_ms, new_total_clicks, pid)
                     )
                     c.commit()
                 _save_ok = True
