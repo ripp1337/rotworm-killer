@@ -20,6 +20,7 @@ from email.mime.multipart import MIMEMultipart
 import collections
 import queue as _queue_mod
 import os
+import socket
 from concurrent.futures import ThreadPoolExecutor
 import tempfile
 PORT    = int(os.environ.get('PORT', 3000))
@@ -652,17 +653,32 @@ MIME = {
 
 # ── Server (suppress harmless Railway health-probe noise) ────────────
 class _Server(ThreadingHTTPServer):
-    # Use a bounded thread pool instead of unbounded thread-per-request.
-    # ThreadingHTTPServer default spawns a new OS thread for every connection;
-    # under load (or slow saves) this exhausts the process thread limit and
-    # raises "can't start new thread". 64 workers handles concurrent players
-    # while staying well within Railway's limits.
+    # Use a bounded thread pool for regular short-lived requests.
+    # SSE connections (/api/chat/stream) are long-lived: they block a worker
+    # indefinitely. With pool=64, even 65 concurrent chat subscribers starves
+    # every other request (including page loads). Fix: peek at the first line
+    # of the request via MSG_PEEK before dispatching — SSE gets a dedicated
+    # daemon thread; everything else uses the pool.
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._pool = ThreadPoolExecutor(max_workers=64)
 
     def process_request(self, request, client_address):
-        self._pool.submit(self.process_request_thread, request, client_address)
+        try:
+            first = request.recv(512, socket.MSG_PEEK).decode('utf-8', errors='replace')
+            is_sse = '/api/chat/stream' in first.split('\n')[0]
+        except Exception:
+            is_sse = False
+        if is_sse:
+            # Dedicated daemon thread — SSE holds the connection forever, must
+            # not occupy a pool worker or new page loads will queue indefinitely.
+            threading.Thread(
+                target=self.process_request_thread,
+                args=(request, client_address),
+                daemon=True,
+            ).start()
+        else:
+            self._pool.submit(self.process_request_thread, request, client_address)
 
     def server_close(self):
         self._pool.shutdown(wait=False)
@@ -709,7 +725,7 @@ class Handler(BaseHTTPRequestHandler):
         return auth[7:] if auth.startswith('Bearer ') else ''
 
     def serve_static(self, url_path: str, head_only: bool = False):
-        # Prevent path traversal
+        # Normalise path and guard against traversal
         try:
             target = (STATIC / url_path.lstrip('/')).resolve()
             if not str(target).startswith(str(STATIC.resolve())):
@@ -717,6 +733,30 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             self.send_response(400); self.end_headers(); return
 
+        # Fast path: serve from in-memory cache (loaded at startup).
+        # Falls back to disk only for files added after the server started.
+        cache_key = url_path if url_path != '' else '/'
+        if cache_key in _static_cache:
+            data, mime, etag, cache_control = _static_cache[cache_key]
+            if self.headers.get('If-None-Match', '') == etag:
+                self.send_response(304)
+                self.send_header('ETag', etag)
+                self.end_headers()
+                return
+            try:
+                self.send_response(200)
+                self.send_header('Content-Type', mime)
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Cache-Control', cache_control)
+                self.send_header('ETag', etag)
+                self.end_headers()
+                if not head_only:
+                    self.wfile.write(data)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            return
+
+        # Slow path: disk (only reached for uncached / dynamic files)
         if target.is_dir():
             target = target / 'index.html'
         if not target.exists():
@@ -1351,6 +1391,37 @@ class Handler(BaseHTTPRequestHandler):
 
 
 # ── Main ───────────────────────────────────────────────────────────
+# ── In-memory static file cache ──────────────────────────────────
+# Pre-load all static files at startup so every page load / asset request
+# is served from RAM (microseconds) rather than hitting the filesystem on
+# every request. Especially important for sprite GIFs — there are many of
+# them and each would otherwise consume a thread-pool worker slot during I/O.
+_static_cache: dict = {}  # url_path → (data, mime, etag, cache_control)
+
+def _build_static_cache() -> None:
+    no_cache_exts = {'.html', '.js'}
+    for _p in STATIC.rglob('*'):
+        if not _p.is_file():
+            continue
+        try:
+            _data  = _p.read_bytes()
+            _stat  = _p.stat()
+            _rel   = '/' + _p.relative_to(STATIC).as_posix()
+            _etag  = f'"{_stat.st_mtime_ns}-{_stat.st_size}"'
+            _mime  = MIME.get(_p.suffix.lower(), 'application/octet-stream')
+            _cc    = 'no-cache' if _p.suffix.lower() in no_cache_exts else 'public, max-age=86400'
+            _static_cache[_rel] = (_data, _mime, _etag, _cc)
+        except Exception as _e:
+            print(f'[static-cache] skipped {_p}: {_e}')
+    # Also register '/' and '/index.html' equivalently
+    _idx = _static_cache.get('/index.html')
+    if _idx:
+        _static_cache['/'] = _idx
+    print(f'[startup] static cache: {len(_static_cache)} files, '
+          f'{sum(len(v[0]) for v in _static_cache.values()) // 1024} KB')
+
+_build_static_cache()
+
 if __name__ == '__main__':
     server = _Server(('', PORT), Handler)
     print(f'Rotworm Killer  →  http://localhost:{PORT}')
