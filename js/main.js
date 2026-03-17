@@ -545,7 +545,7 @@ const GFB_COOLDOWN_MS    = 15000;  // 15s base (reduced by Fireball CDR skill)
 const GFB_GOLD_COST      = 0;      // free to cast
 const GFB_UNLOCK_LEVEL   = 4;
 const GFB_UNLOCK_GOLD    = 100;
-const HMM_COOLDOWN_MS    = 20000;  // Light/Heavy Magic Missile: 20s (Sorcerer S1)
+const HMM_COOLDOWN_MS    = 10000;  // Light/Heavy Magic Missile: 10s base (Sorcerer S1)
 const SUDDEN_DEATH_COOLDOWN_MS = 600000; // Sudden Death: 10 min base (Sorcerer S11, reduced per level)
 let gfbUnlocked     = false;
 let lastBasicAttack = 0;   // timestamp of last basic hit
@@ -594,7 +594,7 @@ let _lastCraftRenderSec = -1;
 
 const AUTO_UNLOCK_LEVEL = 5;
 const AUTO_UNLOCK_GOLD  = 0;
-const AUTO_COOLDOWN_MS  = 800;  // 0.8s base (reduced by Auto-Attack skill)
+const AUTO_COOLDOWN_MS  = 700;  // 0.7s base (reduced by Auto-Attack skill)
 let autoUnlocked   = false;
 let autoEnabled    = false;
 let autoTarget     = null;
@@ -932,7 +932,7 @@ function craftPotion(id) {
 // 3 columns × 4 rows, 10 points each. No level requirements — only prereq chain.
 const GENERAL_SKILLS = [
     // Column A — Automation
-    { id: 11, col: 1, row: 1, name: 'Auto-Attack',        max: 10, prereqs: [],   costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                                          desc: 'Unlocks auto-attack. Reduces auto-attack cooldown by 0.04s per point (0.80s → 0.40s at max)' },
+    { id: 11, col: 1, row: 1, name: 'Auto-Attack',        max: 10, prereqs: [],   costs: [100,200,400,800,1600,3200,6400,12800,25600,51200],                                                          desc: 'Unlocks auto-attack. Reduces auto-attack cooldown by 0.05s per point (0.70s → 0.20s at max)' },
     { id: 12, col: 1, row: 2, name: 'Auto-Attack Damage', max: 10, prereqs: [11], costs: [1000,2000,4000,8000,16000,32000,64000,128000,256000,512000],                                               desc: '+10% auto-attack damage per point (+100% at max). Requires 1pt Auto-Attack' },
     { id: 13, col: 1, row: 3, name: 'Multi-Target',       max: 10, prereqs: [12], costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],                           desc: '+10% chance per point to hit a 2nd monster (100% at max). Requires 1pt Auto-Attack Damage' },
     { id: 14, col: 1, row: 4, name: 'Hyper Automation',   max: 10, prereqs: [13], costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000],               desc: '+10% auto-attack damage per point, +10% chance to hit a 3rd target (100% at max). Requires 1pt Multi-Target' },
@@ -1049,8 +1049,8 @@ function knightComboMaxStacks()  { return 0; } // legacy stub — combo system r
 // costs[] = gold cost per level [lvl1, lvl2, ...]
 const SORC_SKILLS = [
     // Column 1 — Magic Missile
-    { id: 201, col: 1, row: 1, name: 'Light Magic Missile',    max: 10, prereqs: [],       costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],               desc: 'Unlocks Light Magic Missile: auto-fires every 20s dealing (10+5\u00d7pts)% of monster max HP' },
-    { id: 202, col: 1, row: 2, name: 'Heavy Magic Missile',    max: 10, prereqs: [201],    costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],     desc: '+4% Magic Missile damage per point (+40% at max). Requires 1pt Light Magic Missile' },
+    { id: 201, col: 1, row: 1, name: 'Light Magic Missile',    max: 10, prereqs: [],       costs: [10000,20000,40000,80000,160000,320000,640000,1280000,2560000,5120000],               desc: 'Unlocks Light Magic Missile: auto-fires dealing (30+7\u00d7pts)% of monster max HP (up to 100%). Base cooldown 10s, -0.5s/pt' },
+    { id: 202, col: 1, row: 2, name: 'Heavy Magic Missile',    max: 10, prereqs: [201],    costs: [100000,200000,400000,800000,1600000,3200000,6400000,12800000,25600000,51200000],     desc: 'Upgrades to Heavy Magic Missile: -0.5s cooldown per pt and hits +0.5 extra worms per pt (up to +5 at max, min 2s cooldown). Requires 1pt Light Magic Missile' },
     { id: 203, col: 1, row: 3, name: 'Triple Missile Chance',  max: 10, prereqs: [202],    costs: [1000000,2000000,4000000,8000000,16000000,32000000,64000000,128000000,256000000,512000000], desc: '+5% chance per point to fire 2 extra missiles (50% at max). Requires 1pt Heavy Magic Missile' },
     { id: 204, col: 1, row: 4, name: 'Ultimate Explosion',     max: 10, prereqs: [203],    costs: [10000000,20000000,40000000,80000000,160000000,320000000,640000000,1280000000,2560000000,5120000000], desc: 'Each HMM has a chance to instantly kill all non-boss enemies on screen (+1.5%/pt, 15% at max). Requires 1pt Triple Missile Chance' },
     // Column 2 — Loot / Crafting / Potions
@@ -1086,8 +1086,10 @@ function buySorcSkill(id) {
 // Sorc effect helpers
 function sorcDmgMinBonus()           { return 0; }
 function sorcDmgMaxBonus()           { return 0; }
-function sorcHmmDmgFrac()            { return (10 + sPts(201) * 5) / 100; }       // S1: (10+5/pt)% max HP
-function sorcHmmDmgMult()            { return 1 + sPts(202) * 0.04; }             // S2: +4%/pt
+function sorcHmmDmgFrac()            { return (30 + sPts(201) * 7) / 100; }       // S1: (30+7/pt)% max HP, base 30%, max 100%
+function sorcHmmDmgMult()            { return 1.0; }                               // S2: no longer adds flat damage (now CDR + multi-target)
+function sorcHmmExtraTargets()       { return Math.floor(sPts(202) * 0.5); }      // S2: +0.5 extra worm targets/pt → +5 at max
+function effectiveHmmCooldown()      { return Math.max(2000, HMM_COOLDOWN_MS - sPts(201) * 500 - sPts(202) * 500); } // S1+S2 CDR, min 2s
 function sorcTripleMissileChance()   { return sPts(203) * 0.05; }                 // S3: +5%/pt chance to fire 2 extra missiles
 function sorcUltimateExplosionChance(){ return sPts(204) * 0.015; }               // S4: +1.5%/pt chance (15% at max) instant kill all non-boss
 function sorcGoldMult()              { return 1 + sPts(205) * 0.01; }             // S5: +1%/pt gold
@@ -1310,7 +1312,7 @@ function effectiveBasicCooldown() {
     let cd = Math.max(100, BASIC_COOLDOWN_MS - kPts(105) * 40); // K5 Combo Meter: -40ms/pt (0.50s → 0.10s at max)
     return cd * potionCdrMult();
 }
-function effectiveAutoCooldown()  { return Math.max(400, 800 - skillPts(11) * 40) * potionCdrMult(); }  // A1: -40ms/pt (800→400ms)
+function effectiveAutoCooldown()  { return Math.max(200, 700 - skillPts(11) * 50) * potionCdrMult(); }  // A1: -50ms/pt (700→200ms)
 function effectiveGfbCooldown()   { return Math.max(8000, GFB_COOLDOWN_MS - skillPts(32) * 700) * potionCdrMult(); }
 function effectiveAnniCooldown()  { return ANNIHILATION_COOLDOWN_MS * potionCdrMult(); }
 
@@ -2477,11 +2479,11 @@ function update() {
         spawnAttackEffect(boss.x, boss.y);
         killBoss(boss);
     }
-    // Heavy Magic Missile (Sorcerer S1): auto-fires every 20s
+    // Heavy Magic Missile (Sorcerer S1): auto-fires on effectiveHmmCooldown() (10s base, -0.5s/pt S1, -0.5s/pt S2, min 2s)
     if (ascendedClass === 'sorcerer' && sPts(201) >= 1 && !spawnPaused && Date.now() >= hmmCooldownEnd) {
         const _hmmTargets = [...worms, ...(boss ? [boss] : [])];
         if (_hmmTargets.length > 0) {
-            hmmCooldownEnd = Date.now() + HMM_COOLDOWN_MS;
+            hmmCooldownEnd = Date.now() + effectiveHmmCooldown();
             hmmHitCounter++;
             const _hmmTarget = boss || worms.reduce((a, b) => a.hp <= b.hp ? a : b, worms[0]);
             const _hmmIsBoss = _hmmTarget === boss;
@@ -2499,6 +2501,16 @@ function update() {
             _fireHmm(_hmmTarget, _hmmIsBoss);
             if (_hmmIsBoss) { if (boss && boss.hp <= 0) killBoss(boss); }
             else { if (_hmmTarget.hp <= 0) { killWorm(_hmmTarget); worms = worms.filter(w => w !== _hmmTarget); } }
+            // S2 Heavy Magic Missile: fire at additional worms (+0.5 targets/pt → up to +5 at max)
+            const _hmmExtras = sorcHmmExtraTargets();
+            if (_hmmExtras > 0) {
+                const _extraWorms = worms.filter(w => w !== _hmmTarget).slice(0, _hmmExtras);
+                for (const _ew of _extraWorms) {
+                    if (_ew.hp <= 0) continue;
+                    _fireHmm(_ew, false);
+                    if (_ew.hp <= 0) { killWorm(_ew); worms = worms.filter(w => w !== _ew); }
+                }
+            }
             // S4 Ultimate Explosion: chance per missile to instantly kill all non-boss enemies
             if (sPts(204) > 0 && !_hmmIsBoss && Math.random() < sorcUltimateExplosionChance()) {
                 worms.forEach(w => killWorm(w));
@@ -2566,7 +2578,7 @@ function update() {
     if (ascendedClass === 'sorcerer') {
         if (sPts(201) >= 1) {
             const hmmRemaining = Math.max(0, hmmCooldownEnd - Date.now());
-            document.getElementById('cd-hmm-bar').style.width  = hmmRemaining > 0 ? ((1 - hmmRemaining / HMM_COOLDOWN_MS) * 100) + '%' : '100%';
+            document.getElementById('cd-hmm-bar').style.width  = hmmRemaining > 0 ? ((1 - hmmRemaining / effectiveHmmCooldown()) * 100) + '%' : '100%';
             document.getElementById('cd-hmm-text').textContent = hmmRemaining > 0 ? (hmmRemaining / 1000).toFixed(1) + 's' : 'Ready';
         }
         if (sPts(211) >= 1) {
