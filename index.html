@@ -44,6 +44,7 @@
     </nav>
 
     <!-- ── Game Page ──────────────────────────────────────────── -->
+    <div id="gameWrapper">
     <div id="page-game">
         <div id="layout">
 
@@ -52,82 +53,82 @@
                 <div class="hud-section">Weapon</div>
                 <div class="hud-row weapon-row">
                     <img id="hud-weapon-img" src="Serpent_Sword.gif" class="weapon-icon">
-                    <span id="hud-weapon-name">Serpent Sword</span>
+                    <span id="weaponName">Club</span>
                 </div>
-                <button id="weaponUpgradeBtn">-</button>
+                <button id="btnBuyWeapon">-</button>
                 <hr>
                 <div class="hud-section">Damage</div>
-                <div class="hud-row"><span class="dmg-basic">Basic</span><span id="hud-dmg-basic">0–10</span></div>
+                <div class="hud-row"><span class="dmg-basic">Basic</span><span id="weaponDmgRange">0–10</span></div>
                 <div class="cd-wrap">
                     <div class="cd-label"><span>Cooldown</span><span id="cd-basic-text">Ready</span></div>
-                    <div class="cd-bar-bg"><div id="cd-basic-bar" class="cd-bar cd-bar-basic"></div></div>
+                    <div class="cd-bar-bg"><div id="cdBasic" class="cd-bar cd-bar-basic"></div></div>
                 </div>
                 <hr>
                 <div class="hud-section">Spells</div>
-                <button id="fireballBtn" style="display:none">🔥 Fireball</button>
+                <button id="btnGfb" style="display:none">🔥 Fireball</button>
                 <div class="cd-wrap" id="cd-fire-wrap" style="display:none">
                     <div class="cd-label"><span>Fireball CD</span><span id="cd-fire-text">Ready</span></div>
-                    <div class="cd-bar-bg"><div id="cd-fire-bar" class="cd-bar cd-bar-fire"></div></div>
+                    <div class="cd-bar-bg"><div id="cdGfb" class="cd-bar cd-bar-fire"></div></div>
                 </div>
+                <button id="btnHmm" style="display:none">&#9889; HMM</button>
                 <div class="cd-wrap" id="cd-hmm-wrap" style="display:none">
                     <div class="cd-label"><span>&#9889; HMM CD</span><span id="cd-hmm-text">Ready</span></div>
-                    <div class="cd-bar-bg"><div id="cd-hmm-bar" class="cd-bar cd-bar-hmm"></div></div>
+                    <div class="cd-bar-bg"><div id="cdHmm" class="cd-bar cd-bar-hmm"></div></div>
                 </div>
+                <button id="btnSuddenDeath" style="display:none">&#128128; Sudden Death</button>
                 <div class="cd-wrap" id="cd-sd-wrap" style="display:none">
                     <div class="cd-label"><span>&#128128; Sudden Death</span><span id="cd-sd-text">Ready</span></div>
-                    <div class="cd-bar-bg"><div id="cd-sd-bar" class="cd-bar cd-bar-sd"></div></div>
+                    <div class="cd-bar-bg"><div id="cdSuddenDeath" class="cd-bar cd-bar-sd"></div></div>
                 </div>
-                <button id="annihilationBtn" style="display:none"><img src="annihilation.gif" class="btn-icon"> Annihilation</button>
-                <div class="cd-wrap" id="cd-anni-wrap" style="display:none">
-                    <div class="cd-label"><span>Anni. Cooldown</span><span id="cd-anni-text">Locked</span></div>
-                    <div class="cd-bar-bg"><div id="cd-anni-bar" class="cd-bar cd-bar-anni"></div></div>
-                </div>
+
                 <hr>
-                <button id="skillTreeBtn" onclick="openSkillTree()">&#9643; Skill Tree</button>
-                <button id="backpackBtn" onclick="openInventory()">&#127890; Backpack</button>
-                <button id="craftingBtn" onclick="openCrafting()" disabled>&#9879; Crafting (lv.20)</button>
+                <button id="btnSkillTree" onclick="document.getElementById('skillModal').style.display='flex'">&#9643; Skill Tree</button>
+                <button id="btnOpenInventory">&#127890; Backpack</button>
+                <button id="btnOpenCrafting">&#9879; Crafting (lv.20)</button>
                 <div id="hud-potions-section" style="display:none">
                     <div class="hud-section" style="margin-top:4px">Active Potions</div>
                     <div id="hud-potions"></div>
                 </div>
-                <button id="autoAnniBtn" style="display:none">Auto Annihilation: OFF</button>
+                <label style="display:none" id="autoGfbWrap"><input type="checkbox" id="chkAutoGfb"> Auto Fireball</label>
+                <label><input type="checkbox" id="chkAutoAttack"> Auto Attack</label>
             </div>
 
             <!-- Canvas -->
             <div id="game-area">
                 <div style="position:relative;display:inline-block;line-height:0;">
                     <canvas id="gameCanvas" width="800" height="600"></canvas>
-                    <div id="sprite-layer" style="position:absolute;top:0;left:0;width:800px;height:600px;pointer-events:none;"></div>
+                    <div id="spriteLayer" style="position:absolute;top:0;left:0;width:800px;height:600px;pointer-events:none;"></div>
                 </div>
             </div>
 
             <!-- Right HUD: player info, stats, scoreboard -->
             <div id="hud-right">
                 <div class="hud-row player-row">
-                    <span id="hud-player">—</span>
-                    <button id="statsBtn" onclick="openStats()">📊</button>
-                    <button id="logoutBtn">Logout</button>
+                    <span id="playerName">—</span>
+                    <button id="btnStats">📊</button>
+                    <button id="btnLogout">Logout</button>
                 </div>
                 <hr>
-                <div class="hud-row"><span>Level</span><span id="hud-level">1</span></div>
+                <div class="hud-row"><span>Level</span><span id="playerLevel">1</span></div>
                 <div class="hud-xpbar-wrap">
-                    <div id="hud-xpbar"></div>
+                    <div id="expBar" style="height:100%;background:#4caf50;width:0%"></div>
                 </div>
-                <div class="hud-row"><span>EXP</span><span id="hud-exp">0 / 100</span></div>
+                <div class="hud-row"><span>EXP</span><span id="expText">0 / 100</span></div>
                 <hr>
                 <div class="hud-row"><span>Score</span><span id="hud-score">0</span></div>
-                <div class="hud-row"><span>Gold</span><span id="hud-gold">0</span></div>
-                <div class="hud-row"><span>Area</span><span id="hud-area">Rookgaard</span></div>
+                <div class="hud-row"><span>Gold</span><span id="goldCount">0</span></div>
+                <div class="hud-row"><span>Area</span><span id="currentArea">Rookgaard</span></div>
+                <div class="hud-row"><span>Monsters</span><span id="mobCount">0 / 10</span></div>
                 <div class="hud-row">
-                    <button id="areaUnlockBtn">Unlock next area</button>
+                    <button id="btnUnlockArea">Unlock next area</button>
                     <span id="hud-area-info" class="hud-small"></span>
                 </div>
                 <hr>
-                <button id="ascendBtn" disabled>&#9734; Ascend (need lvl 30)</button>
+                <button id="btnAscendOpen" onclick="document.getElementById('ascendModal').style.display='flex'">&#9734; Ascend / Respec</button>
                 <hr>
                 <div class="hud-section sb-header">
                     Top Killers
-                    <button class="sb-refresh-btn" onclick="fetchScoreboard()">↻</button>
+                    <button id="btnScoreboard" class="sb-refresh-btn">↻</button>
                 </div>
                 <div id="scoreboard-list"><div class="sb-loading">Loading…</div></div>
             </div>
@@ -135,12 +136,12 @@
             <!-- Chat panel -->
             <div id="chat-panel">
                 <div class="hud-section chat-header">💬 Live Chat <button id="chat-toggle-btn" onclick="chatToggle()" title="Hide/show chat">[hide]</button></div>
-                <div id="chat-messages"></div>
+                <div id="chatBox"></div>
                 <div id="chat-footer">
                     <div id="chat-login-hint">Log in to chat</div>
-                    <div id="chat-input-row" style="display:none">
-                        <input id="chat-input" type="text" maxlength="200" placeholder="Say something…" autocomplete="off">
-                        <button id="chat-send-btn" onclick="chatSend()">▶</button>
+                    <div id="chat-input-row">
+                        <input id="chatInput" type="text" maxlength="200" placeholder="Say something…" autocomplete="off">
+                        <button id="btnChatSend">▶</button>
                     </div>
                 </div>
             </div>
@@ -148,6 +149,7 @@
         </div>
     </div>
 
+    </div><!-- end gameWrapper -->
     <!-- ── Documentation Page ───────────────────────────────── -->
     <div id="page-docs" style="display:none">
         <div class="about-box docs-box">
@@ -176,7 +178,7 @@
             <details class="docs-section">
                 <summary>🗺️ Locations</summary>
                 <div class="docs-body">
-                    <p>Unlock new locations by reaching the required level and paying a one-time Gold cost. All monsters in an area give +20% HP / EXP / Gold after Ascension compared to pre-ascension values.</p>
+                    <p>Unlock new locations by reaching the required level and paying a one-time Gold cost.</p>
                     <table class="docs-table">
                         <tr><th>Location</th><th>Level</th><th>Cost</th><th>Monster</th><th>HP</th><th>EXP</th><th>Gold</th><th>Boss</th></tr>
                         <tr><td>Rookgaard</td><td>1</td><td>Free</td><td>Rat</td><td>15</td><td>10</td><td>2 – 4</td><td>Cave Rat</td></tr>
@@ -240,7 +242,7 @@
                         <tr><td>250</td><td>814,583,300</td><td>Roshamuul</td></tr>
                         <tr><td>300</td><td>1,764,453,300</td><td>The Void</td></tr>
                     </table>
-                    <p>At <strong>level 30</strong> you can <strong>Ascend</strong> &mdash; a permanent, one-time choice between <strong>Knight</strong> and <strong>Sorcerer</strong>. This unlocks your class-specific Skill Tree. Ascension does <em>not</em> reset your progress, but it does permanently boost all mob stats by +20%.</p>
+                    <p>At <strong>level 30</strong> you can <strong>Ascend</strong> &mdash; a permanent choice between <strong>Knight</strong> and <strong>Sorcerer</strong>. This unlocks your class-specific Skill Tree. Ascension does <em>not</em> reset your progress. You can <strong>Respec</strong> your class later (costs: 1M → 100M → 10B gold).</p>
                     <ul>
                         <li><strong>Knight</strong> — active playstyle. Benefits heavily from manual clicking through Combo Meter, Cleaving Blows and Adrenaline Reset.</li>
                         <li><strong>Sorcerer</strong> — idle/AFK playstyle. Light/Heavy Magic Missile, Sudden Death and Essence Gathering deliver strong output passively with no clicking required.</li>
@@ -261,14 +263,14 @@
                         <tr><td>📚 Small Wisdom</td><td>+15% EXP gain</td><td>2 min</td><td>🔵×5, 🟢×2</td></tr>
                         <tr><td>⚡ Small Swiftness</td><td>−10% cooldowns</td><td>1.5 min</td><td>🔵×4, 🟢×2, 🔴×1</td></tr>
                     </table>
-                    <p><strong>Medium Potions</strong> <em>(level 40, 5,000g)</em></p>
+                    <p><strong>Medium Potions</strong> <em>(level 40, 10,000g)</em></p>
                     <table class="docs-table">
                         <tr><th>Potion</th><th>Effect</th><th>Duration</th><th>Ingredients</th></tr>
                         <tr><td>💰 Medium Wealth</td><td>+25% gold gain</td><td>4 min</td><td>🔵×8, 🟢×4, 🔴×2</td></tr>
                         <tr><td>📚 Medium Wisdom</td><td>+25% EXP gain</td><td>4 min</td><td>🔵×6, 🟢×5, 🔴×2</td></tr>
                         <tr><td>⚡ Medium Swiftness</td><td>−15% cooldowns</td><td>3 min</td><td>🔵×4, 🟢×4, 🔴×3</td></tr>
                     </table>
-                    <p><strong>Large Potions</strong> <em>(level 50, 10,000g)</em></p>
+                    <p><strong>Large Potions</strong> <em>(level 50, 100,000g)</em></p>
                     <table class="docs-table">
                         <tr><th>Potion</th><th>Effect</th><th>Duration</th><th>Ingredients</th></tr>
                         <tr><td>💰 Large Wealth</td><td>+50% gold gain</td><td>8 min</td><td>🟢×6, 🔴×4, 🟡×1</td></tr>
@@ -339,7 +341,7 @@
                     <p><strong>Column 2 — Speed &amp; Multi-Target</strong></p>
                     <table class="docs-table">
                         <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
-                        <tr><td>Combo Meter</td><td>—</td><td>10,000g → 5.12Mg</td><td>−0.04s manual attack cooldown/pt (0.50s → 0.10s at max)</td></tr>
+                        <tr><td>Combo Meter</td><td>—</td><td>10,000g → 5.12Mg</td><td>Reduces manual attack cooldown by 0.015s per point (0.35s → 0.20s at max)</td></tr>
                         <tr><td>Adrenaline Reset</td><td>1pt Combo Meter</td><td>100,000g → 51.2Mg</td><td>+2%/pt chance to instantly reset manual attack cooldown on any kill (20% at max)</td></tr>
                         <tr><td>Sweeping Strikes</td><td>1pt Adrenaline Reset</td><td>1Mg → 512Mg</td><td>+3%/pt chance for manual attacks to also hit +1 extra monster (30% at max)</td></tr>
                         <tr><td>Whirlwind Extension</td><td>1pt Sweeping Strikes</td><td>10Mg → 5.12Bg</td><td>+2%/pt chance to hit +2 additional monsters (20% at max; stacks with Sweeping Strikes)</td></tr>
@@ -364,8 +366,8 @@
                         <tr><th>Skill</th><th>Requires</th><th>Cost (lv1 → lv10)</th><th>Effect</th></tr>
                         <tr><td>Light Magic Missile</td><td>—</td><td>10,000g → 5.12Mg</td><td>Unlocks LMM. Auto-fires every 20s dealing (10 + 5×pts)% of monster max HP</td></tr>
                         <tr><td>Heavy Magic Missile</td><td>1pt Light MM</td><td>100,000g → 51.2Mg</td><td>+4%/pt HMM damage (+40% at max)</td></tr>
-                        <tr><td>Triple Missile Chance</td><td>1pt Heavy MM</td><td>1Mg → 512Mg</td><td>+5%/pt chance to fire 2 extra missiles per cast (50% at max)</td></tr>
-                        <tr><td>Ultimate Explosion</td><td>1pt Triple Missile</td><td>10Mg → 5.12Bg</td><td>Each HMM has +1.5%/pt chance to instantly kill all non-boss enemies on screen (15% at max)</td></tr>
+                        <tr><td>Triple Missile Chance</td><td>1pt Heavy MM</td><td>1Mg → 512Mg</td><td>+2% chance per point to fire 2 extra missiles (20% at max)</td></tr>
+                        <tr><td>Ultimate Explosion</td><td>1pt Triple Missile</td><td>10Mg → 5.12Bg</td><td>+1%/pt chance to instantly kill all non-boss enemies on screen (10% max at 10pts)</td></tr>
                     </table>
                     <p><strong>Column 2 — Loot, Crafting &amp; Potions</strong></p>
                     <table class="docs-table">
@@ -553,40 +555,40 @@
     </div>
 
     <!-- Offline progress modal -->
-    <div id="offline-modal">
+    <div id="offline-modal" style="display:none">
         <div class="offline-box">
             <div class="offline-title">Offline Progress</div>
             <div id="offline-content"></div>
-            <button class="offline-continue" onclick="document.getElementById('offline-modal').style.display='none'">Continue Hunting</button>
+            <button class="offline-continue" data-close-modal="offline-modal">Continue Hunting</button>
         </div>
     </div>
     <!-- Login / Register modal -->
-    <div id="login-modal">
+    <div id="authWrapper">
         <div class="auth-box">
             <h2 class="auth-title">Rotworm Killer</h2>
             <div class="auth-tabs" id="auth-tabs">
                 <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Login</button>
                 <button class="auth-tab" id="tab-reg-btn" onclick="switchAuthTab('register')">Register</button>
             </div>
-            <form id="auth-login-form" class="auth-form">
+            <form id="auth-login-form" class="auth-form" onsubmit="return false">
                 <label class="auth-label">Username</label>
-                <input id="auth-login-user" type="text" class="auth-input" autocomplete="username" maxlength="20" required>
+                <input id="inputUsername" type="text" class="auth-input" autocomplete="username" maxlength="20" required>
                 <label class="auth-label">Password</label>
-                <input id="auth-login-pass" type="password" class="auth-input" autocomplete="current-password" required>
+                <input id="inputPassword" type="password" class="auth-input" autocomplete="current-password" required>
                 <div id="auth-login-err" class="auth-error"></div>
-                <button type="submit" class="auth-submit">Login</button>
+                <button type="submit" id="btnLogin" class="auth-submit">Login</button>
                 <div class="auth-forgot"><a href="#" id="forgotLink">Forgot your password?</a></div>
             </form>
-            <form id="auth-reg-form" class="auth-form" style="display:none">
+            <form id="auth-reg-form" class="auth-form" style="display:none" onsubmit="return false">
                 <label class="auth-label">Username <span class="auth-hint">(3–20 chars, A-Z 0-9 _)</span></label>
                 <input id="auth-reg-user" type="text" class="auth-input" autocomplete="username" maxlength="20" required>
                 <label class="auth-label">Password <span class="auth-hint">(min 4 chars)</span></label>
                 <input id="auth-reg-pass" type="password" class="auth-input" autocomplete="new-password" required>
                 <label class="auth-label">Email <span class="auth-hint">(optional)</span></label>
-                <input id="auth-reg-email" type="email" class="auth-input" autocomplete="email" placeholder="your@email.com">
+                <input id="inputEmail" type="email" class="auth-input" autocomplete="email" placeholder="your@email.com">
                 <p class="auth-note">Email address will be necessary in case you lose your account access.</p>
                 <div id="auth-reg-err" class="auth-error"></div>
-                <button type="submit" class="auth-submit">Create Account</button>
+                <button type="submit" id="btnRegister" class="auth-submit">Create Account</button>
             </form>
             <div id="auth-forgot-panel" style="display:none">
                 <p class="auth-panel-title">Reset Password</p>
@@ -640,72 +642,86 @@
     }
     </script>
     <!-- Skill Tree modal -->
-    <div id="skill-modal" style="display:none">
+    <div id="skillModal" style="display:none">
         <div class="st-modal-box">
             <div class="st-modal-header">
                 <span class="st-modal-title">&#9643; Skill Tree</span>
-                <button class="st-close-btn" onclick="document.getElementById('skill-modal').style.display='none'">&#x2715;</button>
+                <button class="st-close-btn" data-close-modal="skillModal">&#x2715;</button>
             </div>
             <div class="st-tabs">
-                <button id="st-tab-general"  class="st-tab st-tab-active" onclick="switchSkillTab('general')">General</button>
-                <button id="st-tab-knight"   class="st-tab" style="display:none" onclick="switchSkillTab('knight')">&#9876; Knight</button>
-                <button id="st-tab-sorcerer" class="st-tab" style="display:none" onclick="switchSkillTab('sorcerer')">&#10022; Sorcerer</button>
+                <button id="st-tab-general"  class="st-tab st-tab-active">General</button>
+                <button id="st-tab-knight"   class="st-tab" style="display:none">&#9876; Knight</button>
+                <button id="st-tab-sorcerer" class="st-tab" style="display:none">&#10022; Sorcerer</button>
             </div>
-            <div id="st-pane-general"  class="st-pane"></div>
-            <div id="st-pane-knight"   class="st-pane" style="display:none"><div class="st-coming-soon">Knight skills coming soon.</div></div>
-            <div id="st-pane-sorcerer" class="st-pane" style="display:none"><div class="st-coming-soon">Sorcerer skills coming soon.</div></div>
+            <div id="panelGeneral"  class="st-pane"></div>
+            <div id="panelKnight"   class="st-pane" style="display:none"></div>
+            <div id="panelSorc"     class="st-pane" style="display:none"></div>
         </div>
     </div>
-    <!-- Class choice modal -->
-    <div id="class-modal" style="display:none">
+    <!-- Class choice / Respec modal -->
+    <div id="ascendModal" style="display:none">
         <div class="class-choice-box">
-            <div class="class-choice-title">⚔ Ascension ⚔</div>
-            <p class="class-choice-subtitle">You have reached level 30. Choose your eternal path — this cannot be reversed.</p>
+            <div class="class-choice-title">⚔ Ascension &amp; Respec ⚔</div>
+            <p class="class-choice-subtitle">Choose your path. Respec is available after ascending (costs increase each time).</p>
             <div class="class-choice-row">
-                <button class="class-btn class-btn-knight" onclick="doAscendAsClass('knight')">
-                    <div class="class-btn-name">⚔ Knight</div>
-                    <div class="class-btn-desc">Powerful while playing actively.<br>Clicking drives your output through Combo Meter, Cleaving Blows &amp; Battlefield Purge.<br>Annihilation: instant boss kill (Skill Tree).</div>
+                <button id="btnAscendKnight" class="class-btn class-btn-knight">
+                    <div class="class-btn-name">⚔ Ascend: Knight</div>
+                    <div class="class-btn-desc">Powerful while playing actively.<br>Clicking drives your output through Combo Meter, Cleaving Blows &amp; Battlefield Purge.</div>
                 </button>
-                <button class="class-btn class-btn-sorcerer" onclick="doAscendAsClass('sorcerer')">
-                    <div class="class-btn-name">✦ Sorcerer</div>
-                    <div class="class-btn-desc">Thrives on long AFK &amp; passive gameplay.<br>Heavy Magic Missile, Essence Gathering and Sudden Death deliver full output with zero manual input.<br>The true idle class.</div>
+                <button id="btnAscendSorcerer" class="class-btn class-btn-sorcerer">
+                    <div class="class-btn-name">✦ Ascend: Sorcerer</div>
+                    <div class="class-btn-desc">Thrives on long AFK &amp; passive gameplay.<br>Heavy Magic Missile, Essence Gathering and Sudden Death deliver full output with zero manual input.</div>
                 </button>
             </div>
-            <p class="class-choice-warn">⚠ This choice is permanent and cannot be reversed.</p>
+            <div class="class-choice-row" style="margin-top:12px">
+                <button id="btnRespecKnight"   class="class-btn class-btn-knight"  style="opacity:0.7">⚔ Respec → Knight</button>
+                <button id="btnRespecSorcerer" class="class-btn class-btn-sorcerer" style="opacity:0.7">✦ Respec → Sorcerer</button>
+            </div>
+            <button data-close-modal="ascendModal" class="st-close-btn" style="margin-top:10px">Close</button>
         </div>
     </div>
     <!-- Stats modal -->
-    <div id="stats-modal" style="display:none">
+    <div id="statsModal" style="display:none">
         <div class="st-modal-box stats-modal-box">
             <div class="st-modal-header">
                 <span class="st-modal-title">📊 My Statistics</span>
-                <button class="st-close-btn" onclick="document.getElementById('stats-modal').style.display='none'">&#x2715;</button>
+                <button class="st-close-btn" data-close-modal="statsModal">&#x2715;</button>
             </div>
             <div id="stats-body" class="stats-body"></div>
         </div>
     </div>
     <!-- Inventory modal -->
-    <div id="inventory-modal" style="display:none">
+    <div id="inventoryModal" style="display:none">
         <div class="st-modal-box inv-modal-box">
             <div class="st-modal-header">
                 <span class="st-modal-title">&#127890; Backpack</span>
-                <button class="st-close-btn" onclick="document.getElementById('inventory-modal').style.display='none'">&#x2715;</button>
+                <button class="st-close-btn" data-close-modal="inventoryModal">&#x2715;</button>
             </div>
-            <p class="inv-hint">Gold-bordered items have crafting recipes &mdash; click to open Crafting.</p>
-            <div id="inv-body" class="inv-grid"></div>
+            <p class="inv-hint">Gold-bordered items have crafting recipes.</p>
+            <div id="inventoryList" class="inv-grid"></div>
         </div>
     </div>
     <!-- Crafting modal -->
-    <div id="crafting-modal" style="display:none">
+    <div id="craftingModal" style="display:none">
         <div class="st-modal-box craft-modal-box">
             <div class="st-modal-header">
                 <span class="st-modal-title">&#9879; Crafting</span>
-                <button class="st-close-btn" onclick="document.getElementById('crafting-modal').style.display='none'">&#x2715;</button>
+                <button class="st-close-btn" data-close-modal="craftingModal">&#x2715;</button>
             </div>
-            <div id="craft-body" class="craft-body"></div>
+            <div id="craftingList" class="craft-body"></div>
         </div>
     </div>
-    <script src="js/main.js"></script>
+    <!-- Scoreboard modal -->
+    <div id="scoreboardModal" style="display:none">
+        <div class="st-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">🏆 Scoreboard</span>
+                <button class="st-close-btn" data-close-modal="scoreboardModal">&#x2715;</button>
+            </div>
+            <div id="scoreboardList"></div>
+        </div>
+    </div>
+    <script type="module" src="/client/main.js"></script>
     <p style="position:fixed;bottom:8px;right:14px;margin:0;font-size:11px;color:#666;font-style:italic;pointer-events:none;">Credits to Siviertez &mdash; the man who taught me the pleasure of slaying rotworms.</p>
 </body>
 </html>
