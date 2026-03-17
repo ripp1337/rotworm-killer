@@ -925,6 +925,7 @@ function craftPotion(id) {
     _setPotionEnd(id, Math.max(now, currentEnd) + duration);
 
     renderCrafting();
+    saveProgress();
 }
 
 // ── Skill Tree ─────────────────────────────────────────────────────────────────
@@ -970,6 +971,7 @@ function buySkill(id) {
     if (id === 11 && skillPts(11) === 1) { autoUnlocked = true; bossFocusUnlocked = true; autoEnabled = true; autoTarget = _pickAutoTarget(); }
     if (id === 31 && skillPts(31) === 1) { gfbUnlocked = true; autoGfbUnlocked = true; autoGfbEnabled = true; }
     renderSkillTree();
+    saveProgress();
 }
 
 // ── General skill effect helpers ──────────────────────────────────────────────
@@ -1033,6 +1035,7 @@ function buyKnightSkill(id) {
     gold -= (skill.costs[kPts(skill.id)] ?? 0);
     knightSkillPts[id] = (knightSkillPts[id] || 0) + 1;
     renderSkillTree();
+    saveProgress();
 }
 
 // Knight effect helpers
@@ -1077,6 +1080,7 @@ function buySorcSkill(id) {
     gold -= (skill.costs[sPts(skill.id)] ?? 0);
     sorcSkillPts[id] = (sorcSkillPts[id] || 0) + 1;
     renderSkillTree();
+    saveProgress();
 }
 
 // Sorc effect helpers
@@ -2609,6 +2613,7 @@ weaponUpgradeBtn.addEventListener('click', () => {
     if (!next || gold < next.cost || level < next.minLevel) return;
     gold -= next.cost;
     weaponIndex++;
+    saveProgress();
 });
 
 // Area unlock button

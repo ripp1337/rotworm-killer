@@ -1007,7 +1007,8 @@ class Handler(BaseHTTPRequestHandler):
 
         allowed_gold_increase = max(ANTI_CHEAT_MIN_GOLD_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_GOLD_PER_SEC))
         max_allowed_gold = prev_gold + allowed_gold_increase
-        gold_val = min(max(reported_gold, prev_gold), max_allowed_gold)
+        # Gold can legitimately decrease (player spends it). Only cap upward gains.
+        gold_val = max(0, min(reported_gold, max_allowed_gold))
 
         allowed_exp_increase = max(ANTI_CHEAT_MIN_EXP_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_EXP_PER_SEC))
         max_allowed_exp = prev_exp + allowed_exp_increase
