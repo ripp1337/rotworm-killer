@@ -178,6 +178,9 @@ class _TursoConn:
             if ('stream not found' in e_str or 'stream' in e_str.lower() or
                     e_type == 'PanicException' or 'unwrap' in e_str.lower()):
                 _turso_reconnect()
+                # The uncommitted write was on the now-dead connection and is lost.
+                # Raise so callers know the commit failed and must retry the write.
+                raise RuntimeError('Turso stream expired during commit; caller must retry.') from e
             else:
                 raise
     def sync(self):
@@ -1087,19 +1090,27 @@ class Handler(BaseHTTPRequestHandler):
 
         pid   = player['id']
         uname = player['username']
-        def _do_save(_sj=state_json, _sc=score, _lv=level, _ev=exp_val, _ts=now_ms,
-                     _cf=cheat_flags, _tc=new_total_clicks, _pid=pid, _un=uname):
+        # Synchronous save with retry — ensures progress is durable before responding.
+        # An async daemon thread risks being killed on Railway redeploy/restart,
+        # silently losing the save even though the client received HTTP 200.
+        _save_ok = False
+        for _attempt in range(3):
             try:
                 with _write_lock:
                     c = db()
                     c.execute(
                         'UPDATE players SET state=?,score=?,level=?,exp=?,last_save_ms=?,cheat_flags=?,total_clicks=? WHERE id=?',
-                        (_sj, _sc, _lv, _ev, _ts, _cf, _tc, _pid)
+                        (state_json, score, level, exp_val, now_ms, cheat_flags, new_total_clicks, pid)
                     )
                     c.commit()
+                _save_ok = True
+                break
             except Exception as exc:
-                print(f'[save-async] player={_un} error: {exc}')
-        threading.Thread(target=_do_save, daemon=True).start()
+                print(f'[save] player={uname} attempt={_attempt + 1} error: {exc}')
+                if _attempt < 2:
+                    time.sleep(0.3)
+        if not _save_ok:
+            print(f'[save] player={uname} FAILED after 3 attempts — progress may be lost')
 
         self.send_json(200, {'ok': True, 'score': score, 'level': level, 'gold': gold_val, 'exp': exp_val, 'flagged': suspicious})
 
