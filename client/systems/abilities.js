@@ -15,8 +15,20 @@ import { spawnFloatingDmg } from '../renderer/fx.js';
 
 // ── Fireball (GFB) ───────────────────────────────────────────────
 
+// Diamond AoE dimensions (in px, using TILE = 32):
+//   OOOXXXOOO   row ±2 tiles: |dx| ≤ 1 tile
+//   OOXXXXXOO   row ±1 tiles: |dx| ≤ 2 tiles
+//   OXXXXXXXO   row  0      : |dx| ≤ 3 tiles
+// Formula: |dx| + |dy| ≤ 3 * TILE  &&  |dy| ≤ 2 * TILE  (Manhattan diamond)
+const _TILE = 32;
+function _inGfbAoE(cx, cy, tx, ty) {
+    const adx = Math.abs(tx - cx);
+    const ady = Math.abs(ty - cy);
+    return adx + ady <= 3 * _TILE && ady <= 2 * _TILE;
+}
+
 export function canFireGfb(now) {
-    return S.gfbCooldownEnd <= now && S.hasGfb;
+    return S.gfbCooldownEnd <= now && (skillPts(31) >= 1 || S.gfbUnlocked);
 }
 
 export function castGfb(now, area) {
@@ -25,33 +37,38 @@ export function castGfb(now, area) {
     const allTargets = S.boss ? [...S.worms, S.boss] : [...S.worms];
     if (allTargets.length === 0) return null;
 
-    // C4 Ember Cascade: 30% chance to reset GFB CD on kill
-    let resetCd = false;
-    let totalDmg = 0;
-    const results = [];
-
-    for (const t of allTargets) {
-        const dmg  = Math.max(1, Math.floor(t.maxHp * skillFbDmgFrac()));
-        t.hp -= dmg;
-        totalDmg += dmg;
-        results.push({ target: t, dmg });
-
-        // C3 Annihilation chance: 30% at max → instant kill non-boss
-        const anniChance = skillPts(34) * 0.03;
-        if (!t.isBoss && Math.random() < anniChance) {
-            t.hp = 0;
+    // Find the monster-center that maximises targets inside the AoE diamond
+    let bestCenter = null;
+    let bestCount  = 0;
+    for (const cand of allTargets) {
+        const cx = cand.x + cand.size / 2;
+        const cy = cand.y + cand.size / 2;
+        let count = 0;
+        for (const t of allTargets) {
+            if (_inGfbAoE(cx, cy, t.x + t.size / 2, t.y + t.size / 2)) count++;
         }
+        if (count > bestCount) { bestCount = count; bestCenter = { x: cx, y: cy }; }
+    }
+    if (!bestCenter) return null;
+
+    // Apply damage to every target inside the chosen AoE
+    const results = [];
+    for (const t of allTargets) {
+        if (!_inGfbAoE(bestCenter.x, bestCenter.y, t.x + t.size / 2, t.y + t.size / 2)) continue;
+        const dmg = Math.max(1, Math.floor(t.maxHp * skillFbDmgFrac()));
+        t.hp -= dmg;
+        results.push({ target: t, dmg });
+        // C3 Annihilation chance: instant kill non-boss
+        if (!t.isBoss && Math.random() < skillPts(34) * 0.03) t.hp = 0;
     }
 
-    // C4 Ember Cascade: resets GFB CD if any target was killed
+    // C4 Ember Cascade: resets GFB CD if any target died
     const anythingDied = results.some(r => r.target.hp <= 0);
-    const embarCascadeChance = kPts(112) * 0.03;
-    if (anythingDied && Math.random() < embarCascadeChance) {
-        resetCd = true;
-    }
+    const emberChance  = skillPts(33) * 0.02;
+    const resetCd = anythingDied && Math.random() < emberChance;
 
     S.gfbCooldownEnd = resetCd ? now : now + GFB_COOLDOWN_MS;
-    return results;
+    return { results, center: bestCenter };
 }
 
 // Auto GFB (fires automatically when off cooldown if autoGfbEnabled)

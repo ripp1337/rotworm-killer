@@ -17,6 +17,18 @@ let _ctx    = null;
 let _rafId  = null;
 let _running = false;
 
+// ── Floor image cache ─────────────────────────────────────────────
+const _floorImgs = new Map(); // filename → HTMLImageElement
+
+function _getFloorImg(filename) {
+    if (!_floorImgs.has(filename)) {
+        const img = new Image();
+        img.src = filename;
+        _floorImgs.set(filename, img);
+    }
+    return _floorImgs.get(filename);
+}
+
 // Physics sub-step (ms)
 const DT      = 16.67;
 let   _accum  = 0;
@@ -103,9 +115,26 @@ export function draw() {
     if (!_ctx) return;
     _ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Background
-    _ctx.fillStyle = '#1a1a2e';
-    _ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    // ── Tiled floor ──────────────────────────────────────────────
+    const area = getAreaById(S.currentArea);
+    let floorDrawn = false;
+    if (area?.floor) {
+        const img = _getFloorImg(area.floor);
+        if (img.complete && img.naturalWidth > 0) {
+            const iw = img.naturalWidth;
+            const ih = img.naturalHeight;
+            for (let ty = 0; ty < CANVAS_H; ty += ih) {
+                for (let tx = 0; tx < CANVAS_W; tx += iw) {
+                    _ctx.drawImage(img, tx, ty);
+                }
+            }
+            floorDrawn = true;
+        }
+    }
+    if (!floorDrawn) {
+        _ctx.fillStyle = '#1a1a2e';
+        _ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    }
 
     // Boss HP bar
     if (S.boss) {

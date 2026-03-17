@@ -6,7 +6,7 @@ import { saveProgress, saveOnUnload } from './persistence/save.js';
 import { initCanvas, startLoop, stopLoop } from './renderer/canvas.js';
 import { syncSpriteLayer }       from './renderer/sprites.js';
 import { initSprites }           from './renderer/sprites.js';
-import { showLevelUpMsg }        from './renderer/fx.js';
+import { showLevelUpMsg, spawnFireballEffect } from './renderer/fx.js';
 import { updateHUD, doBuyWeapon, doBuyArea, setCurrentArea } from './ui/hud.js';
 import { renderSkillPanel }      from './ui/skill_panel.js';
 import { initChat, sendChat }    from './ui/chat.js';
@@ -271,8 +271,10 @@ export function handleGfbClick() {
     const now = Date.now();
     if (!canFireGfb(now)) return;
     const area = getAreaById(S.currentArea);
-    const results = castGfb(now, area);
-    if (!results) return;
+    const cast = castGfb(now, area);
+    if (!cast) return;
+    const { results, center } = cast;
+    spawnFireballEffect(center.x, center.y);
     for (const { target, dmg } of results) {
         spawnFloatingDmg(target.x + target.size / 2, target.y, dmg, { isBoss: target.isBoss });
         _checkKill(target, area, now);

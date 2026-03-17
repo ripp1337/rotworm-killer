@@ -197,9 +197,10 @@ function _showToast(msg) {
 }
 
 function _fmt(n) {
-    if (n >= 1e12) return (n / 1e12).toFixed(2) + 'T';
-    if (n >= 1e9)  return (n / 1e9 ).toFixed(2) + 'B';
-    if (n >= 1e6)  return (n / 1e6 ).toFixed(2) + 'M';
-    if (n >= 1e3)  return (n / 1e3 ).toFixed(1) + 'K';
-    return String(Math.floor(n));
+    n = Math.floor(n);
+    if (n >= 1_000_000_000_000) return (n / 1e12).toFixed(2) + 'T';
+    if (n >= 1_000_000_000)     return (n / 1e9 ).toFixed(2) + 'B';
+    if (n >= 1_000_000)         return (n / 1e6 ).toFixed(2) + 'M';
+    // Exact value with dots as thousands separators (e.g. 1.234.567)
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }

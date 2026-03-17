@@ -59,3 +59,27 @@ function _fmt(n) {
     if (n >= 1e3)  return (n / 1e3 ).toFixed(1) + 'K';
     return String(n);
 }
+
+// ── Fireball explosion visual ─────────────────────────────────────
+// Diamond AoE: 7 tiles wide × 5 tiles tall  (7×32 = 224, 5×32 = 160)
+const GFB_VFX_W = 224;
+const GFB_VFX_H = 160;
+
+export function spawnFireballEffect(cx, cy) {
+    const el = document.createElement('img');
+    el.src = 'Fireball_Effect.gif';
+    // Force GIF restart by appending a timestamp query param
+    el.src = `Fireball_Effect.gif?t=${Date.now()}`;
+    el.style.cssText = [
+        'position:absolute',
+        `left:${Math.round(cx - GFB_VFX_W / 2)}px`,
+        `top:${Math.round(cy - GFB_VFX_H / 2)}px`,
+        `width:${GFB_VFX_W}px`,
+        `height:${GFB_VFX_H}px`,
+        'pointer-events:none',
+        'z-index:20',
+        'image-rendering:pixelated',
+    ].join(';');
+    _fxContainer.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+}
