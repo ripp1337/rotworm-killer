@@ -20,6 +20,7 @@ from email.mime.multipart import MIMEMultipart
 import collections
 import queue as _queue_mod
 import os
+from concurrent.futures import ThreadPoolExecutor
 import tempfile
 PORT    = int(os.environ.get('PORT', 3000))
 STATIC  = Path(__file__).parent
@@ -648,7 +649,22 @@ MIME = {
 
 # ── Server (suppress harmless Railway health-probe noise) ────────────
 class _Server(ThreadingHTTPServer):
-    import sys as _sys
+    # Use a bounded thread pool instead of unbounded thread-per-request.
+    # ThreadingHTTPServer default spawns a new OS thread for every connection;
+    # under load (or slow saves) this exhausts the process thread limit and
+    # raises "can't start new thread". 64 workers handles concurrent players
+    # while staying well within Railway's limits.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._pool = ThreadPoolExecutor(max_workers=64)
+
+    def process_request(self, request, client_address):
+        self._pool.submit(self.process_request_thread, request, client_address)
+
+    def server_close(self):
+        self._pool.shutdown(wait=False)
+        super().server_close()
+
     def handle_error(self, request, client_address):
         import sys
         exc = sys.exc_info()[1]
@@ -1108,7 +1124,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as exc:
                 print(f'[save] player={uname} attempt={_attempt + 1} error: {exc}')
                 if _attempt < 2:
-                    time.sleep(0.3)
+                    time.sleep(0.05)
         if not _save_ok:
             print(f'[save] player={uname} FAILED after 3 attempts — progress may be lost')
 
