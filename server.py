@@ -964,7 +964,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(200, {'ok': True})
 
     def _post_save(self, body: dict) -> None:
-        player = auth_player(self.get_token())
+        # Accept token from body to support navigator.sendBeacon (can't set headers).
+        token = self.get_token() or _normalize_token(str(body.get('_token') or ''))
+        player = auth_player(token)
         if not player:
             return self.send_json(401, {'error': 'Not authenticated.'})
         state = body.get('state')

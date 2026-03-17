@@ -1808,7 +1808,26 @@ async function initAuth() {
     document.getElementById('login-modal').style.display = 'flex';
 }
 
-window.addEventListener('beforeunload', () => { saveProgress(); });
+window.addEventListener('beforeunload', () => {
+    // Use sendBeacon for reliable fire-and-forget save on tab close / refresh.
+    // Regular fetch() is not guaranteed to complete during page unload.
+    if (!authToken) return;
+    const payload = JSON.stringify({ state: getProgress(), _token: authToken });
+    const sent = navigator.sendBeacon
+        ? navigator.sendBeacon('/api/save', new Blob(
+            [payload],
+            { type: 'application/json' },
+          ))
+        : false;
+    // Fallback: synchronous XHR if sendBeacon is unavailable (rare).
+    if (!sent) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/save', false); // synchronous
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + authToken);
+        try { xhr.send(payload); } catch (_) {}
+    }
+});
 
 function spawnEffect(x, y, radius) {
     const tileSize = 100; // native gif size
