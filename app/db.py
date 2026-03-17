@@ -235,9 +235,9 @@ def init_db():
     _migrate_columns(conn)
 
     # For Turso embedded replicas, sync() pushes local DDL changes to the remote.
-    if USE_TURSO:
+    if USE_TURSO and _turso_conn is not None:
         try:
-            conn.sync()
+            _turso_conn.sync()
             print('[migration] Post-migration sync to Turso complete.')
         except Exception as e:
             print(f'[migration] Post-migration sync failed: {e}')

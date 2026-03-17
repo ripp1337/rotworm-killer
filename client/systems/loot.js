@@ -11,10 +11,15 @@ import {
 // ── Gold gain ────────────────────────────────────────────────────
 
 export function goldGain(area, isBoss, isUber) {
+    // Mob gold is a random range; boss/uber values fall back to multiples of mob avg.
+    const mobGold  = Math.floor(Math.random() * (area.mobGoldMax - area.mobGoldMin + 1) + area.mobGoldMin);
+    const bossGold = area.bossGold  ?? Math.floor((area.mobGoldMin + area.mobGoldMax) / 2) * 10;
+    const uberGold = area.uberBossGold ?? bossGold * 10;
+
     let g;
-    if (isUber)      g = area.uberBossGold  ?? area.bossGold * 10;
-    else if (isBoss) g = area.bossGold;
-    else             g = area.mobGold;
+    if (isUber)      g = uberGold;
+    else if (isBoss) g = bossGold;
+    else             g = mobGold;
 
     g *= skillGoldMult();
     g *= potionGoldMult();
@@ -24,10 +29,15 @@ export function goldGain(area, isBoss, isUber) {
 // ── Exp gain ─────────────────────────────────────────────────────
 
 export function expGain(area, isBoss, isUber) {
+    // Boss/uber exp falls back to multiples of mob exp when not explicitly set.
+    const mobExp  = area.mobExp;
+    const bossExp = area.bossExp  ?? mobExp * 10;
+    const uberExp = area.uberBossExp ?? bossExp * 10;
+
     let e;
-    if (isUber)      e = area.uberBossExp  ?? area.bossExp * 10;
-    else if (isBoss) e = area.bossExp;
-    else             e = area.mobExp;
+    if (isUber)      e = uberExp;
+    else if (isBoss) e = bossExp;
+    else             e = mobExp;
 
     e *= skillExpMult();
     e *= potionExpMult();
