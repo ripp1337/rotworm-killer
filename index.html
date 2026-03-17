@@ -82,7 +82,7 @@
                 </div>
 
                 <hr>
-                <button id="btnSkillTree" onclick="document.getElementById('skillModal').style.display='flex'">&#9643; Skill Tree</button>
+                <button id="btnSkillTree">&#9643; Skill Tree</button>
                 <button id="btnOpenInventory">&#127890; Backpack</button>
                 <button id="btnOpenCrafting">&#9879; Crafting (lv.20)</button>
                 <div id="hud-potions-section" style="display:none">
@@ -124,7 +124,7 @@
                     <span id="hud-area-info" class="hud-small"></span>
                 </div>
                 <hr>
-                <button id="btnAscendOpen" onclick="document.getElementById('ascendModal').style.display='flex'">&#9734; Ascend / Respec</button>
+                <button id="btnAscendOpen">&#9734; Ascend / Respec</button>
                 <hr>
                 <div class="hud-section sb-header">
                     Top Killers
@@ -136,12 +136,12 @@
             <!-- Chat panel -->
             <div id="chat-panel">
                 <div class="hud-section chat-header">💬 Live Chat <button id="chat-toggle-btn" onclick="chatToggle()" title="Hide/show chat">[hide]</button></div>
-                <div id="chatBox"></div>
+                <div id="chat-messages"></div>
                 <div id="chat-footer">
                     <div id="chat-login-hint">Log in to chat</div>
                     <div id="chat-input-row">
-                        <input id="chatInput" type="text" maxlength="200" placeholder="Say something…" autocomplete="off">
-                        <button id="btnChatSend">▶</button>
+                        <input id="chat-input" type="text" maxlength="200" placeholder="Say something…" autocomplete="off">
+                        <button id="chat-send-btn">▶</button>
                     </div>
                 </div>
             </div>
@@ -601,6 +601,83 @@
 
         </div>
     </div>
+    <!-- ── Skill Tree Modal ──────────────────────────────────── -->
+    <div id="skill-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:1001; justify-content:center; align-items:center; overflow-y:auto; padding:16px 0;">
+        <div class="st-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">⚔ Skill Tree</span>
+                <button class="st-close-btn" data-close-modal="skill-modal">✕</button>
+            </div>
+            <div class="st-tabs">
+                <button class="st-tab st-tab-active" data-tab="general" onclick="switchSkillTab('general')">General</button>
+                <button class="st-tab" id="skillTabKnight" data-tab="knight" onclick="switchSkillTab('knight')" style="display:none">⚔ Knight</button>
+                <button class="st-tab" id="skillTabSorc"   data-tab="sorc"    onclick="switchSkillTab('sorc')"    style="display:none">✦ Sorcerer</button>
+            </div>
+            <div class="st-pane" id="panelGeneral"></div>
+            <div class="st-pane" id="panelKnight" style="display:none"></div>
+            <div class="st-pane" id="panelSorc"   style="display:none"></div>
+        </div>
+    </div>
+
+    <!-- ── Crafting Modal ────────────────────────────────────── -->
+    <div id="crafting-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:1001; justify-content:center; align-items:center; overflow-y:auto; padding:16px 0;">
+        <div class="modal-box craft-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">⚗ Crafting</span>
+                <button class="st-close-btn" data-close-modal="crafting-modal">✕</button>
+            </div>
+            <div class="craft-body" id="craftingList"></div>
+        </div>
+    </div>
+
+    <!-- ── Inventory / Backpack Modal ────────────────────────── -->
+    <div id="inventory-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:1001; justify-content:center; align-items:center; overflow-y:auto; padding:16px 0;">
+        <div class="modal-box inv-modal-box">
+            <div class="st-modal-header">
+                <span class="st-modal-title">🎒 Backpack</span>
+                <button class="st-close-btn" data-close-modal="inventory-modal">✕</button>
+            </div>
+            <p class="inv-hint">Essences gathered from monster kills</p>
+            <div class="inv-grid" id="inventoryList"></div>
+        </div>
+    </div>
+
+    <!-- ── Ascend / Respec Modal ─────────────────────────────── -->
+    <div id="class-modal">
+        <div class="class-choice-box">
+            <p class="class-choice-title">★ Choose Your Path</p>
+            <!-- Ascend section -->
+            <div id="ascend-section">
+                <p class="class-choice-subtitle">Ascension is permanent — you can respec later for gold.</p>
+                <div class="class-choice-row">
+                    <button class="class-btn class-btn-knight" id="btnAscendKnight">
+                        <span class="class-btn-name">⚔ Knight</span>
+                        <span class="class-btn-desc">Active play.<br>Combo Meter, Cleaving Blows,<br>Double Strike Instinct.</span>
+                    </button>
+                    <button class="class-btn class-btn-sorcerer" id="btnAscendSorcerer">
+                        <span class="class-btn-name">✦ Sorcerer</span>
+                        <span class="class-btn-desc">Idle / AFK play.<br>Magic Missile, Sudden Death,<br>Essence Gathering.</span>
+                    </button>
+                </div>
+                <p class="class-choice-warn">⚠ Requires level 30. Choice is permanent!</p>
+            </div>
+            <!-- Respec section -->
+            <div id="respec-section" style="display:none">
+                <p class="class-choice-subtitle">You are a <strong id="cur-class-label">Knight</strong>. Switch class for gold.</p>
+                <div class="class-choice-row">
+                    <button class="class-btn class-btn-knight" id="btnRespecKnight">
+                        <span class="class-btn-name">⚔ Respec to Knight</span>
+                    </button>
+                    <button class="class-btn class-btn-sorcerer" id="btnRespecSorcerer">
+                        <span class="class-btn-name">✦ Respec to Sorcerer</span>
+                    </button>
+                </div>
+                <p id="respec-cost-label" class="class-choice-subtitle"></p>
+            </div>
+            <button class="st-close-btn" data-close-modal="class-modal" style="margin-top:12px; align-self:flex-end;">✕ Close</button>
+        </div>
+    </div>
+
     <script>
     function showPage(page) {
         document.getElementById('page-game').style.display    = page === 'game'    ? '' : 'none';
@@ -641,45 +718,7 @@
         btn.disabled = false;
     }
     </script>
-    <!-- Skill Tree modal -->
-    <div id="skillModal" style="display:none">
-        <div class="st-modal-box">
-            <div class="st-modal-header">
-                <span class="st-modal-title">&#9643; Skill Tree</span>
-                <button class="st-close-btn" data-close-modal="skillModal">&#x2715;</button>
-            </div>
-            <div class="st-tabs">
-                <button id="st-tab-general"  class="st-tab st-tab-active">General</button>
-                <button id="st-tab-knight"   class="st-tab" style="display:none">&#9876; Knight</button>
-                <button id="st-tab-sorcerer" class="st-tab" style="display:none">&#10022; Sorcerer</button>
-            </div>
-            <div id="panelGeneral"  class="st-pane"></div>
-            <div id="panelKnight"   class="st-pane" style="display:none"></div>
-            <div id="panelSorc"     class="st-pane" style="display:none"></div>
-        </div>
-    </div>
-    <!-- Class choice / Respec modal -->
-    <div id="ascendModal" style="display:none">
-        <div class="class-choice-box">
-            <div class="class-choice-title">⚔ Ascension &amp; Respec ⚔</div>
-            <p class="class-choice-subtitle">Choose your path. Respec is available after ascending (costs increase each time).</p>
-            <div class="class-choice-row">
-                <button id="btnAscendKnight" class="class-btn class-btn-knight">
-                    <div class="class-btn-name">⚔ Ascend: Knight</div>
-                    <div class="class-btn-desc">Powerful while playing actively.<br>Clicking drives your output through Combo Meter, Cleaving Blows &amp; Battlefield Purge.</div>
-                </button>
-                <button id="btnAscendSorcerer" class="class-btn class-btn-sorcerer">
-                    <div class="class-btn-name">✦ Ascend: Sorcerer</div>
-                    <div class="class-btn-desc">Thrives on long AFK &amp; passive gameplay.<br>Heavy Magic Missile, Essence Gathering and Sudden Death deliver full output with zero manual input.</div>
-                </button>
-            </div>
-            <div class="class-choice-row" style="margin-top:12px">
-                <button id="btnRespecKnight"   class="class-btn class-btn-knight"  style="opacity:0.7">⚔ Respec → Knight</button>
-                <button id="btnRespecSorcerer" class="class-btn class-btn-sorcerer" style="opacity:0.7">✦ Respec → Sorcerer</button>
-            </div>
-            <button data-close-modal="ascendModal" class="st-close-btn" style="margin-top:10px">Close</button>
-        </div>
-    </div>
+
     <!-- Stats modal -->
     <div id="statsModal" style="display:none">
         <div class="st-modal-box stats-modal-box">
@@ -690,27 +729,8 @@
             <div id="stats-body" class="stats-body"></div>
         </div>
     </div>
-    <!-- Inventory modal -->
-    <div id="inventoryModal" style="display:none">
-        <div class="st-modal-box inv-modal-box">
-            <div class="st-modal-header">
-                <span class="st-modal-title">&#127890; Backpack</span>
-                <button class="st-close-btn" data-close-modal="inventoryModal">&#x2715;</button>
-            </div>
-            <p class="inv-hint">Gold-bordered items have crafting recipes.</p>
-            <div id="inventoryList" class="inv-grid"></div>
-        </div>
-    </div>
-    <!-- Crafting modal -->
-    <div id="craftingModal" style="display:none">
-        <div class="st-modal-box craft-modal-box">
-            <div class="st-modal-header">
-                <span class="st-modal-title">&#9879; Crafting</span>
-                <button class="st-close-btn" data-close-modal="craftingModal">&#x2715;</button>
-            </div>
-            <div id="craftingList" class="craft-body"></div>
-        </div>
-    </div>
+
+
     <!-- Scoreboard modal -->
     <div id="scoreboardModal" style="display:none">
         <div class="st-modal-box">

@@ -24,12 +24,9 @@ export function getMaxMonsters() {
 let _nextId = 1;
 
 function makeWorm(area, isBoss, isUber) {
-    const speedMin = area.mobSpeedMin ?? 30;
-    const speedMax = area.mobSpeedMax ?? 60;
-    const speed    = speedMin + Math.random() * (speedMax - speedMin);
-    const size     = isBoss ? BOSS_SIZE : TILE;
-    const x        = Math.random() * (CANVAS_W - size);
-    const y        = Math.random() * (CANVAS_H - size);
+    const size = isBoss ? BOSS_SIZE : TILE;
+    const x    = size + Math.random() * (CANVAS_W - size * 2);
+    const y    = size + Math.random() * (CANVAS_H - size * 2);
     let hp;
     if (isUber)    hp = area.uberBossHp;
     else if (isBoss) hp = area.bossHp;
@@ -37,8 +34,6 @@ function makeWorm(area, isBoss, isUber) {
     return {
         id:    _nextId++,
         x, y,
-        dx:    (Math.random() < 0.5 ? 1 : -1) * speed,
-        dy:    (Math.random() < 0.5 ? 1 : -1) * speed,
         hp,
         maxHp: hp,
         size,

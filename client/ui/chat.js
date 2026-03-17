@@ -57,11 +57,11 @@ export async function sendChat(text) {
 // ── Append a message to the chat box ─────────────────────────────
 
 export function appendMessage({ username, message, timestamp }) {
-    const box = document.getElementById('chatBox');
+    const box = document.getElementById('chat-messages');
     if (!box) return;
 
     const line = document.createElement('div');
-    line.className = 'chat-line';
+    line.className = 'chat-msg';
 
     const time = new Date(timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -75,7 +75,7 @@ export function appendMessage({ username, message, timestamp }) {
     userSpan.textContent = `${username}: `;
 
     const msgSpan = document.createElement('span');
-    msgSpan.className   = 'chat-msg';
+    msgSpan.className   = 'chat-text';
     msgSpan.textContent = message;
 
     line.appendChild(timeSpan);

@@ -70,7 +70,11 @@ export async function doLogin(username, password) {
     });
     const data = await res.json();
 
-    if (!res.ok) return alert(data.error ?? 'Login failed.');
+    if (!res.ok) {
+        const el = document.getElementById('auth-login-err');
+        if (el) el.textContent = data.error ?? 'Login failed.';
+        return;
+    }
 
     localStorage.setItem('token', data.token);
     loadState({ ...data.player, token: data.token });
@@ -88,7 +92,11 @@ export async function doRegister(username, password, email) {
     });
     const data = await res.json();
 
-    if (!res.ok) return alert(data.error ?? 'Registration failed.');
+    if (!res.ok) {
+        const el = document.getElementById('auth-reg-err');
+        if (el) el.textContent = data.error ?? 'Registration failed.';
+        return;
+    }
 
     localStorage.setItem('token', data.token);
     loadState({ ...data.player, token: data.token });
@@ -119,8 +127,8 @@ function startGame() {
 
     startLoop();
 
-    // Auto-save every 60 seconds
-    setInterval(() => saveProgress(), 60_000);
+    // Auto-save every 5 minutes
+    setInterval(() => saveProgress(), 300_000);
 
     // Server-sent announcement
     _loadAnnouncement();
@@ -136,14 +144,15 @@ export function handleGameClick(e) {
     const now = Date.now();
     const cd  = effectiveBasicCooldown();
     if (now - _lastClickMs < cd) return;
-    _lastClickMs = now;
 
+    // Hit-test: find which monster was clicked
+    const target = _pickClickedTarget(e);
+    if (!target) return;   // clicked empty space — don't consume cooldown
+
+    _lastClickMs = now;
     S.totalClicks++;
 
     const area   = getAreaById(S.currentArea);
-    const target = _pickTarget();
-    if (!target) return;
-
     const isBoss = target.isBoss;
     const dmg    = rollClickDmg(target, isBoss);
     target.hp   -= dmg;
@@ -169,7 +178,33 @@ window.addEventListener('autoAttack', () => {
     _checkKill(target, area, Date.now());
 });
 
-// ── Pick the lowest-HP target ─────────────────────────────────────
+// ── Pick the monster that was clicked (hit-test) ──────────────────
+
+function _pickClickedTarget(e) {
+    const canvas = document.getElementById('gameCanvas');
+    if (!canvas) return null;
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / (rect.width  || canvas.width);
+    const scaleY = canvas.height / (rect.height || canvas.height);
+    const cx = (e.clientX - rect.left) * scaleX;
+    const cy = (e.clientY - rect.top)  * scaleY;
+
+    // Boss takes priority (larger target)
+    if (S.boss) {
+        const b = S.boss;
+        if (cx >= b.x - b.size && cx <= b.x + b.size &&
+            cy >= b.y - b.size && cy <= b.y + b.size) return b;
+    }
+    // Check worms — prefer lowest HP among clicked ones
+    const hit = S.worms.filter(w =>
+        cx >= w.x - w.size && cx <= w.x + w.size &&
+        cy >= w.y - w.size && cy <= w.y + w.size
+    );
+    if (hit.length === 0) return null;
+    return hit.reduce((a, b) => a.hp < b.hp ? a : b);
+}
+
+// ── Pick the lowest-HP target for auto-attack ─────────────────────
 
 function _pickTarget() {
     // Always attack boss if present; no boss-focus toggle needed
@@ -311,12 +346,40 @@ function _bindUI() {
     _on('btnOpenInventory', 'click', showInventoryModal);
     _on('btnScoreboard',    'click', toggleScoreboard);
 
+    // Skill tree modal
+    _on('btnSkillTree', 'click', () => {
+        renderSkillPanel();
+        const m = document.getElementById('skill-modal');
+        if (m) m.style.display = 'flex';
+    });
+
+    // Ascend / Respec modal
+    _on('btnAscendOpen', 'click', () => {
+        const ascended = S.ascended;
+        const ascSection   = document.getElementById('ascend-section');
+        const respecSection = document.getElementById('respec-section');
+        if (ascSection)   ascSection.style.display   = ascended ? 'none' : '';
+        if (respecSection) respecSection.style.display = ascended ? '' : 'none';
+        if (ascended) {
+            const curLbl  = document.getElementById('cur-class-label');
+            const costLbl = document.getElementById('respec-cost-label');
+            if (curLbl)  curLbl.textContent  = S.ascendedClass === 'knight' ? 'Knight' : 'Sorcerer';
+            if (costLbl) {
+                const COSTS = [1_000_000, 100_000_000, 10_000_000_000];
+                const cost  = COSTS[Math.min(S.respecCount, 2)];
+                costLbl.textContent = `Respec cost: ${_fmtGold(cost)}g`;
+            }
+        }
+        const m = document.getElementById('class-modal');
+        if (m) m.style.display = 'flex';
+    });
+
     // Chat
-    _on('btnChatSend', 'click', () => {
-        const inp = document.getElementById('chatInput');
+    _on('chat-send-btn', 'click', () => {
+        const inp = document.getElementById('chat-input');
         if (inp) { sendChat(inp.value); inp.value = ''; }
     });
-    document.getElementById('chatInput')?.addEventListener('keydown', e => {
+    document.getElementById('chat-input')?.addEventListener('keydown', e => {
         if (e.key === 'Enter') { sendChat(e.target.value); e.target.value = ''; }
     });
 
@@ -355,8 +418,19 @@ function _bindUI() {
         document.getElementById('announcement-overlay').style.display = 'none';
     };
 
+    window.switchSkillTab = function(tab) {
+        const MAP = { general: 'panelGeneral', knight: 'panelKnight', sorc: 'panelSorc' };
+        for (const [t, id] of Object.entries(MAP)) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = t === tab ? '' : 'none';
+        }
+        document.querySelectorAll('.st-tab').forEach(btn =>
+            btn.classList.toggle('st-tab-active', btn.dataset.tab === tab)
+        );
+    };
+
     window.chatToggle = function() {
-        const box = document.getElementById('chatBox');
+        const box = document.getElementById('chat-messages');
         const btn = document.getElementById('chat-toggle-btn');
         if (!box) return;
         const hidden = box.style.display === 'none';
@@ -405,6 +479,13 @@ function _bindUI() {
 
 function _on(id, event, handler) {
     document.getElementById(id)?.addEventListener(event, handler);
+}
+
+function _fmtGold(n) {
+    if (n >= 1e9)  return (n / 1e9 ).toFixed(1) + 'B';
+    if (n >= 1e6)  return (n / 1e6 ).toFixed(1) + 'M';
+    if (n >= 1e3)  return (n / 1e3 ).toFixed(1) + 'K';
+    return String(Math.floor(n));
 }
 
 // ── Announcement ─────────────────────────────────────────────────

@@ -14,6 +14,7 @@ import { apiFetch }       from '../persistence/save.js';  // shared fetch helper
 export function updateHUD() {
     _setText('playerName',  S.loggedInPlayer ?? '');
     _setText('playerLevel', `Lv ${S.level}`);
+    _setText('hud-score',   _fmt(S.score));
     _setHpBar();
     _setExpBar();
     _setGoldText();
@@ -127,7 +128,7 @@ export async function doBuyWeapon() {
         S.gold        = res.gold;
         updateHUD();
     } else {
-        alert(res.error ?? 'Failed to upgrade weapon.');
+        _showToast(res.error ?? 'Failed to upgrade weapon.');
     }
 }
 
@@ -145,7 +146,7 @@ export async function doBuyArea() {
         updateHUD();
         _refreshAreaSelector();
     } else {
-        alert(res.error ?? 'Failed to unlock area.');
+        _showToast(res.error ?? 'Failed to unlock area.');
     }
 }
 
@@ -175,6 +176,24 @@ function _refreshAreaSelector() {
 function _setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
+}
+
+function _showToast(msg) {
+    let toast = document.getElementById('game-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'game-toast';
+        toast.style.cssText =
+            'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+            'background:#1a1006;border:1px solid #aa3300;color:#cc6030;' +
+            'padding:8px 18px;font-family:Verdana,sans-serif;font-size:11px;' +
+            'z-index:9999;pointer-events:none;display:none;';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
 
 function _fmt(n) {

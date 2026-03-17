@@ -1,0 +1,229 @@
+2026-03-17T17:44:19.953657393Z [inf]  Starting Container
+2026-03-17T17:44:20.575598926Z [inf]  [startup] DB_PATH=/app/game.db
+2026-03-17T17:44:20.575604006Z [err]  INFO:     Started server process [1]
+2026-03-17T17:44:20.575608596Z [err]  INFO:     Waiting for application startup.
+2026-03-17T17:44:28.623790550Z [err]  INFO:     Application startup complete.
+2026-03-17T17:44:28.623794970Z [err]  INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+2026-03-17T17:44:48.629367433Z [inf]  INFO:     100.64.0.2:18460 - "GET /client/systems/state.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629369213Z [inf]  INFO:     100.64.0.2:18462 - "GET /client/persistence/save.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629373733Z [inf]  INFO:     100.64.0.2:18470 - "GET /client/ui/modals.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629375853Z [inf]  INFO:     100.64.0.2:18524 - "GET /client/data/areas.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629378203Z [inf]  INFO:     100.64.0.2:18472 - "GET /client/renderer/canvas.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629379823Z [inf]  INFO:     100.64.0.2:18532 - "GET /client/data/weapons.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629382812Z [inf]  INFO:     100.64.0.2:18474 - "GET /client/ui/skill_panel.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629383012Z [inf]  INFO:     100.64.0.2:18536 - "GET /client/systems/loot.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629386502Z [inf]  INFO:     100.64.0.2:18540 - "GET /client/ui/hud.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629388182Z [inf]  INFO:     100.64.0.2:18506 - "GET /client/renderer/fx.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629390192Z [inf]  INFO:     100.64.0.2:18552 - "GET /client/systems/spawner.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629391842Z [inf]  INFO:     100.64.0.2:18508 - "GET /client/ui/chat.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629394202Z [inf]  INFO:     100.64.0.2:18564 - "GET /client/ui/scoreboard.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629396892Z [inf]  INFO:     100.64.0.2:18566 - "GET /client/renderer/sprites.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629425442Z [inf]  INFO:     100.64.0.2:18460 - "GET / HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629428602Z [inf]  INFO:     100.64.0.2:18460 - "GET /css/style.css HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629432122Z [inf]  INFO:     100.64.0.2:18460 - "GET /Serpent_Sword.gif HTTP/1.1" 200 OK
+2026-03-17T17:44:48.629437002Z [inf]  INFO:     100.64.0.2:18460 - "GET /client/main.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631322928Z [inf]  INFO:     100.64.0.2:18580 - "GET /client/persistence/load.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631326028Z [inf]  INFO:     100.64.0.2:18590 - "GET /client/systems/skills.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631329358Z [inf]  INFO:     100.64.0.2:18586 - "GET /client/systems/combat.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631333578Z [inf]  INFO:     100.64.0.2:18596 - "GET /client/systems/abilities.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631337338Z [inf]  INFO:     100.64.0.2:18532 - "GET /client/systems/crafting.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631340728Z [inf]  INFO:     100.64.0.2:18552 - "GET /client/data/constants.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631344618Z [inf]  INFO:     100.64.0.2:18540 - "GET /client/data/recipes.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631348718Z [inf]  INFO:     100.64.0.2:18532 - "GET /client/data/skills.js HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631353868Z [inf]  INFO:     100.64.0.2:18532 - "GET /api/me HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631357188Z [inf]  INFO:     100.64.0.2:18532 - "GET /api/announcement HTTP/1.1" 404 Not Found
+2026-03-17T17:44:48.631361028Z [inf]  INFO:     100.64.0.2:18532 - "GET /api/chat/stream HTTP/1.1" 200 OK
+2026-03-17T17:44:48.631363928Z [inf]  INFO:     100.64.0.2:18540 - "GET /api/scoreboard HTTP/1.1" 200 OK
+2026-03-17T17:45:08.327248170Z [inf]  INFO:     100.64.0.2:21880 - "POST /api/save HTTP/1.1" 500 Internal Server Error
+2026-03-17T17:45:08.327254500Z [err]  ERROR:    Exception in ASGI application
+2026-03-17T17:45:08.327259140Z [err]  Traceback (most recent call last):
+2026-03-17T17:45:08.327262820Z [err]    File "/app/.venv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+2026-03-17T17:45:08.327266780Z [err]      result = await app(  # type: ignore[func-returns-value]
+2026-03-17T17:45:08.327271450Z [err]               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:08.327276430Z [err]    File "/app/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+2026-03-17T17:45:08.327281590Z [err]      return await self.app(scope, receive, send)
+2026-03-17T17:45:08.327285210Z [err]      raise exc
+2026-03-17T17:45:08.327285910Z [err]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:08.327289780Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1160, in __call__
+2026-03-17T17:45:08.327294190Z [err]      await super().__call__(scope, receive, send)
+2026-03-17T17:45:08.327299330Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/applications.py", line 107, in __call__
+2026-03-17T17:45:08.327305570Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+2026-03-17T17:45:08.327306140Z [err]      await self.middleware_stack(scope, receive, send)
+2026-03-17T17:45:08.327311390Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+2026-03-17T17:45:08.327316690Z [err]      await self.app(scope, receive, _send)
+2026-03-17T17:45:08.327322940Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+2026-03-17T17:45:08.330418752Z [err]      await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+2026-03-17T17:45:08.330427532Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-03-17T17:45:08.330432951Z [err]      raise exc
+2026-03-17T17:45:08.330437651Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-03-17T17:45:08.330441831Z [err]      await app(scope, receive, sender)
+2026-03-17T17:45:08.330448231Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+2026-03-17T17:45:08.330453301Z [err]      await self.app(scope, receive, send)
+2026-03-17T17:45:08.330458091Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 716, in __call__
+2026-03-17T17:45:08.330462431Z [err]      await self.middleware_stack(scope, receive, send)
+2026-03-17T17:45:08.330466771Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 736, in app
+2026-03-17T17:45:08.330471811Z [err]      await route.handle(scope, receive, send)
+2026-03-17T17:45:08.330476151Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 290, in handle
+2026-03-17T17:45:08.330481371Z [err]      await self.app(scope, receive, send)
+2026-03-17T17:45:08.330485911Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 130, in app
+2026-03-17T17:45:08.330490151Z [err]      await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+2026-03-17T17:45:08.330493931Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-03-17T17:45:08.330498681Z [err]      raise exc
+2026-03-17T17:45:08.330503231Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-03-17T17:45:08.332369807Z [err]      await app(scope, receive, sender)
+2026-03-17T17:45:08.332381776Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 116, in app
+2026-03-17T17:45:08.332387616Z [err]      response = await f(request)
+2026-03-17T17:45:08.332393486Z [err]                 ^^^^^^^^^^^^^^^^
+2026-03-17T17:45:08.332401866Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 670, in app
+2026-03-17T17:45:08.332408116Z [err]      raw_response = await run_endpoint_function(
+2026-03-17T17:45:08.332413256Z [err]                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:08.332418356Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 324, in run_endpoint_function
+2026-03-17T17:45:08.332422516Z [err]      return await dependant.call(**values)
+2026-03-17T17:45:08.332427566Z [err]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:08.332432106Z [err]    File "/app/app/routes/save.py", line 75, in save
+2026-03-17T17:45:08.332437776Z [err]      conn.execute(
+2026-03-17T17:45:08.332442776Z [err]    File "/app/app/db.py", line 85, in execute
+2026-03-17T17:45:08.332447386Z [err]      return _TursoCursor(self._raw.execute(sql, params))
+2026-03-17T17:45:08.332455375Z [err]                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:08.332462165Z [err]  ValueError: Hrana: `stream error: `Error { message: "SQLite error: no such column: gold", code: "SQLITE_UNKNOWN" }``
+2026-03-17T17:45:09.075524011Z [inf]  INFO:     100.64.0.2:13316 - "POST /api/save HTTP/1.1" 401 Unauthorized
+2026-03-17T17:45:11.798259863Z [inf]  INFO:     100.64.0.2:13316 - "GET / HTTP/1.1" 200 OK
+2026-03-17T17:45:11.832521725Z [inf]  INFO:     100.64.0.2:14896 - "GET /Serpent_Sword.gif HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.832527225Z [inf]  INFO:     100.64.0.2:13316 - "GET /css/style.css HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.836312377Z [inf]  INFO:     100.64.0.2:13316 - "GET /client/main.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.940272466Z [inf]  INFO:     100.64.0.2:14896 - "GET /client/renderer/canvas.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.944345456Z [inf]  INFO:     100.64.0.2:13316 - "GET /client/systems/state.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.944348986Z [inf]  INFO:     100.64.0.2:14902 - "GET /client/renderer/sprites.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.944354526Z [inf]  INFO:     100.64.0.2:14924 - "GET /client/renderer/fx.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.944358266Z [inf]  INFO:     100.64.0.2:14904 - "GET /client/persistence/load.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.944362316Z [inf]  INFO:     100.64.0.2:14934 - "GET /client/persistence/save.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.944365926Z [inf]  INFO:     100.64.0.2:13316 - "GET /client/ui/skill_panel.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948931939Z [inf]  INFO:     100.64.0.2:14896 - "GET /client/ui/hud.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948936629Z [inf]  INFO:     100.64.0.2:14902 - "GET /client/ui/modals.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948940549Z [inf]  INFO:     100.64.0.2:14940 - "GET /client/ui/chat.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948944469Z [inf]  INFO:     100.64.0.2:14956 - "GET /client/data/areas.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948949289Z [inf]  INFO:     100.64.0.2:14952 - "GET /client/ui/scoreboard.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948953819Z [inf]  INFO:     100.64.0.2:14968 - "GET /client/data/weapons.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948958139Z [inf]  INFO:     100.64.0.2:14980 - "GET /client/systems/loot.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948964039Z [inf]  INFO:     100.64.0.2:14988 - "GET /client/systems/combat.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948969058Z [inf]  INFO:     100.64.0.2:15000 - "GET /client/systems/spawner.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.948974078Z [inf]  INFO:     100.64.0.2:15008 - "GET /client/systems/skills.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:11.952527473Z [inf]  INFO:     100.64.0.2:15026 - "GET /client/systems/abilities.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:12.020192287Z [inf]  INFO:     100.64.0.2:14896 - "GET /client/data/recipes.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:12.020197577Z [inf]  INFO:     100.64.0.2:14956 - "GET /client/data/constants.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:12.020202607Z [inf]  INFO:     100.64.0.2:14902 - "GET /client/systems/crafting.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:12.020208317Z [inf]  INFO:     100.64.0.2:14940 - "GET /client/data/skills.js HTTP/1.1" 304 Not Modified
+2026-03-17T17:45:12.084795979Z [inf]  INFO:     100.64.0.2:14940 - "GET /api/me HTTP/1.1" 200 OK
+2026-03-17T17:45:12.136541192Z [inf]  INFO:     100.64.0.2:14940 - "GET /api/chat/stream HTTP/1.1" 200 OK
+2026-03-17T17:45:12.136544492Z [inf]  INFO:     100.64.0.2:14896 - "GET /api/announcement HTTP/1.1" 404 Not Found
+2026-03-17T17:45:42.143107266Z [inf]  [turso] reconnecting...
+2026-03-17T17:45:42.143115436Z [inf]  [turso] reconnected.
+2026-03-17T17:45:42.143120846Z [inf]  INFO:     100.64.0.2:21640 - "POST /api/save HTTP/1.1" 500 Internal Server Error
+2026-03-17T17:45:42.143124736Z [err]  ERROR:    Exception in ASGI application
+2026-03-17T17:45:42.143128686Z [err]  Traceback (most recent call last):
+2026-03-17T17:45:42.143132336Z [err]    File "/app/.venv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+2026-03-17T17:45:42.143135925Z [err]      result = await app(  # type: ignore[func-returns-value]
+2026-03-17T17:45:42.143139715Z [err]               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:42.143143855Z [err]    File "/app/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+2026-03-17T17:45:42.143147985Z [err]      return await self.app(scope, receive, send)
+2026-03-17T17:45:42.143153345Z [err]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:42.143157635Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1160, in __call__
+2026-03-17T17:45:42.143161795Z [err]      await super().__call__(scope, receive, send)
+2026-03-17T17:45:42.143166145Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/applications.py", line 107, in __call__
+2026-03-17T17:45:42.143170305Z [err]      await self.middleware_stack(scope, receive, send)
+2026-03-17T17:45:42.143174175Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+2026-03-17T17:45:42.143178105Z [err]      raise exc
+2026-03-17T17:45:42.143182045Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+2026-03-17T17:45:42.143186135Z [err]      await self.app(scope, receive, _send)
+2026-03-17T17:45:42.143191865Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+2026-03-17T17:45:42.144937543Z [err]      await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+2026-03-17T17:45:42.144940653Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-03-17T17:45:42.144943303Z [err]      raise exc
+2026-03-17T17:45:42.144946513Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-03-17T17:45:42.144949453Z [err]      await app(scope, receive, sender)
+2026-03-17T17:45:42.144952553Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+2026-03-17T17:45:42.144955153Z [err]      await self.app(scope, receive, send)
+2026-03-17T17:45:42.144957513Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 716, in __call__
+2026-03-17T17:45:42.144960123Z [err]      await self.middleware_stack(scope, receive, send)
+2026-03-17T17:45:42.144963253Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 736, in app
+2026-03-17T17:45:42.144965923Z [err]      await route.handle(scope, receive, send)
+2026-03-17T17:45:42.144969363Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 290, in handle
+2026-03-17T17:45:42.144972423Z [err]      await self.app(scope, receive, send)
+2026-03-17T17:45:42.144974673Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 130, in app
+2026-03-17T17:45:42.144977343Z [err]      await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+2026-03-17T17:45:42.144980213Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-03-17T17:45:42.144983123Z [err]      raise exc
+2026-03-17T17:45:42.144985743Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-03-17T17:45:42.146862769Z [err]      await app(scope, receive, sender)
+2026-03-17T17:45:42.146865879Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 116, in app
+2026-03-17T17:45:42.146868269Z [err]      response = await f(request)
+2026-03-17T17:45:42.146871119Z [err]                 ^^^^^^^^^^^^^^^^
+2026-03-17T17:45:42.146873629Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 670, in app
+2026-03-17T17:45:42.146876299Z [err]      raw_response = await run_endpoint_function(
+2026-03-17T17:45:42.146878889Z [err]                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:42.146881579Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 324, in run_endpoint_function
+2026-03-17T17:45:42.146884829Z [err]      return await dependant.call(**values)
+2026-03-17T17:45:42.146887819Z [err]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:42.146890089Z [err]    File "/app/app/routes/save.py", line 75, in save
+2026-03-17T17:45:42.146892629Z [err]      conn.execute(
+2026-03-17T17:45:42.146894889Z [err]    File "/app/app/db.py", line 93, in execute
+2026-03-17T17:45:42.146897159Z [err]      return _TursoCursor(fresh._raw.execute(sql, params))
+2026-03-17T17:45:42.146899499Z [err]                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:45:42.146901869Z [err]  ValueError: Hrana: `stream error: `Error { message: "SQLite error: no such column: gold", code: "SQLITE_UNKNOWN" }``
+2026-03-17T17:46:22.153750800Z [inf]  [turso] reconnecting...
+2026-03-17T17:46:22.153764320Z [inf]  [turso] reconnected.
+2026-03-17T17:46:22.153768580Z [inf]  INFO:     100.64.0.2:61956 - "POST /api/save HTTP/1.1" 500 Internal Server Error
+2026-03-17T17:46:22.153772460Z [err]  ERROR:    Exception in ASGI application
+2026-03-17T17:46:22.153776840Z [err]  Traceback (most recent call last):
+2026-03-17T17:46:22.153781999Z [err]    File "/app/.venv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+2026-03-17T17:46:22.153785769Z [err]      result = await app(  # type: ignore[func-returns-value]
+2026-03-17T17:46:22.153789429Z [err]               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:46:22.153793919Z [err]    File "/app/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+2026-03-17T17:46:22.153797599Z [err]      return await self.app(scope, receive, send)
+2026-03-17T17:46:22.153801369Z [err]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:46:22.153805219Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1160, in __call__
+2026-03-17T17:46:22.153809119Z [err]      await super().__call__(scope, receive, send)
+2026-03-17T17:46:22.153813229Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/applications.py", line 107, in __call__
+2026-03-17T17:46:22.153818529Z [err]      await self.middleware_stack(scope, receive, send)
+2026-03-17T17:46:22.153822459Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+2026-03-17T17:46:22.153826059Z [err]      raise exc
+2026-03-17T17:46:22.153838379Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+2026-03-17T17:46:22.153841919Z [err]      await self.app(scope, receive, _send)
+2026-03-17T17:46:22.153845429Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+2026-03-17T17:46:22.155824043Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 716, in __call__
+2026-03-17T17:46:22.155825983Z [err]      await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+2026-03-17T17:46:22.155826063Z [err]      await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+2026-03-17T17:46:22.155832633Z [err]      await self.middleware_stack(scope, receive, send)
+2026-03-17T17:46:22.155838903Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-03-17T17:46:22.155839823Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-03-17T17:46:22.155840733Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 736, in app
+2026-03-17T17:46:22.155846093Z [err]      raise exc
+2026-03-17T17:46:22.155848413Z [err]      await route.handle(scope, receive, send)
+2026-03-17T17:46:22.155850893Z [err]      raise exc
+2026-03-17T17:46:22.155854323Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-03-17T17:46:22.155857313Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/routing.py", line 290, in handle
+2026-03-17T17:46:22.155861482Z [err]    File "/app/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-03-17T17:46:22.155861952Z [err]      await app(scope, receive, sender)
+2026-03-17T17:46:22.155865252Z [err]      await self.app(scope, receive, send)
+2026-03-17T17:46:22.155868642Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+2026-03-17T17:46:22.155870242Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 130, in app
+2026-03-17T17:46:22.155873522Z [err]      await self.app(scope, receive, send)
+2026-03-17T17:46:22.157796478Z [err]      await app(scope, receive, sender)
+2026-03-17T17:46:22.157803308Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 116, in app
+2026-03-17T17:46:22.157809768Z [err]      response = await f(request)
+2026-03-17T17:46:22.157815598Z [err]                 ^^^^^^^^^^^^^^^^
+2026-03-17T17:46:22.157819748Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 670, in app
+2026-03-17T17:46:22.157823558Z [err]      raw_response = await run_endpoint_function(
+2026-03-17T17:46:22.157827368Z [err]                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:46:22.157830928Z [err]    File "/app/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 324, in run_endpoint_function
+2026-03-17T17:46:22.157834318Z [err]      return await dependant.call(**values)
+2026-03-17T17:46:22.157838918Z [err]             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:46:22.157842348Z [err]    File "/app/app/routes/save.py", line 75, in save
+2026-03-17T17:46:22.157847468Z [err]      conn.execute(
+2026-03-17T17:46:22.157852198Z [err]    File "/app/app/db.py", line 93, in execute
+2026-03-17T17:46:22.157856108Z [err]      return _TursoCursor(fresh._raw.execute(sql, params))
+2026-03-17T17:46:22.157860018Z [err]                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-17T17:46:22.157864317Z [err]  ValueError: Hrana: `stream error: `Error { message: "SQLite error: no such column: gold", code: "SQLITE_UNKNOWN" }``
+2026-03-17T17:47:32.278279348Z [err]  INFO:     Shutting down
+2026-03-17T17:47:32.278283558Z [err]  INFO:     Waiting for connections to close. (CTRL+C to force quit)
+2026-03-17T17:47:34.574109573Z [inf]  Stopping Container

@@ -55,6 +55,7 @@ export const S = {
     // ── Combat timers ─────────────────────────────────────────────
     lastBasicAttack:        0,
     lastAutoAttack:         0,
+    nextAutoAttackMs:       0,
     gfbCooldownEnd:         0,
     hmmCooldownEnd:         0,
     arcaneWeakeningStacks:  0,

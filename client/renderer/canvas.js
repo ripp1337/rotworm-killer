@@ -68,12 +68,6 @@ export function update(dtSec) {
     const area = getAreaById(S.currentArea);
     if (!area) return;
 
-    // Move worms
-    for (const w of S.worms) _moveEntity(w, dtSec);
-
-    // Move boss
-    if (S.boss) _moveEntity(S.boss, dtSec);
-
     // Auto-attack tick
     const now = Date.now();
     if (S.autoEnabled && now >= S.nextAutoAttackMs) {
