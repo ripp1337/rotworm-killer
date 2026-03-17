@@ -157,7 +157,7 @@ export function handleGameClick(e) {
     const dmg    = rollClickDmg(target, isBoss);
     target.hp   -= dmg;
 
-    spawnFloatingDmg(target.x + target.size / 2, target.y, dmg, { isBoss });
+    _spawnDmgFx(target, dmg);
 
     _checkKill(target, area, now);
     saveProgress();
@@ -175,7 +175,7 @@ window.addEventListener('autoAttack', () => {
     const dmg    = rollAutoDmg(target, isBoss);
     target.hp   -= dmg;
 
-    spawnFloatingDmg(target.x + target.size / 2, target.y, dmg, { isBoss });
+    _spawnDmgFx(target, dmg);
     _checkKill(target, area, Date.now());
 
     // Save to DB at most once every 30 s during auto-attack so area unlock works
@@ -185,6 +185,12 @@ window.addEventListener('autoAttack', () => {
         saveProgress();
     }
 });
+
+// ── Damage FX helper — top-center of sprite ───────────────────────
+
+function _spawnDmgFx(target, dmg) {
+    spawnFloatingDmg(target.x + target.size / 2, target.y - 22, dmg, { isBoss: target.isBoss });
+}
 
 // ── Pick the monster that was clicked (hit-test) ──────────────────
 
@@ -250,6 +256,12 @@ function _checkKill(target, area, now) {
     S.exp   += e;
     S.score += isBoss ? 100 : 10;
 
+    // Floating reward numbers above the killed entity
+    const rx = target.x + target.size / 2;
+    const ry = target.y;
+    spawnFloatingDmg(rx,      ry - 20, e, { type: 'exp'  });
+    spawnFloatingDmg(rx + 20, ry - 4,  g, { type: 'gold' });
+
     applyEssenceDrops(drops);
 
     // Level up
@@ -273,14 +285,26 @@ export function handleGfbClick() {
     const area = getAreaById(S.currentArea);
     const cast = castGfb(now, area);
     if (!cast) return;
+    _applyGfbCast(cast, area, now);
+    saveProgress();
+    updateHUD();
+}
+
+// Auto-GFB fired from canvas loop
+window.addEventListener('autoGfbFired', (e) => {
+    const cast = e.detail;
+    const area = getAreaById(S.currentArea);
+    _applyGfbCast(cast, area, Date.now());
+    updateHUD();
+});
+
+function _applyGfbCast(cast, area, now) {
     const { results, center } = cast;
     spawnFireballEffect(center.x, center.y);
     for (const { target, dmg } of results) {
-        spawnFloatingDmg(target.x + target.size / 2, target.y, dmg, { isBoss: target.isBoss });
+        spawnFloatingDmg(target.x + target.size / 2, target.y - 22, dmg, { isBoss: target.isBoss });
         _checkKill(target, area, now);
     }
-    saveProgress();
-    updateHUD();
 }
 
 export function handleHmmClick() {

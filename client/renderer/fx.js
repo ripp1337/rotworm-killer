@@ -2,28 +2,41 @@
 
 const _fxContainer = document.createElement('div');
 _fxContainer.id    = 'fxLayer';
-_fxContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
+_fxContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:30;';
 document.addEventListener('DOMContentLoaded', () => {
-    const arena = document.getElementById('gameArena') ?? document.body;
-    arena.appendChild(_fxContainer);
+    // Attach to spriteLayer so FX coordinates align with sprite positions
+    const host = document.getElementById('spriteLayer') ?? document.body;
+    host.appendChild(_fxContainer);
 });
 
-// ── Floating damage number ─────────────────────────────────────────
+// ── Floating numbers ──────────────────────────────────────────────
+// type: 'dmg' (default) | 'dmg-boss' | 'exp' | 'gold'
 
-export function spawnFloatingDmg(x, y, dmg, { isBoss = false, isCrit = false } = {}) {
+export function spawnFloatingDmg(x, y, dmg, { isBoss = false, isCrit = false, type = 'dmg' } = {}) {
     const el = document.createElement('span');
-    el.className   = 'float-dmg';
-    el.textContent = _fmt(dmg);
+    el.textContent = (type === 'exp' ? '+' : '') + _fmt(dmg);
+
+    let color;
+    if (type === 'exp')        color = '#ffffff';
+    else if (type === 'gold')  color = '#ffd700';
+    else if (isBoss)           color = '#ff6600';
+    else                       color = '#ff2222';
+
+    const size = isCrit || isBoss ? '16px' : '13px';
 
     el.style.cssText = [
-        `left:${x}px`,
-        `top:${y}px`,
-        `color:${isBoss ? '#ff6600' : isCrit ? '#fff700' : '#ffffff'}`,
-        `font-size:${isCrit ? '18px' : '14px'}`,
+        `left:${Math.round(x)}px`,
+        `top:${Math.round(y)}px`,
+        `color:${color}`,
+        `font-size:${size}`,
+        `font-family:Verdana,sans-serif`,
         `font-weight:bold`,
+        `text-shadow:1px 1px 2px #000,-1px -1px 2px #000`,
         `position:absolute`,
         `pointer-events:none`,
+        `transform:translateX(-50%)`,
         `animation:floatUp 1s ease forwards`,
+        `white-space:nowrap`,
     ].join(';');
 
     _fxContainer.appendChild(el);

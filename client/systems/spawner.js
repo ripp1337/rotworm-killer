@@ -4,7 +4,7 @@ import { S } from './state.js';
 import { AREAS, getAreaIndex } from '../data/areas.js';
 import {
     BOSS_KILLS, BOSS_SPAWN_CHANCE, UBER_BOSS_SPAWN_CHANCE,
-    BOSS_SIZE, TILE,
+    BOSS_SIZE, MOB_SIZE, TILE,
 } from '../data/constants.js';
 import { potionMadnessActive, potionDangerActive } from './skills.js';
 
@@ -24,13 +24,13 @@ export function getMaxMonsters() {
 let _nextId = 1;
 
 function makeWorm(area, isBoss, isUber) {
-    const size = isBoss ? BOSS_SIZE : TILE;
-    const x    = size + Math.random() * (CANVAS_W - size * 2);
-    const y    = size + Math.random() * (CANVAS_H - size * 2);
+    const size = isBoss ? BOSS_SIZE : MOB_SIZE;
+    const x    = Math.random() * (CANVAS_W - size);
+    const y    = Math.random() * (CANVAS_H - size);
     let hp;
-    if (isUber)    hp = area.uberBossHp;
+    if (isUber)      hp = area.uberBossHp ?? area.bossHp * 3;
     else if (isBoss) hp = area.bossHp;
-    else           hp = area.mobHp;
+    else             hp = area.mobHp;
     return {
         id:    _nextId++,
         x, y,
@@ -39,7 +39,7 @@ function makeWorm(area, isBoss, isUber) {
         size,
         isBoss,
         isUber,
-        name:  isUber ? area.uberBossName : isBoss ? area.bossName : area.mobName,
+        name:   isUber ? (area.uberBossName ?? area.bossName) : isBoss ? area.bossName : area.mobName,
         sprite: isUber ? (area.uberBossSprite ?? area.bossSprite) : isBoss ? area.bossSprite : area.mobSprite,
     };
 }
@@ -50,28 +50,24 @@ export function spawnWorm(area) {
     S.worms.push(makeWorm(area, false, false));
 }
 
-// ── Boss spawn checks ─────────────────────────────────────────────
+// ── Boss spawn check (called after each monster kill) ─────────────
+// Roll uber first (1% + danger bonus), then regular boss (2% + danger bonus).
+// The guaranteed-first-boss threshold is kept as a safety catch.
 
 export function checkSpawnBoss(area) {
-    // Guaranteed first boss at kill threshold
-    if (S.bossSpawnCounter >= BOSS_KILLS && S.bossKillCounter === 0 && !S.boss) {
-        doSpawnBoss(area, false);
-        return;
-    }
+    if (S.boss) return;  // boss already alive
 
-    if (S.boss) return;  // already alive
-
-    // Danger potion: +10% boss spawn chance, +5% uber chance
+    // Danger potion bonuses
     const dangerBonus = potionDangerActive() ? 0.10 : 0;
     const uberBonus   = potionDangerActive() ? 0.05 : 0;
 
-    // Check uber boss first (1% base)
+    // Uber boss roll (1% base)
     if (Math.random() < UBER_BOSS_SPAWN_CHANCE + uberBonus) {
         doSpawnBoss(area, true);
         return;
     }
 
-    // Regular boss (2% base)
+    // Regular boss roll (2% base)
     if (Math.random() < BOSS_SPAWN_CHANCE + dangerBonus) {
         doSpawnBoss(area, false);
     }

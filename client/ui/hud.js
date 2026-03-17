@@ -5,7 +5,7 @@ import { WEAPONS }        from '../data/weapons.js';
 import { AREAS, getAreaIndex, getAreaById } from '../data/areas.js';
 import { isPotionActive } from '../systems/crafting.js';
 import { getMaxMonsters } from '../systems/spawner.js';
-import { effectiveBasicCooldown, effectiveAutoCooldown } from '../systems/skills.js';
+import { effectiveBasicCooldown, effectiveAutoCooldown, skillPts } from '../systems/skills.js';
 import { expForLevel }    from '../systems/combat.js';
 import { apiFetch }       from '../persistence/save.js';  // shared fetch helper
 
@@ -23,10 +23,19 @@ export function updateHUD() {
     _setPotionTimers();
     _setMobCount();
     _setCooldownBars();
+    _setAbilityButtons();
 }
 
 function _setHpBar() {
     // No player HP in this game; show boss HP bar instead
+}
+
+function _setAbilityButtons() {
+    const gfbUnlocked = skillPts(31) >= 1 || S.gfbUnlocked;
+    const gfbBtn  = document.getElementById('btnGfb');
+    const gfbWrap = document.getElementById('cd-fire-wrap');
+    if (gfbBtn)  gfbBtn.style.display  = gfbUnlocked ? '' : 'none';
+    if (gfbWrap) gfbWrap.style.display = gfbUnlocked ? '' : 'none';
 }
 
 function _setExpBar() {

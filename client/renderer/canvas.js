@@ -8,6 +8,7 @@ import {
 } from '../systems/skills.js';
 import { fillToMaxMonsters, checkSpawnBoss } from '../systems/spawner.js';
 import { syncSpriteLayer }  from './sprites.js';
+import { tickAutoGfb }      from '../systems/abilities.js';
 
 const CANVAS_W = 800;
 const CANVAS_H = 500;
@@ -86,6 +87,12 @@ export function update(dtSec) {
         S.nextAutoAttackMs = now + effectiveAutoCooldown();
         // dispatch a synthetic auto-attack event (handled in main.js)
         window.dispatchEvent(new CustomEvent('autoAttack'));
+    }
+
+    // Auto-GFB tick — fires automatically if C1 is unlocked and off-cooldown
+    if (S.autoGfbEnabled || skillPts(31) >= 1) {
+        const cast = tickAutoGfb(now, area);
+        if (cast) window.dispatchEvent(new CustomEvent('autoGfbFired', { detail: cast }));
     }
 
     // Fill population
