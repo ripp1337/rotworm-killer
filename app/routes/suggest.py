@@ -4,9 +4,9 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from server.db import get_conn, _write_lock
-from server.config import NOTIFY_EMAIL
-from server.email_service import send_email
+from app.db import get_conn, _write_lock
+from app.config import NOTIFY_EMAIL
+from app.email_service import send_email
 
 router = APIRouter()
 

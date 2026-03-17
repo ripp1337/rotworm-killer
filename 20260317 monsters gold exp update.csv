@@ -1,0 +1,12 @@
+Area,Level required,Pay to go there,Floor,Monster,Monster picture (.gif),Monster hp,Monster exp,Monster gold min,Monster gold max,Boss,Boss picture (.gif)
+Rookgaard,1 (starting area),0 (starting area),Lush_Grass,Rat,Rat,15,10,3,7,Cave Rat,Cave_Rat
+Rotworm Cave,8,100,Muddy_Floor_(Dark),Rotworm,Rotworm,60,40,13,29,Vesperoth,Vesperoth
+Cyclopolis,30,5000,Gravel,Cyclops,Cyclops,260,180,47,109,Behemoth,Behemoth
+Hell Gate,50,50000,Stone_Floor_(Grey),Demon Skeleton,Demon_Skeleton,400,260,72,168,Bonebeast,Bonebeast
+Dragon Lair,70,100000,Earth_Ground,Dragon,Dragon,1000,660,120,280,Dragon Lord,Dragon_Lord
+Plains of Havoc,100,200000,Grass_(Tile),Giant Spider,Giant_Spider,1300,860,156,364,Mamma Long Legs,Unwanted
+Demona,130,1000000,Black_Marble_Floor,Warlock,Warlock,4000,2640,360,840,Infernalist,Infernalist
+Goroma,175,5000000,Strange_Sand,Demon,Demon,8000,5280,720,1680,Orshabaal,Weakened_Demon
+Formogar Mines,200,10000000,Ice_Stone_Floor,Juggernaut,Juggernaut,12000,7920,720,1680,Massacre ,Arbaziloth
+Roshamuul,250,50000000,Dry_Earth_(Zao),Guzzlemaw,Guzzlemaw,18000,11880,1080,2520,Sight of Surrender,Sight_of_Surrender
+The Void,300,100000000,Void_(Tile),Void Emissary,The_Unarmored_Voidborn,30000,19800,1800,4200,Devovorga,Devovorga

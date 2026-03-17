@@ -6,9 +6,9 @@ import secrets
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from server.auth import hash_pwd, check_pwd, get_token_from_request, auth_player, _row_to_dict
-from server import cache as _cache
-from server.db import get_conn, _write_lock
+from app.auth import hash_pwd, check_pwd, get_token_from_request, auth_player, _row_to_dict
+from app import cache as _cache
+from app.db import get_conn, _write_lock
 
 router = APIRouter()
 
@@ -86,6 +86,8 @@ async def register(request: Request):
         player_row = conn.execute(
             'SELECT * FROM players WHERE username = ?', (username,)
         ).fetchone()
+        if player_row is None:
+            return JSONResponse({'error': 'Registration failed.'}, 500)
         player_id = player_row['id']
         conn.execute('INSERT INTO sessions (token, player_id) VALUES (?, ?)', (token, player_id))
         conn.commit()

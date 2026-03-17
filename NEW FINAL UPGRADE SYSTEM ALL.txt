@@ -1,0 +1,691 @@
+Automations Skill Path (Column 1)
+
+A1 – Auto-Attack Unlock
+- Enables automatic attacks.
+- Base auto-attack cooldown: 0.7 seconds.
+- Each point reduces auto-attack cooldown by 0.05 seconds.
+- At 10 points: cooldown becomes 0.20 seconds.
+- Gold cost per point (steep scaling):
+  1: 100
+  2: 200
+  3: 400
+  4: 800
+  5: 1600
+  6: 3200
+  7: 6400
+  8: 12800
+  9: 25600
+  10: 51200
+
+A2 – Auto-Attack Damage
+- Increases auto-attack damage.
+- +10% auto-attack damage per point.
+- At 10 points: +100% damage.
+- Requires at least 1 point in A1.
+- Gold cost per point:
+  1: 1,000
+  2: 2,000
+  3: 4,000
+  4: 8,000
+  5: 16,000
+  6: 32,000
+  7: 64,000
+  8: 1,28,000
+  9: 2,56,000
+  10: 5,12,000
+
+A3 – Multi-Target Automation
+- Auto-attacks can hit additional monsters.
+- +10% chance per point to hit +1 extra monster.
+- At 10 points: 100% chance to always hit 2 targets.
+- Requires at least 1 point in A2.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+A4 – Hyper Automation
+- Increases auto-attack damage and multi-target potential.
+- +10% auto-attack damage per point.
+- +10% chance per point to hit a 3rd target.
+- At 10 points: +100% damage and 100% chance to hit 3 targets.
+- Requires at least 1 point in A3.
+- Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+
+More Numbers Skill Path (Column 2)
+
+B1 – Wealth Training
+- +5% gold gain per point.
+- At 10 points: +50% gold gain.
+- Gold cost per point:
+  1: 1,000
+  2: 2,000
+  3: 4,000
+  4: 8,000
+  5: 16,000
+  6: 32,000
+  7: 64,000
+  8: 1,28,000
+  9: 2,56,000
+  10: 5,12,000
+
+B2 – Experience Mastery
+- +5% experience gain per point.
+- At 10 points: +50% experience gain.
+- Requires at least 1 point in B1.
+- Gold cost per point:
+  1: 10,000
+  2: 20,000
+  3: 40,000
+  4: 80,000
+  5: 160,000
+  6: 320,000
+  7: 640,000
+  8: 1,280,000
+  9: 2,560,000
+  10: 5,120,000
+
+B3 – Material Harvesting
+- Increases material drop frequency.
+- +5% material drop chance per point.
+- At 10 points: +50% material drop chance.
+- Requires at least 1 point in B2.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+B4 – Boss Attraction
+- Increases boss and uber boss spawn rates.
+- +2% boss spawn rate per point.
+- +1% uber boss spawn rate per point.
+- At 10 points: +20% boss spawn, +10% uber boss spawn.
+- Requires at least 1 point in B3.
+- Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+Fireball Skill Path (Column 3)
+
+C1 – Fireball Mastery
+- Unlocks the Fireball ability.
+- Fireball automatically casts whenever its cooldown finishes.
+- Base fireball damage: 10% of monster max HP.
+- Each point increases fireball damage by +5% of monster max HP.
+- At 10 points: 60% max HP damage.
+- Base cooldown: 20 seconds.
+- Gold cost per point:
+  1: 1000
+  2: 2000
+  3: 4000
+  4: 8000
+  5: 16,000
+  6: 32,000
+  7: 64,000
+  8: 128,000
+  9: 256,000
+  10: 512,000
+
+C2 – Fireball Cooldown Reduction
+- Reduces fireball cooldown by 1 second per point.
+- Minimum cooldown: 10 seconds.
+- At 10 points: cooldown reduced from 20s → 10s.
+- Requires at least 1 point in C1.
+- Gold cost per point:
+  1: 10,000
+  2: 20,000
+  3: 40,000
+  4: 80,000
+  5: 160,000
+  6: 320,000
+  7: 640,000
+  8: 1,280,000
+  9: 2,560,000
+  10: 5,120,000
+
+C3 – Fireball Annihilation
+- Fireball has a chance to instantly kill all non-boss monsters it hits.
+- Chance increases from 10% at level 1 to 30% at level 10.
+- Does not affect bosses or uber bosses.
+- Requires at least 1 point in C2.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+C4 – Ember of Renewal
+- Fireball gains a chance to reset its cooldown instantly.
+- 10% chance at level 1.
+- 20% chance at level 10.
+- Requires at least 1 point in C3.
+- Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+
+SORCERER SKILL TREE (3×4 GRID)
+
+COLUMN 1 – IDLE DPS (Heavy Magic Missile Path)
+
+S1 – Light Magic Missile
+
+Unlocks a passive Light Magic Missile that fires automatically every 10 seconds.
+
+Base damage: 30% of monster max HP.
+
++7% max HP damage per point and -0.5 second cooldown per level.
+
+At 10 points: 100% max HP damage every 10 seconds.
+
+Gold cost per point:
+1: 10,000
+2: 20,000
+3: 40,000
+4: 80,000
+5: 160,000
+6: 320,000
+7: 640,000
+8: 1,280,000
+9: 2,560,000
+10: 5,120,000
+
+S2 – Heavy Magic Missile
+
+Changes Light Magic Missile into Heavy Magic Missile greatly decreasing its cooldown and attacking more monsters.
+
+0.5 s cd per level and 0.5 more monsters per level
+
+At 10 points: -5 s cd and +5 monsters attacked
+
+Requires 1 point in S1.
+
+Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+S3 – Triple Missile Chance
+
+Each Heavy Magic Missile has a chance to fire 3 additional missiles.
+
++5% chance per point.
+
+At 10 points: 50% chance to fire 3 extra missiles.
+
+Requires 1 point in S2.
+
+Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+S4 – Ultimate Explosion
+
+Each Heavy Magic Missile has a chance to trigger Ultimate Explosion that instantly kills all non‑boss, non‑uber‑boss enemies on screen.
+
++2% chance per point.
+
+At 10 points: 30% chance per missile.
+
+Requires 1 point in S3.
+
+Gold cost per point:
+  1: 10,000,000
+  2: 20,000,000
+  3: 40,000,000
+  4: 80,000,000
+  5: 160,000,000
+  6: 320,000,000
+  7: 640,000,000
+  8: 1,280,000,000
+  9: 2,560,000,000
+  10: 5,120,000,000
+
+COLUMN 2 – LOOT / CRAFTING / POTIONS
+
+S5 – Arcane Fortune
+
+Increases gold gained from all monsters.
+
++1% gold per point.
+
+At 10 points: +10% gold.
+
+Gold cost per point:
+1: 10,000
+2: 20,000
+3: 40,000
+4: 80,000
+5: 160,000
+6: 320,000
+7: 640,000
+8: 1,280,000
+9: 2,560,000
+10: 5,120,000
+
+S6 – Mystic Salvaging
+
+Increases chance for crafting materials to drop.
+
++1% material drop chance per point.
+
+At 10 points: +10% material drop chance.
+
+Requires 1 point in S5.
+
+Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+S7 – Arcane Extraction
+
+Increases potion duration.
+
++2% potion duration per point.
+
+At 10 points: +20% potion duration.
+
+Requires 1 point in S6.
+
+Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+
+S8 – Grand Alchemist
+
+Each boss kill has a chance to activate a random potion effect.
+
++1% chance per point.
+
+At 10 points: 10% chance.
+
+Requires 1 point in S7.
+
+Gold cost per point:
+  1: 10,000,000
+  2: 20,000,000
+  3: 40,000,000
+  4: 80,000,000
+  5: 160,000,000
+  6: 320,000,000
+  7: 640,000,000
+  8: 1,280,000,000
+  9: 2,560,000,000
+  10: 5,120,000,000
+
+COLUMN 3 – BOSS KILLER
+
+S9 – Bane of Titans
+
+Increases damage dealt to bosses.
+
++2% boss damage per point.
+
+At 10 points: +20% boss damage.
+
+Gold cost per point:
+1: 10,000
+2: 20,000
+3: 40,000
+4: 80,000
+5: 160,000
+6: 320,000
+7: 640,000
+8: 1,280,000
+9: 2,560,000
+10: 5,120,000
+
+
+S10 – Arcane Weakening
+
+Bosses hit by Heavy Magic Missile take increased damage.
+
++2% increased damage taken per point.
+
+Stacks up to 10 times.
+
+At 10 points: +20% increased damage taken.
+
+Requires 1 point in S9.
+
+Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+S11 Sudden Death
+
+Unleashes Sudden Death every 10 minutes: deals 100% of boss or uber‑boss max HP. Reduces Sudden Death's cooldown by 45 seconds for each point (down to 150 seconds).
+
+Requires 1 point in S10.
+
+Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+S12 Essence Gathering
+
+Killing a boss or uber boss grants 30 seconds of double damage from all sources. Each point grants additional 3 seconds duration.
+
+Requires 1 point in S11.
+
+Gold cost per point:
+  1: 10,000,000
+  2: 20,000,000
+  3: 40,000,000
+  4: 80,000,000
+  5: 160,000,000
+  6: 320,000,000
+  7: 640,000,000
+  8: 1,280,000,000
+  9: 2,560,000,000
+  10: 5,120,000,000
+
+
+KNIGHT SKILL TREE (3×4 GRID)
+
+KNIGHT SKILL TREE (3×4 GRID)
+
+COLUMN 1 – CLICK DAMAGE PATH
+
+K1 – Strike Training
+- Increases click attack damage.
+- +20% click damage per point.
+- At 10 points: +200% click damage.
+- Gold cost per point:
+  1: 10,000
+  2: 20,000
+  3: 40,000
+  4: 80,000
+  5: 160,000
+  6: 320,000
+  7: 640,000
+  8: 1,280,000
+  9: 2,560,000
+  10: 5,120,000
+
+K2 – Precision Execution
+- Clicks deal bonus % max HP damage.
+- +1% max HP damage per point.
+- At 10 points: +10% max HP damage.
+- Requires 1 point in K1.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+K3 – Cleaving Blows
+- Every click deals AoE % max HP damage to all non‑boss enemies.
+- +1% max HP per point.
+- At 10 points: 10% max HP per click to all non‑boss enemies.
+- Requires 1 point in K2.
+- Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+K4 – Double Strike Instinct
+- Each manual click has a chance to strike twice.
+- +3% chance per point.
+- At 10 points: 30% chance to double‑strike.
+- Requires 1 point in K3.
+- Gold cost per point:
+  1: 10,000,000
+  2: 20,000,000
+  3: 40,000,000
+  4: 80,000,000
+  5: 160,000,000
+  6: 320,000,000
+  7: 640,000,000
+  8: 1,280,000,000
+  9: 2,560,000,000
+  10: 5,120,000,000
+
+COLUMN 2 – SPEED / MULTI‑TARGET / COOLDOWNS
+
+K5 – Combo Meter
+- Reduces manual attack cooldown.
+- Base cooldown: 0.50s.
+- Each point reduces cooldown by 0.04s.
+- At 10 points: cooldown becomes 0.10s.
+- Gold cost per point:
+  1: 10,000
+  2: 20,000
+  3: 40,000
+  4: 80,000
+  5: 160,000
+  6: 320,000
+  7: 640,000
+  8: 1,280,000
+  9: 2,560,000
+  10: 5,120,000
+
+K6 – Adrenaline Reset
+- Killing a monster has a chance to fully reset manual attack cooldown.
+- +2% chance per point.
+- At 10 points: 20% chance.
+- Requires 1 point in K5.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+K7 – Sweeping Strikes
+- Manual attacks have a chance to hit +1 extra monster.
+- +3% chance per point.
+- At 10 points: 30% chance.
+- Requires 1 point in K6.
+- Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+K8 – Whirlwind Extension
+- Manual attacks have a chance to hit +2 additional monsters (stacks with K7).
+- +2% chance per point.
+- At 10 points: 20% chance.
+- Combined with K7 → up to 3 targets per click.
+- Requires 1 point in K7.
+- Gold cost per point:
+  1: 10,000,000
+  2: 20,000,000
+  3: 40,000,000
+  4: 80,000,000
+  5: 160,000,000
+  6: 320,000,000
+  7: 640,000,000
+  8: 1,280,000,000
+  9: 2,560,000,000
+  10: 5,120,000,000
+
+COLUMN 3 – BOSS / UBER BOSS DESTRUCTION
+
+K9 – Decapitation Chance
+- Chance for any manual click to instantly kill a boss or uber boss.
+- +0.5% chance per point.
+- At 10 points: 5% one‑shot chance.
+- Gold cost per point:
+  1: 10,000
+  2: 20,000
+  3: 40,000
+  4: 80,000
+  5: 160,000
+  6: 320,000
+  7: 640,000
+  8: 1,280,000
+  9: 2,560,000
+  10: 5,120,000
+
+K10 – Endless Challenge
+- Killing a boss or uber boss has a chance to instantly spawn the next uber boss.
+- +1% chance per point.
+- At 10 points: 10% chance.
+- Requires 1 point in K9.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+K11 – Battlefield Purge
+- Killing a boss has a chance to kill all remaining non‑boss enemies on screen.
+- +5% chance per point.
+- At 10 points: 50% chance.
+- Requires 1 point in K10.
+- Gold cost per point:
+  1: 1,000,000
+  2: 2,000,000
+  3: 4,000,000
+  4: 8,000,000
+  5: 16,000,000
+  6: 32,000,000
+  7: 64,000,000
+  8: 128,000,000
+  9: 256,000,000
+  10: 512,000,000
+
+K12 – Momentum Overdrive
+- Each manual click permanently increases weapon damage multiplier.
+- +0.0001% per click per point.
+- At 10 points: +0.001% per click.
+- Scales with total lifetime manual clicks.
+- Requires 1 point in K11.
+- Gold cost per point:
+  1: 10,000,000
+  2: 20,000,000
+  3: 40,000,000
+  4: 80,000,000
+  5: 160,000,000
+  6: 320,000,000
+  7: 640,000,000
+  8: 1,280,000,000
+  9: 2,560,000,000
+  10: 5,120,000,000

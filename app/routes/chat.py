@@ -6,8 +6,8 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from server.auth import auth_player, get_token_from_request
-from server.config import CHAT_HISTORY_MAX, CHAT_RATE_LIMIT_MS
+from app.auth import auth_player, get_token_from_request
+from app.config import CHAT_HISTORY_MAX, CHAT_RATE_LIMIT_MS
 
 router = APIRouter()
 

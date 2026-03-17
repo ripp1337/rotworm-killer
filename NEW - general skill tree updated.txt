@@ -1,0 +1,212 @@
+Automations Skill Path (Column 1)
+
+A1 – Auto-Attack Unlock
+- Enables automatic attacks.
+- Base auto-attack cooldown: 0.50 seconds.
+- Each point reduces auto-attack cooldown by 0.04 seconds.
+- At 10 points: cooldown becomes 0.10 seconds.
+- Gold cost per point (steep scaling):
+  1: 100
+  2: 200
+  3: 400
+  4: 800
+  5: 1,600
+  6: 3,200
+  7: 6,400
+  8: 12,800
+  9: 25,600
+  10: 51,200
+
+A2 – Auto-Attack Damage
+- Increases auto-attack damage.
+- +10% auto-attack damage per point.
+- At 10 points: +100% damage.
+- Requires at least 1 point in A1.
+- Gold cost per point:
+  1: 10,000
+  2: 20,000
+  3: 40,000
+  4: 80,000
+  5: 160,000
+  6: 320,000
+  7: 640,000
+  8: 1,280,000
+  9: 2,560,000
+  10: 5,120,000
+
+A3 – Multi-Target Automation
+- Auto-attacks can hit additional monsters.
+- +10% chance per point to hit +1 extra monster.
+- At 10 points: 100% chance to always hit 2 targets.
+- Requires at least 1 point in A2.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+A4 – Hyper Automation
+- Increases auto-attack damage and multi-target potential.
+- +10% auto-attack damage per point.
+- +10% chance per point to hit a 3rd target.
+- At 10 points: +100% damage and 100% chance to hit 3 targets.
+- Requires at least 1 point in A3.
+- Gold cost per point:
+  1: 500,000
+  2: 1,000,000
+  3: 2,000,000
+  4: 4,000,000
+  5: 8,000,000
+  6: 12,000,000
+  7: 16,000,000
+  8: 20,000,000
+  9: 25,000,000
+  10: 30,000,000
+
+
+More Numbers Skill Path (Column 2)
+
+B1 – Wealth Training
+- +5% gold gain per point.
+- At 10 points: +50% gold gain.
+- Gold cost per point:
+  1: 100
+  2: 200
+  3: 400
+  4: 800
+  5: 1,600
+  6: 3,200
+  7: 6,400
+  8: 12,800
+  9: 25,600
+  10: 51,200
+
+B2 – Experience Mastery
+- +5% experience gain per point.
+- At 10 points: +50% experience gain.
+- Requires at least 1 point in B1.
+- Gold cost per point:
+  1: 10,000
+  2: 20,000
+  3: 40,000
+  4: 80,000
+  5: 160,000
+  6: 320,000
+  7: 640,000
+  8: 1,280,000
+  9: 2,560,000
+  10: 5,120,000
+
+B3 – Material Harvesting
+- Increases material drop frequency.
+- +5% material drop chance per point.
+- At 10 points: +50% material drop chance.
+- Requires at least 1 point in B2.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+B4 – Boss Attraction
+- Increases boss and uber boss spawn rates.
+- +2% boss spawn rate per point.
+- +1% uber boss spawn rate per point.
+- At 10 points: +20% boss spawn, +10% uber boss spawn.
+- Requires at least 1 point in B3.
+- Gold cost per point:
+  1: 500,000
+  2: 1,000,000
+  3: 2,000,000
+  4: 4,000,000
+  5: 8,000,000
+  6: 12,000,000
+  7: 16,000,000
+  8: 20,000,000
+  9: 25,000,000
+  10: 30,000,000
+
+
+Fireball Skill Path (Column 3)
+
+C1 – Fireball Mastery
+- Unlocks the Fireball ability.
+- Fireball automatically casts whenever its cooldown finishes.
+- Base fireball damage: 10% of monster max HP.
+- Each point increases fireball damage by +5% of monster max HP.
+- At 10 points: 60% max HP damage.
+- Base cooldown: 20 seconds.
+- Gold cost per point:
+  1: 100
+  2: 200
+  3: 400
+  4: 800
+  5: 1,600
+  6: 3,200
+  7: 6,400
+  8: 12,800
+  9: 25,600
+  10: 51,200
+
+C2 – Fireball Cooldown Reduction
+- Reduces fireball cooldown by 1 second per point.
+- Minimum cooldown: 10 seconds.
+- At 10 points: cooldown reduced from 20s → 10s.
+- Requires at least 1 point in C1.
+- Gold cost per point:
+  1: 10,000
+  2: 20,000
+  3: 40,000
+  4: 80,000
+  5: 160,000
+  6: 320,000
+  7: 640,000
+  8: 1,280,000
+  9: 2,560,000
+  10: 5,120,000
+
+C3 – Fireball Annihilation
+- Fireball has a chance to instantly kill all non-boss monsters it hits.
+- Chance increases from 10% at level 1 to 30% at level 10.
+- Does not affect bosses or uber bosses.
+- Requires at least 1 point in C2.
+- Gold cost per point:
+  1: 100,000
+  2: 200,000
+  3: 400,000
+  4: 800,000
+  5: 1,600,000
+  6: 3,200,000
+  7: 6,400,000
+  8: 12,800,000
+  9: 25,600,000
+  10: 51,200,000
+
+C4 – Ember of Renewal
+- Fireball gains a chance to reset its cooldown instantly.
+- 10% chance at level 1.
+- 20% chance at level 10.
+- Requires at least 1 point in C3.
+- Gold cost per point:
+  1: 500,000
+  2: 1,000,000
+  3: 2,000,000
+  4: 4,000,000
+  5: 8,000,000
+  6: 12,000,000
+  7: 16,000,000
+  8: 20,000,000
+  9: 25,000,000
+  10: 30,000,000

@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from urllib.request import urlopen, Request as URLRequest
 
-from server.config import (
+from app.config import (
     RESEND_API_KEY, RESEND_FROM,
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM,
 )

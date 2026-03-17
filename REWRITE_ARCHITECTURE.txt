@@ -1,0 +1,317 @@
+================================================================================
+  ROTWORM KILLER — PROPOSED REWRITE ARCHITECTURE
+================================================================================
+
+Goals of the rewrite:
+  - Much lower RAM usage on Railway free plan
+  - Clean separation of concerns (no 1,400-line single files)
+  - Easier to add features without touching unrelated code
+  - Dead/legacy code fully removed
+
+──────────────────────────────────────────────────────────────────────────────
+FOLDER STRUCTURE
+──────────────────────────────────────────────────────────────────────────────
+
+rotworm-killer/
+│
+├── server/                     ← All backend Python
+│   ├── __init__.py
+│   ├── main.py                 ← Entry point: starts HTTP server
+│   ├── config.py               ← All env vars + constants in one place
+│   ├── db.py                   ← DB connection, init_db(), write_lock
+│   ├── cache.py                ← Session cache + player data cache
+│   ├── auth.py                 ← hash_pwd, auth_player, token helpers
+│   ├── email_service.py        ← Resend + SMTP send functions
+│   ├── state.py                ← _upgrade_state(), area/skill validation
+│   ├── http_server.py          ← _Server class (ThreadPoolExecutor, SSE bypass)
+│   └── routes/
+│       ├── __init__.py
+│       ├── static_files.py     ← serve_static, _build_static_cache
+│       ├── account.py          ← /api/register, /api/login, /api/logout
+│       ├── save.py             ← /api/save
+│       ├── password_reset.py   ← /api/forgot-password, /api/reset-password
+│       ├── scoreboard.py       ← /api/scoreboard, /api/stats
+│       ├── chat.py             ← /api/chat/stream, /api/chat/send
+│       ├── suggest.py          ← /api/suggest
+│       └── admin.py            ← /api/admin/*
+│
+├── client/                     ← All frontend JS (split by concern)
+│   ├── data/
+│   │   ├── areas.js            ← AREAS array (mob stats, sprites, gold costs)
+│   │   ├── weapons.js          ← WEAPONS array
+│   │   ├── skills.js           ← GENERAL_SKILLS, KNIGHT_SKILLS, SORC_SKILLS arrays
+│   │   ├── recipes.js          ← CRAFTING_RECIPES, ITEM_DEFS, LOOT_TABLE
+│   │   └── constants.js        ← cooldown times, boss intervals, other magic numbers
+│   ├── systems/
+│   │   ├── combat.js           ← rollClickDmg, rollAutoDmg, rollBasicDmg
+│   │   ├── skills.js           ← skillPts(), kPts(), sPts(), all multiplier helpers
+│   │   ├── loot.js             ← rollEssenceDrops, gold/exp gain calculation
+│   │   ├── crafting.js         ← crafting logic, potion application, _getPotionEnd
+│   │   ├── spawner.js          ← worm/boss/uber-boss spawning logic
+│   │   └── abilities.js        ← fireball, HMM, annihilation, sudden death logic
+│   ├── ui/
+│   │   ├── hud.js              ← updateHUD(), HP bar, level bar, weapon display
+│   │   ├── modals.js           ← openAscendModal, openCrafting, openInventory, etc.
+│   │   ├── skill_panel.js      ← render + buy skill tree buttons
+│   │   ├── scoreboard.js       ← fetch + render scoreboard
+│   │   └── chat.js             ← SSE connection + chat render
+│   ├── persistence/
+│   │   ├── save.js             ← saveProgress(), sendBeacon on unload
+│   │   └── load.js             ← loadState(), applyState(), state defaults
+│   ├── renderer/
+│   │   ├── canvas.js           ← game loop (requestAnimationFrame), draw calls
+│   │   ├── sprites.js          ← syncSpriteLayer(), DOM img management
+│   │   └── fx.js               ← floating damage numbers, flash messages
+│   └── main.js                 ← app entry: init, wire up event listeners,
+│                                  start game loop (imports from above modules)
+│
+├── css/
+│   └── style.css
+│
+├── sprites/                    ← All .gif sprite files (currently in root, messy)
+│   ├── monsters/
+│   ├── bosses/
+│   ├── weapons/
+│   └── floors/
+│
+├── index.html
+├── stats.html
+├── reset-password.html
+├── server.py                   ← Thin shim: `from server.main import run; run()`
+├── requirements.txt
+├── Procfile
+└── runtime.txt
+
+──────────────────────────────────────────────────────────────────────────────
+BACKEND MODULE RESPONSIBILITIES
+──────────────────────────────────────────────────────────────────────────────
+
+config.py
+  All constants from environment variables in one place.
+  No logic — just os.environ.get() reads and type conversions.
+  Example: PORT, ADMIN_TOKEN, TURSO_URL, RESEND_API_KEY, etc.
+
+db.py
+  - init_db() — creates tables, runs migrations
+  - db() — returns connection (Turso or local SQLite)
+  - _write_lock — single global lock, imported everywhere that writes
+  - No HTTP code here
+
+cache.py
+  - _session_cache, _player_data_cache — the two in-memory dicts
+  - cache_session(), auth_player(), evict_player(), etc.
+  - Completely independent of HTTP
+
+auth.py
+  - hash_pwd(), check_pwd()
+  - auth_player() — uses cache.py, db.py
+  - get_token() helper
+  - No HTTP code here either
+
+state.py
+  - _upgrade_state(state) — migration logic by version
+  - _AREA_ORDER, _AREA_LEVEL_REQS, _SKILL_MAXES_* — validation data
+  - validate_save(state) — clamp/sanitize values before writing
+  - Purely data transformation, no I/O
+
+http_server.py
+  - _Server(ThreadingHTTPServer) class
+  - ThreadPoolExecutor(max_workers=32) — reduce from 64 since we removed
+    heavy per-request work (consider tuning based on Railway RAM)
+  - _dispatch() — MSG_PEEK SSE detection
+  - Handler base class with send_json(), read_json(), get_token()
+
+routes/*.py
+  - Each file handles a logical group of endpoints
+  - Every handler receives (handler_instance, body) and calls send_json()
+  - No DB code in routes — routes call functions from db.py, auth.py, state.py
+
+main.py
+  - Calls init_db(), _build_static_cache(), starts _Server
+  - Registers routes from routes/ into do_GET / do_POST dispatch table
+  - Minimal — just wiring
+
+──────────────────────────────────────────────────────────────────────────────
+FRONTEND MODULE RESPONSIBILITIES
+──────────────────────────────────────────────────────────────────────────────
+
+Use ES Modules (<script type="module">) so files can import each other
+cleanly without a bundler. This is widely supported.
+
+client/data/*.js — pure data, no logic, no DOM
+  Just const arrays/objects. Can be changed without touching any game logic.
+
+client/systems/*.js — pure logic, no DOM
+  Functions that take inputs and return outputs (or mutate game state objects).
+  No document.getElementById(), no fetch() in here.
+
+client/ui/*.js — DOM rendering only
+  Reads game state, updates DOM. Calls systems/ functions but does not contain
+  game logic itself. Makes it easy to change layout without breaking combat.
+
+client/persistence/*.js — networking
+  All fetch() / sendBeacon calls. Systems and UI are not allowed to call fetch
+  directly — they go through persistence/save.js and persistence/load.js.
+
+client/renderer/*.js — canvas + sprite DOM
+  Game loop lives here. Calls systems/ to get damage values, calls sprites.js
+  to update DOM images. No game-state mutation in the draw loop.
+
+client/main.js — entry point only
+  Imports and wires everything together. No logic here.
+
+──────────────────────────────────────────────────────────────────────────────
+MEMORY OPTIMISATIONS FOR RAILWAY FREE PLAN
+──────────────────────────────────────────────────────────────────────────────
+
+1. Static cache: skip large sprites
+   Instead of caching everything, only cache .html/.js/.css in RAM.
+   Serve .gif files directly from disk (they are already browser-cached
+   after first load via ETags — disk I/O only happens once per client).
+
+2. Reduce thread pool
+   max_workers=64 was added to cope with SSE blocking. With the SSE bypass
+   now working correctly, 16–24 workers is enough for HTTP requests.
+   Fewer threads = less stack memory.
+
+3. Remove chat SSE entirely (optional)
+   Each SSE subscriber holds a daemon thread + a queue. If chat is rarely
+   used, consider polling (client fetches /api/chat/messages every 5s) instead.
+   Eliminates all thread overhead from chat.
+
+4. Player data cache TTL
+   Currently 1 hour. Could reduce to 5–10 minutes on low-RAM plans.
+
+5. Turso connection
+   Already a single global connection (good). No change needed.
+
+──────────────────────────────────────────────────────────────────────────────
+SERVER-AUTHORITATIVE DESIGN (anti-cheat without anti-cheat code)
+──────────────────────────────────────────────────────────────────────────────
+
+The root cause of all cheat complexity: the server trusts whatever the client
+sends. The solution is not detection — it is making cheating structurally
+impossible for the highest-value operations.
+
+RULE: Anything that costs gold must go through a server transaction.
+      The server owns the gold balance. The client never reports gold spent.
+
+NEW ENDPOINTS (replace buy-on-client logic):
+
+  POST /api/buy/skill   { "id": 32 }
+    Server checks:  player has >= skill cost in gold
+                    player meets prerequisite (prior skill >= 1 pt)
+                    skill is not already at max (10 pts)
+    Server does:    deducts gold, increments skill point
+    Returns:        { gold: <new_balance>, skillPoints: <updated_dict> }
+
+  POST /api/buy/weapon  { "index": 5 }
+    Server checks:  player.gold >= weapon.cost
+                    player.level >= weapon.minLevel
+                    index == current weaponIndex + 1 (sequential only)
+    Server does:    deducts gold, advances weaponIndex
+    Returns:        { gold: <new_balance>, weaponIndex: <new_index> }
+
+  POST /api/buy/area    { "id": "Cyclopolis" }
+    Server checks:  area exists, is the next unlocked area (no skipping)
+                    player.level >= area.levelReq
+                    player.gold >= area.goldCost
+    Server does:    deducts gold, adds area to unlockedAreas
+    Returns:        { gold: <new_balance>, unlockedAreas: [...] }
+
+THE SAVE ENDPOINT (/api/save) CHANGES:
+  - No longer accepts skillPoints, knightSkillPts, sorcSkillPts from client
+    (server owns these; client ignores what client sends for those fields)
+  - No longer accepts weaponIndex from client (server owns this)
+  - No longer accepts unlockedAreas or currentArea from client
+    (server enforces area ownership; client can only request travel to an
+     area it already owns)
+  - DOES still accept: gold, exp (from combat — must stay client-side)
+    But with a simple per-area cap:
+      max_gold_per_save = elapsed_sec * area_gold_max_per_sec[player.current_area]
+      (one line of math per area, hardcoded table, no complex rate-limiter)
+
+WHAT THIS ACHIEVES WITHOUT ANY ANTI-CHEAT CODE:
+  - Skills cannot be bought for free → server validates gold before crediting
+  - Skills cannot be overwritten to arbitrary values → server is the only writer
+  - Weapons cannot be skipped or bought for free → same
+  - Areas cannot be unlocked by editing JS → same
+  - The only remaining cheat surface is inflating combat gold/exp, which is
+    capped by the simple per-area math above (not a ban system, just a clamp)
+
+CLIENT CHANGES NEEDED:
+  - buySkill() calls POST /api/buy/skill, updates local gold/skills from response
+  - buyWeapon() calls POST /api/buy/weapon, updates local gold/weaponIndex
+  - unlockArea() calls POST /api/buy/area, updates local gold/unlockedAreas
+  - On load: server sends the canonical skillPoints, weaponIndex, unlockedAreas
+    (these are now always loaded from server, never reconstructed from save blob)
+  - saveProgress() continues to send gold, exp, and all transient combat state
+
+GOLD/EXP CAP TABLE (replace the old ANTI_CHEAT_* system):
+  This is just a table lookup, not a detection system. No flags, no bans.
+  The server clamps incoming values to what is theoretically achievable.
+
+  Area              Max gold/sec   Max exp/sec
+  (with all buffs)
+  ───────────────────────────────────────────
+  Rookgaard              50           200
+  Rotworm Cave          300         1,500
+  Cyclopolis          1,200         7,000
+  Hell Gate           1,800        10,000
+  Dragon Lair         3,200        27,000
+  Plains of Havoc     4,500        35,000
+  Demona             15,000       108,000
+  Goroma             30,000       215,000
+  Formogar Mines     30,000       323,000
+  Roshamuul          45,000       485,000
+  The Void           75,000       808,000
+
+  These are calculated as: area_gold_max × max_spawn × max_multipliers × speed_cap.
+  If the client reports more than this for the elapsed time, it is silently clamped
+  (not flagged, not banned — just: "you can have this much, not more").
+
+──────────────────────────────────────────────────────────────────────────────
+MIGRATION PLAN (incremental — do not big-bang rewrite)
+──────────────────────────────────────────────────────────────────────────────
+
+Phase 1 — Backend split (no user-visible changes)
+  1. Create server/ package, move server.py logic file-by-file
+  2. Keep server.py as a shim: from server.main import run; run()
+  3. All existing tests/endpoints unchanged
+  4. Apply memory optimisations (static cache, pool size)
+
+Phase 2 — Frontend split
+  1. Add type="module" to index.html scripts
+  2. Move AREAS, WEAPONS, SKILLS into data/ files (pure copy-paste)
+  3. Move skill calculation helpers into systems/skills.js
+  4. Move combat helpers into systems/combat.js
+  5. Move UI renders into ui/*.js
+  6. main.js becomes thin wiring only
+
+Phase 3 — Clean dead code
+  1. Remove all legacy state fields from _upgrade_state (firestormCharges,
+     comboStacks, flowStacks, ueUnlocked, powerStance*, autoUe*)
+  2. Remove ROTWORM_DROPS, CYCLOPS_BOSS_DROPS unused arrays
+  3. Remove legacy JS variables (UE_COOLDOWN_MS etc.)
+  4. Bump LATEST_STATE_VERSION to 8 to mark clean state
+
+Phase 4 — Feature changes (as decided from GAME_FEATURES_REVIEW.txt)
+  Only start this after phases 1–3 are stable and deployed.
+
+──────────────────────────────────────────────────────────────────────────────
+WHAT NOT TO REWRITE
+──────────────────────────────────────────────────────────────────────────────
+
+These parts work well and should be kept exactly as-is:
+
+  - Auth: PBKDF2 + session token + cache — solid and fast
+  - State versioning / migration pattern — important, keep the version bump idea
+  - Synchronous 3-retry save — prevents progress loss on Railway restarts
+  - Turso auto-reconnect logic — handles stream expiry correctly
+  - sendBeacon + sync XHR fallback on unload — reliable
+  - SSE daemon thread bypass via MSG_PEEK — correct, just leave it
+  - ETag-based HTTP caching for static files — efficient
+
+================================================================================
+  END OF ARCHITECTURE PROPOSAL
+================================================================================

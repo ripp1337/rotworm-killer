@@ -6,15 +6,15 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from server.db import init_db
-from server.routes.account        import router as account_router
-from server.routes.save            import router as save_router
-from server.routes.buy             import router as buy_router
-from server.routes.password_reset  import router as pw_router
-from server.routes.scoreboard      import router as sb_router
-from server.routes.chat            import router as chat_router
-from server.routes.suggest         import router as suggest_router
-from server.routes.admin           import router as admin_router
+from app.db import init_db
+from app.routes.account        import router as account_router
+from app.routes.save            import router as save_router
+from app.routes.buy             import router as buy_router
+from app.routes.password_reset  import router as pw_router
+from app.routes.scoreboard      import router as sb_router
+from app.routes.chat            import router as chat_router
+from app.routes.suggest         import router as suggest_router
+from app.routes.admin           import router as admin_router
 
 _ROOT = Path(__file__).parent.parent
 

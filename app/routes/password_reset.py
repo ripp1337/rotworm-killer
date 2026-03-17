@@ -6,10 +6,10 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from server.db import get_conn, _write_lock
-from server import cache as _cache
-from server.config import RESET_TOKEN_EXPIRY_S, GAME_URL, NOTIFY_EMAIL
-from server.email_service import send_email
+from app.db import get_conn, _write_lock
+from app import cache as _cache
+from app.config import RESET_TOKEN_EXPIRY_S, GAME_URL, NOTIFY_EMAIL
+from app.email_service import send_email
 
 router = APIRouter()
 
@@ -53,7 +53,7 @@ async def forgot_password(request: Request):
 @router.post('/api/reset-password')
 async def reset_password(request: Request):
     import hashlib
-    from server.auth import hash_pwd
+    from app.auth import hash_pwd
 
     body     = await request.json()
     token    = (body.get('token') or '').strip()

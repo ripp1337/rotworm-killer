@@ -5,10 +5,10 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from server.auth import auth_player, get_token_from_request
-from server import cache as _cache
-from server.db import get_conn, _write_lock, level_from_exp
-from server.config import AREA_GOLD_CAP_PER_SEC, AREA_EXP_CAP_PER_SEC
+from app.auth import auth_player, get_token_from_request
+from app import cache as _cache
+from app.db import get_conn, _write_lock, level_from_exp
+from app.config import AREA_GOLD_CAP_PER_SEC, AREA_EXP_CAP_PER_SEC
 
 router = APIRouter()
 

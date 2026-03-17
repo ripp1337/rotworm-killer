@@ -1,0 +1,520 @@
+================================================================================
+  ROTWORM KILLER — FULL FEATURE REVIEW (for rewrite planning)
+  Last updated: 17 March 2026
+================================================================================
+
+Review this file before the rewrite. Each section describes what currently
+exists, with notes on things to keep, change, or cut. Edit freely.
+
+────────────────────────────────────────────────────────────────────────────────
+1. ACCOUNTS & AUTH
+────────────────────────────────────────────────────────────────────────────────
+
+Registration
+  - Username: 3–20 chars, letters/numbers/underscore
+  - Password: 4–100 chars
+  - Email: optional, used only for password reset
+  - On register: session token is issued immediately (auto-login)
+
+Login
+  - Username + password
+  - Password hashed with PBKDF2-SHA256, 100,000 iterations, random salt (16 bytes)
+  - Returns a session token stored in localStorage
+
+Logout
+  - Deletes session from DB + in-memory cache
+
+Password Reset
+  - User submits email → server sends reset link via Resend API (or SMTP fallback)
+  - Token expires after 1 hour
+  - On reset: all existing sessions are invalidated
+
+Session system
+  - Tokens stored in `sessions` table (token → player_id)
+  - In-memory session cache (10-minute TTL) avoids DB round-trips on every request
+  - In-memory player data cache (1-hour TTL) — zero DB reads on authenticated hot path
+
+KEEP / CHANGE?
+  [X] Keep as-is
+  [ ] Change something: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+2. SAVE / LOAD SYSTEM
+────────────────────────────────────────────────────────────────────────────────
+
+How saving works
+  - Client calls POST /api/save with full state JSON every 30 seconds
+  - Also saves immediately after any purchase (weapon, skill, area unlock)
+  - On tab close: navigator.sendBeacon → POST /api/save (with token in body since
+    sendBeacon can't set headers); XHR sync fallback
+  - Server saves synchronously with 3 retries before returning HTTP 200
+    (ensures progress is durable — no fire-and-forget that could be lost on restart)
+
+State versioning
+  - Every player state has a `stateVersion` field (currently v7)
+  - _upgrade_state() migrates old saves to current version
+  - v1: baseline keys
+  - v2: totalClicks
+  - v3: inventory + potion timers
+  - v4: weapon index remapped (5 → 15 weapons)
+  - v5: area progression (currentArea, unlockedAreas)
+  - v6: general skill system replaced (IDs 1–12 → 11–34)
+  - v7: knight + sorcerer skill trees replaced (3×4 grids)
+
+What is saved (in `state` JSON blob)
+  score, gold, exp, level, weaponIndex, skillPoints (general),
+  knightSkillPts, sorcSkillPts, ascended, ascendedClass,
+  currentArea, unlockedAreas, inventory, all potion timers,
+  bossSpawnCounter, hmmCooldownEnd, arcaneWeakeningStacks,
+  suddenDeathCooldownEnd, essenceGatheringEnd, totalClicks,
+  legacy fields kept for migration (firestormCharges, comboStacks, etc.)
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [X] Change something: We drop the existing data and start from scratch full fully ready DB schema - no migration needed and no versions needed_______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+3. AREAS & PROGRESSION
+────────────────────────────────────────────────────────────────────────────────
+
+11 areas, each gated by level AND gold cost:
+
+  Area              Level  Gold Cost      Mob HP   Mob EXP  Gold Min  Gold Max
+  ─────────────────────────────────────────────────────────────────────────────
+  Rookgaard            1          0          15       10        3         7
+  Rotworm Cave         8        100          60       40       13        29
+  Cyclopolis          30      5,000         260      180       47       109
+  Hell Gate           50     50,000         400      260       72       168
+  Dragon Lair         70    100,000       1,000      660      120       280
+  Plains of Havoc    100    200,000       1,300      860      156       364
+  Demona             130  1,000,000       4,000    2,640      360       840
+  Goroma             175  5,000,000       8,000    5,280      720     1,680
+  Formogar Mines     200 10,000,000      12,000    7,920      720     1,680
+  Roshamuul          250 50,000,000      18,000   11,880    1,080     2,520
+  The Void           300 100,000,000     30,000   19,800    1,800     4,200
+
+Each area has: floor tile sprite, mob sprite, boss sprite, boss name.
+
+KEEP / CHANGE?
+  [] Keep as-is
+  [X] Change areas: No gold / exp scaling for ascension
+  [ ] Change gold costs: _______________________________________________
+  [ ] Change level requirements: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+4. COMBAT & GAME LOOP
+────────────────────────────────────────────────────────────────────────────────
+
+Click combat
+  - Player clicks a monster to deal damage (rollClickDmg)
+  - Base damage from current weapon (min–max range)
+  - 0.35s manual click cooldown (BASIC_COOLDOWN_MS)
+  - Knight K1–K4, K5 modify click damage
+  - clicking cooldown should be influenced by cooldown reduction potions and other general cooldown reduction mechanisms
+
+Auto-attack (A1 skill required)
+  - Fires every effectiveAutoCooldown() = max(200ms, 700ms – A1pts×50ms)
+  - Potion of Swiftness also reduces all cooldowns by 10/15/25%
+  - Targets lowest-HP worm first
+  - A2 skill: +10%/pt auto damage
+  - A3: 10%/pt chance of hitting a 2nd target
+  - A4: 10%/pt chance of hitting a 3rd target
+
+Monster spawning
+  - Multiple worms on screen simultaneously
+  - the number of monsters is 10 at level 1 and in the first arena
+  - every new arena unlocks additional 1 monster (so 11 monsters in second location, 12 monsters in third location and so on)
+  - every 50 player levels there will be an additional monster
+  - Boss spawn after first 10 kills for the given player (to quickly show the mechanics)
+  - Generally, after every monster kill there is 2% chance for boss spawn
+  - Uber-boss has 1% chance to spawn (so first the game checks if the uber boss rolled, then, if the boss rolled)
+  - Potion of Madness: +10 max spawn count, ×10 spawn rate
+  - monster spawn rate should scale with level and locations to ensure that on high levels the player doesn't constantly run out of monsters
+
+Level system
+  - XP formula: expForLevel(x) = floor(50 × (x³ – 6x² + 17x – 12) / 3)      (Tibia formula)
+  - No level cap (practical upper limit ~300 to reach The Void)
+  - Level-up flash message shown for ~2s
+
+Score
+  - +1 per normal mob kill, +BOSS_KILLS (10) per boss kill
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [X] Change click cooldown: 
+  [X] Change boss spawn interval: _______________________________________________
+  [] Change XP formula: _______________________________________________
+I added a few points in many sections
+────────────────────────────────────────────────────────────────────────────────
+5. WEAPONS
+────────────────────────────────────────────────────────────────────────────────
+
+15 weapons, each with min damage, max damage, gold cost, and minimum level:
+
+#   Name                Min   Max        Cost        Min Level
+───────────────────────────────────────────────────────────────
+ 1  Club                  3     8            0              1
+ 2  Rapier                5    10           50              2
+ 3  Mace                  7    12          200              4
+ 4  Longsword             9    14          500              5
+ 5  Clerical Mace        11    16        1,000              7
+ 6  Orcish Axe           13    18        2,500             10
+ 7  Dwarven Axe          15    22        5,000             12
+ 8  Fire Sword           18    25       10,000             14
+ 9  Skull Staff          20    27       20,000             17
+10  Fire Axe             22    30       50,000             20
+11  Giant Sword          25    35      100,000             25
+12  Queen's Sceptre      30    40      150,000             30
+13  Stonecutter Axe      40    55      200,000             35
+14  Thunder Hammer       55    70      500,000             40
+15  Magic Longsword      70   100    1,000,000             50
+16  War Axe              85   120    2,500,000             60
+17  Bright Sword        100   140    5,000,000             70
+18  Dragon Hammer       120   170   10,000,000             80
+19  Warlord Sword       140   200   20,000,000             90
+20  Great Axe           160   230   35,000,000            100
+21  Arcane Staff        190   270   50,000,000            120
+22  Silver Mace         220   310   75,000,000            130
+23  Guardian Halberd    260   360  100,000,000            150
+24  Twin Axe            300   420  150,000,000            175
+25  Pharaoh Sword       350   500  200,000,000            200
+26  War Hammer          420   600  300,000,000            220
+27  Magic Sword         500   720  500,000,000            240
+28  Hammer of Wrath     600   850  750,000,000            250
+29  Enchanted Staff     700 1,000 1,000,000,000           275
+30  Ice Rapier          900 1,300 2,500,000,000           300
+
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [X] Change weapons: New list
+
+────────────────────────────────────────────────────────────────────────────────
+6. ASCENSION SYSTEM
+────────────────────────────────────────────────────────────────────────────────
+
+- Unlocks at level 30
+- Player picks one class: Knight or Sorcerer
+- Allow respec: first for 1 000 000 gold, then 100 000 000 gold, then 10 000 000 000 gold (and for all next)
+- respec should remove current ascention tree and all skills (so the player doesnt benefit from them), replace skill tree with a new one and do not refund any gold
+- Unlocks the class-specific skill tree (3×4 grid)
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [ ] Change ascension level: _______________________________________________
+  [X] Allow respec: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+7. GENERAL SKILL TREE (3×4 grid, all classes)
+────────────────────────────────────────────────────────────────────────────────
+
+Column A — Auto-attack path (IDs 11–14)
+  A1 (11) Auto-Attack Unlock  — enables auto-attack; 0.7s base CD, -50ms/pt → 200ms min
+  A2 (12) Auto-Attack Damage  — +10%/pt auto dmg (max +100% at 10pts)
+  A3 (13) Multi-Target        — +10%/pt chance to hit a 2nd monster
+  A4 (14) Hyper Automation    — +10%/pt dmg and chance to hit 3rd monster
+
+Column B — Gold/EXP/Drops/Boss (IDs 21–24)
+  B1 (21) Wealth Training     — +5%/pt gold gain
+  B2 (22) Experience Mastery  — +5%/pt EXP gain
+  B3 (23) Material Harvesting — +5%/pt material drop chance
+  B4 (24) Boss Attraction     — +2%/pt boss spawn rate, +1%/pt uber boss rate
+
+Column C — Fireball path (IDs 31–34)
+  C1 (31) Fireball Mastery    — unlocks Fireball; +5%/pt damage (10%→60% of mob max HP)
+                                 15s base cooldown
+  C2 (32) Fireball CDR        — -700ms/pt CD → 8s min (max 10pts)
+  C3 (33) Fireball Annihilation — 10%→30% instakill chance on non-boss mobs
+  C4 (34) Ember of Renewal    — 10%→20% chance to reset fireball CD on fire
+
+Gold costs per skill: each skill doubles from previous point.
+  A1: 100, 200, 400…51,200 | A2: 1K, 2K…512K | A3: 100K, 200K…51.2M | A4: 1M…512M
+  B1: 1K…512K | B2: 10K…5.12M | B3: 100K…51.2M | B4: 1M…512M
+  C1: 1K…512K | C2: 10K…5.12M | C3: 100K…51.2M | C4: 1M…512M
+
+KEEP / CHANGE?
+  [X] Keep as-is
+  [ ] Change something: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+8. SORCERER SKILL TREE (3×4 grid, IDs 201–212)
+────────────────────────────────────────────────────────────────────────────────
+
+Column 1 — Heavy Magic Missile (HMM) path
+  S1 (201) Light Magic Missile  — auto-fires every 10s; 30%+7%/pt of mob max HP dmg;
+                                   -0.5s CD/pt
+  S2 (202) Heavy Magic Missile  — upgrades LMM; -0.2s CD/pt and +0.2 extra targets/pt
+                                   effectiveHmmCooldown = max
+  S3 (203) Triple Missile Chance — +2%/pt chance to fire 3 extra missiles
+  S4 (204) Ultimate Explosion   — +1-10%% (capped 10% at 10pts) chance per missile to
+                                   instantly kill all non-boss enemies
+
+Column 2 — Loot/Crafting/Potions
+  S5 (205) Arcane Fortune       — +1%/pt gold gain
+  S6 (206) Mystic Salvaging     — +1%/pt material drop chance
+  S7 (207) Arcane Extraction    — +2%/pt potion duration
+  S8 (208) Grand Alchemist      — +1%/pt chance to auto-activate random potion on boss kill
+
+Column 3 — Boss Killer
+  S9  (209) Bane of Titans      — +2%/pt damage to bosses
+  S10 (210) Arcane Weakening    — bosses hit by HMM take +2%/pt extra damage (stacks up to 10×)
+  S11 (211) Sudden Death        — fires every 10min; deals 100% of boss/uber max HP;
+                                   -45s CD/pt → 150s min
+  S12 (212) Essence Gathering   — boss kill → 30s + 3s/pt double-damage buff
+
+Gold costs follow same doubling pattern as general tree, 10× more expensive per tier.
+  S1: 10K…5.12M | S2: 100K…51.2M | S3: 1M…512M | S4: 10M…5.12B
+  S5–S8 same tiers as S1–S4 | S9–S12 same tiers
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [ ] Change something: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+9. KNIGHT SKILL TREE (3×4 grid, IDs 101–112)
+────────────────────────────────────────────────────────────────────────────────
+
+Column 1 — Click Damage
+  K1 (101) Strike Training      — +20%/pt click damage
+  K2 (102) Precision Execution  — +1%/pt of target max HP as bonus damage per click
+  K3 (103) Cleaving Blows       — +1%/pt of mob max HP to ALL non-boss enemies per click (AoE)
+  K4 (104) Double Strike Instinct — +3%/pt chance to strike twice per click
+
+Column 2 — Speed / Multi-target / Cooldowns
+  K5 (105) Combo Meter          — reduces manual click cooldown: 0.35s base, 0.015 s/pt - 0.20 min
+  K6 (106) Adrenaline Reset     — +2%/pt chance to fully reset manual CD on kill
+  K7 (107) Sweeping Strikes     — +3%/pt chance to hit +1 extra monster per click
+  K8 (108) Whirlwind Extension  — +2%/pt chance to hit +2 additional monsters (stacks with K7)
+
+Column 3 — Boss/Uber Boss
+  K9  (109) Decapitation Chance — +0.5%/pt chance to instakill any boss per click
+  K10 (110) Endless Challenge   — +1%/pt chance to instantly spawn next uber boss on kill
+  K11 (111) Battlefield Purge   — +5%/pt chance to kill all non-boss enemies on boss kill
+  K12 (112) Momentum Overdrive  — permanent damage multiplier: +0.0001%/pt per lifetime click
+
+Gold costs same doubling pattern:
+  K1: 10K…5.12M | K2: 100K…51.2M | K3: 1M…512M | K4: 10M…5.12B  (etc.)
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [ ] Change something: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+10. ANNIHILATION (Knight only)
+────────────────────────────────────────────────────────────────────────────────
+
+- Unlocks on ascension as knight
+- Costs: 0 gold to unlock (granted automatically)
+- Cooldown: 3 minutes
+- Effect: instantly kills all non-boss monsters on screen
+- Can be automated (autoAnniEnabled toggle)
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [X] REMOVE ENTIRELY: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+11. FIREBALL (all classes, C1 skill required)
+────────────────────────────────────────────────────────────────────────────────
+
+- Auto-fires on cooldown
+- Damage: (10% + 5%/pt) × mob max HP, capped at 60% at 10pts
+- Base cooldown: 15s; C2 reduces by 700ms/pt → 8s min
+- Potions of Swiftness also reduce fireball CD
+- C3: chance to instantly kill all non-boss mobs it hits (10%→30% at 10pts)
+- C4: 10%→20% chance to reset fireball CD on use (allows chain casting)
+- Auto-GFB mode: auto-fires fireball whenever ready
+
+KEEP / CHANGE?
+  [X] Keep as-is
+  [ ] Change something: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+12. CRAFTING / INVENTORY SYSTEM
+────────────────────────────────────────────────────────────────────────────────
+
+Unlocks at level 20.
+
+Materials (essences) — 4 types:
+  Blue Essence (common), Green Essence, Red Essence, Yellow Essence (rare)
+
+Drop system
+  - Each area has a loot table: drop chance 5% (Rookgaard) → 48% (The Void)
+  - On drop: weighted random selects which essence color
+  - Bosses: 2× drop chance and 2× quantity
+  - Uber bosses: 4× total (stacks with boss bonus)
+  - Skills B3 (General) and S6 (Sorcerer) increase drop chance
+
+Potions (11 craftable recipes):
+  Tier   Name              Effect              Level  Gold Cost  Duration
+  ────────────────────────────────────────────────────────────────────────
+  Small  Potion of Wealth  +15% gold           20     1,000      2 min
+  Small  Potion of Wisdom  +15% EXP            20     1,000      2 min
+  Small  Potion of Swift.  -10% cooldowns      20     1,000      1.5 min
+  Medium Potion of Wealth  +25% gold           40     10,000      4 min
+  Medium Potion of Wisdom  +25% EXP            40     10,000       4 min
+  Medium Potion of Swift.  -15% cooldowns      40     10,000 0      3 min
+  Large  Potion of Wealth  +50% gold           50    100,000      8 min
+  Large  Potion of Wisdom  +50% EXP            50    100,000      8 min
+  Large  Potion of Swift.  -25% cooldowns      50    100,000      6 min
+  —      Potion of Danger  +10% boss and +5 uber boss chance  60    500,000     5 min  (ascended only)
+  —      Potion of Madness +10 spawn, ×10 rate 70    500,000     5 min  (ascended only)
+
+Rules:
+  - Only one tier per type active at a time (no stacking Small + Large Wealth)
+  - Active potions show countdown timers in HUD
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [X] Change potions: danger and madness, gold costs
+  [ ] Change essence system: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+13. BOSS FOCUS (legacy feature, still present)
+────────────────────────────────────────────────────────────────────────────────
+
+- Unlocks at level 10 for 1,000 gold
+- Makes auto-attack prioritize the boss
+- Simple toggle
+
+KEEP / CHANGE?
+  [ ] Keep as-is
+  [X] Remove: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+14. SCOREBOARD & STATS PAGE
+────────────────────────────────────────────────────────────────────────────────
+
+/api/scoreboard
+  - Top 10 players by total EXP
+  - If logged-in player not in top 10, shows their rank + entry below the table
+  - Fields: rank, username, score, exp, level, ascendedClass
+
+/api/stats  (stats.html)
+  - Total registered players
+  - Active last 5 min / 1h / 24h
+  - Class distribution (non-ascended, knight, sorcerer)
+  - Full player list sorted by EXP (rank, username, score, exp, level, totalClicks, class)
+
+KEEP / CHANGE?
+  [X] Keep as-is
+  [ ] Change something: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+15. LIVE CHAT
+────────────────────────────────────────────────────────────────────────────────
+
+- Real-time chat via SSE (Server-Sent Events) on GET /api/chat/stream
+- Send messages via POST /api/chat/send (requires login)
+- Rate limit: 1 message per 2 seconds per user
+- History: last 100 messages stored in-memory (reset on server restart)
+- Max message length: 200 chars
+
+KEEP / CHANGE?
+  [X] Keep as-is
+  [ ] Remove (simplify RAM usage): _______________________________________________
+  [ ] Change message limit: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+16. SUGGESTIONS SYSTEM
+────────────────────────────────────────────────────────────────────────────────
+
+- POST /api/suggest — anyone can submit (no auth required)
+- Max 2000 chars, optional contact field (100 chars)
+- Stored in `suggestions` DB table
+- Optionally sends email notification via Resend API to NOTIFY_EMAIL
+
+KEEP / CHANGE?
+  [X] Keep as-is
+  [ ] Remove: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+17. ADMIN ENDPOINTS
+────────────────────────────────────────────────────────────────────────────────
+
+All require ADMIN_TOKEN (env var) in header or request body.
+
+  POST /api/admin/delete-users        — delete one or more players by username
+  POST /api/admin/list-users          — list all players (username, score, level)
+  POST /api/admin/get-player-state    — inspect a player's full state JSON
+  POST /api/admin/list-suggestions    — list all suggestions
+  POST /api/admin/reset-db            — DANGER: wipe all players, sessions, tokens
+
+KEEP / CHANGE?
+  [X] Keep as-is
+  [ ] Add soft-delete (ban players without losing data): _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+18. SERVER INFRASTRUCTURE
+────────────────────────────────────────────────────────────────────────────────
+
+Runtime
+  - Python 3, stdlib only (no pip except libsql_experimental for Turso + optional email libs)
+  - ThreadingHTTPServer overridden with ThreadPoolExecutor(max_workers=64)
+  - SSE connections bypassed to dedicated daemon threads (not pool workers)
+  - Static files preloaded into RAM at startup (in-memory dict)
+
+Database
+  - Turso (remote SQLite via libsql_experimental) when TURSO_URL + TURSO_AUTH_TOKEN set
+  - Falls back to local SQLite (game.db) for local dev
+  - Single global Turso connection with auto-reconnect on stream expiry
+  - Write lock for all INSERT/UPDATE/DELETE operations
+
+Email
+  - Resend HTTP API (preferred — works on Railway)
+  - SMTP fallback (may be blocked on Railway)
+
+Environment variables
+  PORT, TURSO_URL, TURSO_AUTH_TOKEN, ADMIN_TOKEN,
+  RESEND_API_KEY, RESEND_FROM, NOTIFY_EMAIL, GAME_URL,
+  SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM,
+  DATA_DIR (optional custom DB directory)
+
+Deployment
+  - Railway (production from master branch, test from dev branch)
+  - Procfile: web: python server.py
+  - runtime.txt: python-3.11.x
+
+KEEP / CHANGE?
+  [ ] Keep Python stdlib approach
+  [X] Migrate to a framework (Flask, FastAPI, etc.): _______________________________________________
+  [ ] Change deployment: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+19. LEGACY / DEAD CODE (things to clean up in rewrite)
+────────────────────────────────────────────────────────────────────────────────
+
+These features exist in the codebase but are no longer active:
+
+  - firestormCharges — replaced by Fireball Annihilation (C3); kept for state migration
+  - comboStacks, flowStacks, clickOrderCount — knight combo system removed
+  - UE_COOLDOWN_MS, ueUnlocked, ueCooldownEnd — legacy UE ability removed
+  - powerStanceUnlocked / powerStanceActive / powerStanceCooldownEnd — removed ability
+  - autoPsEnabled — was "auto power stance", removed
+  - autoUeEnabled / autoUeUnlocked — auto UE, removed
+  - firstBossSpawned — "(legacy) no longer used" comment in code
+  - ROTWORM_DROPS, CYCLOPS_DROPS etc. — old drop system, replaced by essence system
+    but arrays still defined (unused)
+  - cheat_flags column — anti-cheat removed, column exists in DB but no longer written
+
+KEEP / CHANGE?
+  [X] Remove all legacy code in rewrite: _______________________________________________
+
+────────────────────────────────────────────────────────────────────────────────
+20. KNOWN BUGS / ISSUES (at time of review)
+────────────────────────────────────────────────────────────────────────────────
+
+  - Railway free plan RAM is too small for the current server under real load
+    (main reason for rewrite consideration)
+  - Static cache loads ALL files (including sprites) into RAM at startup — may
+    be contributing to memory pressure
+  - The `cheat_flags` column in admin list-users still returns data (always 0 now)
+  - No rate limiting on login (brute-force possible in theory)
+  - No email verification on registration (email only used for password reset)
+
+NOTES / OTHER ISSUES:
+  _______________________________________________
+
+================================================================================
+  END OF REVIEW
+================================================================================

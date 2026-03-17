@@ -6,7 +6,7 @@ import threading
 import time
 from pathlib import Path
 
-from server.config import USE_TURSO, TURSO_URL, TURSO_AUTH_TOKEN
+from app.config import USE_TURSO, TURSO_URL, TURSO_AUTH_TOKEN
 
 _write_lock = threading.Lock()
 

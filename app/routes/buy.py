@@ -4,10 +4,10 @@ import json
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from server.auth import auth_player, get_token_from_request
-from server import cache as _cache
-from server.db import get_conn, _write_lock
-from server.config import (
+from app.auth import auth_player, get_token_from_request
+from app import cache as _cache
+from app.db import get_conn, _write_lock
+from app.config import (
     WEAPONS, AREA_ORDER, AREA_LEVEL_REQS, AREA_GOLD_COSTS,
     SKILL_MAXES_GENERAL, SKILL_MAXES_KNIGHT, SKILL_MAXES_SORC,
     SKILL_COSTS_GENERAL, SKILL_COSTS_KNIGHT, SKILL_COSTS_SORC,

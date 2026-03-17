@@ -4,9 +4,9 @@ import json
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from server.config import ADMIN_TOKEN
-from server.db import get_conn, _write_lock
-from server import cache as _cache
+from app.config import ADMIN_TOKEN
+from app.db import get_conn, _write_lock
+from app import cache as _cache
 
 router = APIRouter()
 

@@ -4,8 +4,8 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from server.auth import auth_player, get_token_from_request
-from server.db import get_conn
+from app.auth import auth_player, get_token_from_request
+from app.db import get_conn
 
 router = APIRouter()
 
@@ -58,19 +58,16 @@ async def stats_page(request: Request):
     conn = get_conn()
     now  = int(time.time() * 1000)
 
-    total   = conn.execute('SELECT COUNT(*) FROM players').fetchone()[0]
-    active5 = conn.execute(
-        'SELECT COUNT(*) FROM players WHERE last_save_ms > ?', (now - 5 * 60 * 1000,)
-    ).fetchone()[0]
-    active1h = conn.execute(
-        'SELECT COUNT(*) FROM players WHERE last_save_ms > ?', (now - 60 * 60 * 1000,)
-    ).fetchone()[0]
-    active24h = conn.execute(
-        'SELECT COUNT(*) FROM players WHERE last_save_ms > ?', (now - 24 * 60 * 60 * 1000,)
-    ).fetchone()[0]
+    def _count(query, params=()):  # type: ignore[misc]
+        row = conn.execute(query, params).fetchone()
+        return row[0] if row else 0
 
-    knights   = conn.execute("SELECT COUNT(*) FROM players WHERE ascended_class = 'knight'").fetchone()[0]
-    sorcerers = conn.execute("SELECT COUNT(*) FROM players WHERE ascended_class = 'sorcerer'").fetchone()[0]
+    total     = _count('SELECT COUNT(*) FROM players')
+    active5   = _count('SELECT COUNT(*) FROM players WHERE last_save_ms > ?', (now - 5 * 60 * 1000,))
+    active1h  = _count('SELECT COUNT(*) FROM players WHERE last_save_ms > ?', (now - 60 * 60 * 1000,))
+    active24h = _count('SELECT COUNT(*) FROM players WHERE last_save_ms > ?', (now - 24 * 60 * 60 * 1000,))
+    knights   = _count("SELECT COUNT(*) FROM players WHERE ascended_class = 'knight'")
+    sorcerers = _count("SELECT COUNT(*) FROM players WHERE ascended_class = 'sorcerer'")
 
     all_rows = conn.execute(
         'SELECT username, score, exp, level, total_clicks, ascended_class FROM players ORDER BY exp DESC'

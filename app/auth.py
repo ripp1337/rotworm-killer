@@ -3,8 +3,8 @@ import hashlib
 import secrets
 import json
 
-from server import cache as _cache
-from server.db import get_conn
+from app import cache as _cache
+from app.db import get_conn
 
 
 def hash_pwd(password: str, salt: str) -> str:
@@ -16,7 +16,7 @@ def check_pwd(password: str, salt: str, stored_hash: str) -> bool:
     return secrets.compare_digest(hash_pwd(password, salt), stored_hash)
 
 
-def auth_player(token: str) -> dict | None:
+def auth_player(token: str | None) -> dict | None:
     """Return player row dict for token, or None if invalid/expired."""
     if not token:
         return None

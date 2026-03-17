@@ -1,6 +1,6 @@
 """In-memory session and player data caches."""
 import time
-from server.config import SESSION_TTL_S, PLAYER_TTL_S
+from app.config import SESSION_TTL_S, PLAYER_TTL_S
 
 # token → (player_id, expires_at_unix)
 _session_cache: dict[str, tuple[int, float]] = {}
