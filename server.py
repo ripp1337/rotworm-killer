@@ -29,12 +29,15 @@ ANTI_CHEAT_MAX_LEVELS_PER_MIN = float(os.environ.get('ANTI_CHEAT_MAX_LEVELS_PER_
 ANTI_CHEAT_MIN_SCORE_BURST = int(os.environ.get('ANTI_CHEAT_MIN_SCORE_BURST', '500'))
 ANTI_CHEAT_MIN_LEVEL_BURST = int(os.environ.get('ANTI_CHEAT_MIN_LEVEL_BURST', '3'))
 # Gold and EXP rate limits (generous upper bounds — tune via env vars).
-# Based on max possible legitimate earn rates in the best area with all multipliers.
-ANTI_CHEAT_MAX_GOLD_PER_SEC  = float(os.environ.get('ANTI_CHEAT_MAX_GOLD_PER_SEC',  '15000'))
-ANTI_CHEAT_MIN_GOLD_BURST    = int(os.environ.get('ANTI_CHEAT_MIN_GOLD_BURST',    '10000'))
-ANTI_CHEAT_MAX_EXP_PER_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_EXP_PER_SEC',   '500000'))
-ANTI_CHEAT_MIN_EXP_BURST     = int(os.environ.get('ANTI_CHEAT_MIN_EXP_BURST',    '50000'))
-ANTI_CHEAT_BAN_THRESHOLD     = int(os.environ.get('ANTI_CHEAT_BAN_THRESHOLD',    '3'))
+# Recalculated for 20260317 balance: The Void gold avg=3000/mob, max multipliers
+# (B1 +50%, S5 +10%, large gold potion +50%) = 2.475x. Auto at 200ms = 5 mobs/sec
+# + HMM multi-target hits. True max ≈ 37,000 gold/sec; limit set to 60,000 for headroom.
+# EXP: The Void 19800/mob × 2.25x mults × 5/sec ≈ 222,750 exp/sec; limit 600,000.
+ANTI_CHEAT_MAX_GOLD_PER_SEC  = float(os.environ.get('ANTI_CHEAT_MAX_GOLD_PER_SEC',  '60000'))
+ANTI_CHEAT_MIN_GOLD_BURST    = int(os.environ.get('ANTI_CHEAT_MIN_GOLD_BURST',    '80000'))
+ANTI_CHEAT_MAX_EXP_PER_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_EXP_PER_SEC',   '600000'))
+ANTI_CHEAT_MIN_EXP_BURST     = int(os.environ.get('ANTI_CHEAT_MIN_EXP_BURST',    '500000'))
+ANTI_CHEAT_BAN_THRESHOLD     = int(os.environ.get('ANTI_CHEAT_BAN_THRESHOLD',    '10'))
 # Cap elapsed time considered per save (prevents last_save_ms=0 loophole and caps offline gains).
 ANTI_CHEAT_MAX_ELAPSED_SEC   = float(os.environ.get('ANTI_CHEAT_MAX_ELAPSED_SEC',   str(8 * 3600)))
 
@@ -379,7 +382,7 @@ def db() -> _TursoConn | sqlite3.Connection:
 
 # ── Auth helpers ───────────────────────────────────────────────────
 def hash_pwd(password: str, salt: str) -> str:
-    dk = hashlib.pbkdf2_hmac('sha256', password.encode(), bytes.fromhex(salt), 260_000)
+    dk = hashlib.pbkdf2_hmac('sha256', password.encode(), bytes.fromhex(salt), 100_000)
     return dk.hex()
 
 def auth_player(token: str):
