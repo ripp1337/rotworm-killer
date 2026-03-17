@@ -664,10 +664,23 @@ class _Server(ThreadingHTTPServer):
         self._pool = ThreadPoolExecutor(max_workers=64)
 
     def process_request(self, request, client_address):
+        # Return immediately — never block the main accept loop.
+        self._pool.submit(self._dispatch, request, client_address)
+
+    def _dispatch(self, request, client_address):
+        """Runs inside a pool worker. Peeks at the first HTTP line to detect
+        SSE connections, then transfers them to a daemon thread so the pool
+        worker is freed before the long-running receive loop starts."""
         try:
+            request.settimeout(2.0)
             first = request.recv(512, socket.MSG_PEEK).decode('utf-8', errors='replace')
+            request.settimeout(None)
             is_sse = '/api/chat/stream' in first.split('\n')[0]
         except Exception:
+            try:
+                request.settimeout(None)
+            except Exception:
+                pass
             is_sse = False
         if is_sse:
             # Dedicated daemon thread — SSE holds the connection forever, must
@@ -678,7 +691,7 @@ class _Server(ThreadingHTTPServer):
                 daemon=True,
             ).start()
         else:
-            self._pool.submit(self.process_request_thread, request, client_address)
+            self.process_request_thread(request, client_address)
 
     def server_close(self):
         self._pool.shutdown(wait=False)
