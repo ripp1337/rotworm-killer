@@ -33,13 +33,16 @@ async def save(request: Request):
     exp_cap  = AREA_EXP_CAP_PER_SEC.get(area, 200)  * elapsed
 
     # ── Client-owned numeric fields ───────────────────────────────
-    client_gold = int(body.get('gold', player.get('gold', 0)))
-    client_exp  = int(body.get('exp',  player.get('exp',  0)))
-    client_score = int(body.get('score', player.get('score', 0)))
+    # Use `or 0` instead of .get(key, default) so that NULL DB values
+    # (key present but value=None) are also coerced to 0 instead of
+    # reaching int(None) and raising TypeError.
+    client_gold  = int(body.get('gold')  or player.get('gold')  or 0)
+    client_exp   = int(body.get('exp')   or player.get('exp')   or 0)
+    client_score = int(body.get('score') or player.get('score') or 0)
 
     # Clamp gold/exp gains against per-area cap
-    prev_gold = int(player.get('gold', 0))
-    prev_exp  = int(player.get('exp',  0))
+    prev_gold = int(player.get('gold') or 0)
+    prev_exp  = int(player.get('exp')  or 0)
     gold_gain = max(0, client_gold - prev_gold)
     exp_gain  = max(0, client_exp  - prev_exp)
 
@@ -49,20 +52,20 @@ async def save(request: Request):
         client_exp = prev_exp + int(exp_cap)
 
     # Score can only go up
-    new_score = max(int(player.get('score', 0)), client_score)
+    new_score = max(int(player.get('score') or 0), client_score)
 
     new_level = level_from_exp(client_exp)
 
     # ── Transient combat state (stored as-is) ────────────────────
-    total_clicks            = int(body.get('total_clicks',            player.get('total_clicks', 0)))
-    inventory               = body.get('inventory',               player.get('inventory', {}))
-    potion_timers           = body.get('potion_timers',           player.get('potion_timers', {}))
-    hmm_cd_end              = int(body.get('hmm_cd_end',              player.get('hmm_cd_end', 0)))
-    arcane_weakness_stacks  = int(body.get('arcane_weakness_stacks',  player.get('arcane_weakness_stacks', 0)))
-    sudden_death_cd_end     = int(body.get('sudden_death_cd_end',     player.get('sudden_death_cd_end', 0)))
-    essence_gathering_end   = int(body.get('essence_gathering_end',   player.get('essence_gathering_end', 0)))
-    boss_spawn_counter      = int(body.get('boss_spawn_counter',      player.get('boss_spawn_counter', 0)))
-    boss_kill_counter       = int(body.get('boss_kill_counter',       player.get('boss_kill_counter', 0)))
+    total_clicks            = int(body.get('total_clicks')           or player.get('total_clicks')           or 0)
+    inventory               = body.get('inventory')               or player.get('inventory')               or {}
+    potion_timers           = body.get('potion_timers')           or player.get('potion_timers')           or {}
+    hmm_cd_end              = int(body.get('hmm_cd_end')             or player.get('hmm_cd_end')             or 0)
+    arcane_weakness_stacks  = int(body.get('arcane_weakness_stacks') or player.get('arcane_weakness_stacks') or 0)
+    sudden_death_cd_end     = int(body.get('sudden_death_cd_end')    or player.get('sudden_death_cd_end')    or 0)
+    essence_gathering_end   = int(body.get('essence_gathering_end')  or player.get('essence_gathering_end')  or 0)
+    boss_spawn_counter      = int(body.get('boss_spawn_counter')     or player.get('boss_spawn_counter')     or 0)
+    boss_kill_counter       = int(body.get('boss_kill_counter')      or player.get('boss_kill_counter')      or 0)
 
     # ── Persist ──────────────────────────────────────────────────
     conn = get_conn()
