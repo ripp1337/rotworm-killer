@@ -338,6 +338,70 @@ function _bindUI() {
 
     // Page unload — save via sendBeacon
     window.addEventListener('beforeunload', saveOnUnload);
+
+    // ── Global functions called from inline onclick attributes ────
+    // (ES modules don't expose to global scope automatically)
+
+    window.switchAuthTab = function(tab) {
+        const isLogin = tab === 'login';
+        document.getElementById('auth-login-form').style.display  = isLogin ? '' : 'none';
+        document.getElementById('auth-reg-form').style.display    = isLogin ? 'none' : '';
+        document.getElementById('auth-forgot-panel').style.display = 'none';
+        document.getElementById('auth-tabs').style.display        = '';
+        document.getElementById('tab-login-btn').classList.toggle('active', isLogin);
+        document.getElementById('tab-reg-btn').classList.toggle('active', !isLogin);
+    };
+
+    window.closeAnnouncement = function() {
+        document.getElementById('announcement-overlay').style.display = 'none';
+    };
+
+    window.chatToggle = function() {
+        const box = document.getElementById('chatBox');
+        const btn = document.getElementById('chat-toggle-btn');
+        if (!box) return;
+        const hidden = box.style.display === 'none';
+        box.style.display = hidden ? '' : 'none';
+        if (btn) btn.textContent = hidden ? '[hide]' : '[show]';
+    };
+
+    // Forgot-password flow
+    _on('forgotLink', 'click', e => {
+        e.preventDefault();
+        document.getElementById('auth-login-form').style.display   = 'none';
+        document.getElementById('auth-reg-form').style.display     = 'none';
+        document.getElementById('auth-tabs').style.display         = 'none';
+        document.getElementById('auth-forgot-panel').style.display = '';
+        document.getElementById('auth-forgot-email').value         = '';
+        document.getElementById('auth-forgot-msg').textContent     = '';
+    });
+    _on('forgotBackLink', 'click', e => {
+        e.preventDefault();
+        document.getElementById('auth-forgot-panel').style.display = 'none';
+        document.getElementById('auth-tabs').style.display         = '';
+        window.switchAuthTab('login');
+    });
+    _on('auth-forgot-btn', 'click', async () => {
+        const email = document.getElementById('auth-forgot-email').value.trim();
+        const msgEl = document.getElementById('auth-forgot-msg');
+        const btn   = document.getElementById('auth-forgot-btn');
+        msgEl.style.color = '#e05050';
+        msgEl.textContent = '';
+        if (!email) { msgEl.textContent = 'Please enter your email address.'; return; }
+        btn.disabled = true;
+        try {
+            await fetch('/api/forgot-password', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ email }),
+            });
+            msgEl.style.color = '#7fff9e';
+            msgEl.textContent = 'If an account with that email exists, a reset link has been sent.';
+        } catch {
+            msgEl.textContent = 'Connection error.';
+        }
+        btn.disabled = false;
+    });
 }
 
 function _on(id, event, handler) {
@@ -359,7 +423,7 @@ async function _loadAnnouncement() {
 // ── Auth form helpers ─────────────────────────────────────────────
 
 function _showAuthForm() {
-    document.getElementById('authWrapper')?.style?.setProperty('display', '');
+    document.getElementById('authWrapper')?.style?.setProperty('display', 'flex');
     document.getElementById('gameWrapper')?.style?.setProperty('display', 'none');
     document.getElementById('top-nav')?.style?.setProperty('display', 'none');
 }
