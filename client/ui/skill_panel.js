@@ -1,6 +1,6 @@
 // ── Skill panel — buy general, knight, and sorcerer skills ────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 import { GENERAL_SKILLS, KNIGHT_SKILLS, SORC_SKILLS } from '../data/skills.js';
 import { apiFetch } from '../persistence/save.js';
 import { updateHUD } from './hud.js';

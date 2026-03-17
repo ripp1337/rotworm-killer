@@ -1,6 +1,6 @@
 // ── Combat damage calculations ────────────────────────────────────
 
-import * as S from './state.js';
+import { S } from './state.js';
 import { WEAPONS } from '../data/weapons.js';
 import {
     knightClickDmgMult, knightMaxHpBonusFrac, knightDoubleStrikeChance,

@@ -1,7 +1,7 @@
 // ── Skill effect helpers ──────────────────────────────────────────
 // Pure functions — read from state, return numeric modifiers.
 
-import * as S from './state.js';
+import { S } from './state.js';
 import { BASIC_COOLDOWN_MS, AUTO_COOLDOWN_BASE_MS, GFB_COOLDOWN_MS, HMM_COOLDOWN_MS } from '../data/constants.js';
 
 export function skillPts(id)  { return (S.skillPoints[id]    || S.skillPoints[String(id)]   ) | 0; }

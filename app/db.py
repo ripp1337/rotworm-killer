@@ -231,8 +231,39 @@ def init_db():
     """)
     conn.commit()
 
+    # ── Column migrations (add any columns introduced after initial deploy) ──
+    _migrate_columns(conn)
+
     if not USE_TURSO:
         conn.close()
+
+
+def _migrate_columns(conn) -> None:
+    """Add columns that may be missing in databases created before v3."""
+    new_cols = [
+        ('knight_pts',              "TEXT    DEFAULT '{}'"),
+        ('sorc_pts',                "TEXT    DEFAULT '{}'"),
+        ('ascended_class',          'TEXT    DEFAULT NULL'),
+        ('respec_count',            'INTEGER DEFAULT 0'),
+        ('current_area',            "TEXT    DEFAULT 'Rookgaard'"),
+        ('unlocked_areas',          "TEXT    DEFAULT '[\"Rookgaard\"]'"),
+        ('inventory',               "TEXT    DEFAULT '{}'"),
+        ('potion_timers',           "TEXT    DEFAULT '{}'"),
+        ('hmm_cd_end',              'INTEGER DEFAULT 0'),
+        ('arcane_weakness_stacks',  'INTEGER DEFAULT 0'),
+        ('sudden_death_cd_end',     'INTEGER DEFAULT 0'),
+        ('essence_gathering_end',   'INTEGER DEFAULT 0'),
+        ('boss_spawn_counter',      'INTEGER DEFAULT 0'),
+        ('boss_kill_counter',       'INTEGER DEFAULT 0'),
+        ('total_clicks',            'INTEGER DEFAULT 0'),
+        ('last_save_ms',            'INTEGER DEFAULT 0'),
+    ]
+    for col, definition in new_cols:
+        try:
+            conn.execute(f'ALTER TABLE players ADD COLUMN {col} {definition}')
+            conn.commit()
+        except Exception:
+            pass  # column already exists — ignore
 
 
 # ── EXP / level helpers ────────────────────────────────────────────

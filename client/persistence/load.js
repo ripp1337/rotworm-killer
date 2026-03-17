@@ -1,6 +1,6 @@
 // ── Load — apply server-owned state from login/me response ────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 
 // Called after a successful /api/login or /api/me response.
 // Only sets fields that the server owns; client-owned combat state is
@@ -48,15 +48,7 @@ export function loadState(data) {
 }
 
 function _applyPotionTimers(timers) {
-    S.potionSmallSpeedEnd  = timers.potion_small_speed  ?? 0;
-    S.potionMediumSpeedEnd = timers.potion_medium_speed ?? 0;
-    S.potionLargeSpeedEnd  = timers.potion_large_speed  ?? 0;
-    S.potionSmallGoldEnd   = timers.potion_small_gold   ?? 0;
-    S.potionMediumGoldEnd  = timers.potion_medium_gold  ?? 0;
-    S.potionLargeGoldEnd   = timers.potion_large_gold   ?? 0;
-    S.potionSmallExpEnd    = timers.potion_small_exp    ?? 0;
-    S.potionMediumExpEnd   = timers.potion_medium_exp   ?? 0;
-    S.potionLargeExpEnd    = timers.potion_large_exp    ?? 0;
-    S.potionDangerEnd      = timers.potion_danger       ?? 0;
-    S.potionMadnessEnd     = timers.potion_madness      ?? 0;
+    // Merge server-stored timer values into the potionTimers object.
+    // Keys match those in state.js (small_gold, medium_gold, etc.)
+    Object.assign(S.potionTimers, timers);
 }

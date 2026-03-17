@@ -1,6 +1,6 @@
 // ── Modals — ascend, respec, crafting, inventory ──────────────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 import { CRAFTING_RECIPES, LOOT_TABLE } from '../data/recipes.js';
 import { craftPotion, isPotionActive } from '../systems/crafting.js';
 import { apiFetch } from '../persistence/save.js';

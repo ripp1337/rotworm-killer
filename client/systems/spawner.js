@@ -1,6 +1,6 @@
 // ── Spawner — worm and boss spawn logic ───────────────────────────
 
-import * as S from './state.js';
+import { S } from './state.js';
 import { AREAS, getAreaIndex } from '../data/areas.js';
 import {
     BOSS_KILLS, BOSS_SPAWN_CHANCE, UBER_BOSS_SPAWN_CHANCE,

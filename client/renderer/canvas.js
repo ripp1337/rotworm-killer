@@ -1,6 +1,6 @@
 // ── Game loop — update, draw, and main loop ───────────────────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 import { AREAS, getAreaById, getAreaIndex } from '../data/areas.js';
 import { TILE } from '../data/constants.js';
 import {

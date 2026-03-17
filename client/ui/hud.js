@@ -1,6 +1,6 @@
 // ── HUD updates ──────────────────────────────────────────────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 import { WEAPONS }        from '../data/weapons.js';
 import { AREAS, getAreaIndex, getAreaById } from '../data/areas.js';
 import { isPotionActive } from '../systems/crafting.js';

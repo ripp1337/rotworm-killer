@@ -1,6 +1,6 @@
 // ── Save — send game state to the server ─────────────────────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 
 let _saveTimer = null;
 
@@ -39,19 +39,7 @@ function buildSavePayload() {
 }
 
 function _collectPotionTimers() {
-    return {
-        potion_small_speed:  S.potionSmallSpeedEnd,
-        potion_medium_speed: S.potionMediumSpeedEnd,
-        potion_large_speed:  S.potionLargeSpeedEnd,
-        potion_small_gold:   S.potionSmallGoldEnd,
-        potion_medium_gold:  S.potionMediumGoldEnd,
-        potion_large_gold:   S.potionLargeGoldEnd,
-        potion_small_exp:    S.potionSmallExpEnd,
-        potion_medium_exp:   S.potionMediumExpEnd,
-        potion_large_exp:    S.potionLargeExpEnd,
-        potion_danger:       S.potionDangerEnd,
-        potion_madness:      S.potionMadnessEnd,
-    };
+    return { ...S.potionTimers };
 }
 
 // Debounced save — coalesces rapid calls into one request

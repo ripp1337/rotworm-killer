@@ -1,6 +1,6 @@
 // ── Crafting — potion craft and timer helpers ─────────────────────
 
-import * as S from './state.js';
+import { S } from './state.js';
 import { CRAFTING_RECIPES } from '../data/recipes.js';
 import { saveProgress } from '../persistence/save.js';
 

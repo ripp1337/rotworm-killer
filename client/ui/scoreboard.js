@@ -1,6 +1,6 @@
 // ── Scoreboard UI ─────────────────────────────────────────────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 
 let _visible = false;
 

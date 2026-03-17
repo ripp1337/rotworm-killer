@@ -1,6 +1,6 @@
 // ── Abilities — fireball, HMM, Sudden Death ───────────────────────
 
-import * as S from './state.js';
+import { S } from './state.js';
 import { AREAS, getAreaIndex } from '../data/areas.js';
 import {
     GFB_COOLDOWN_MS, HMM_COOLDOWN_MS, SUDDEN_DEATH_COOLDOWN_MS,

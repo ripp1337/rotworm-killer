@@ -1,6 +1,6 @@
 // ── Sprite layer — DOM image elements for worms and boss ──────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 
 const _spritePool = new Map();  // id → <img> element
 let   _container  = null;

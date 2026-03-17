@@ -1,6 +1,6 @@
 // ── Loot — gold, exp, and essence drops ──────────────────────────
 
-import * as S from './state.js';
+import { S } from './state.js';
 import { getAreaIndex } from '../data/areas.js';
 import { LOOT_TABLE }   from '../data/recipes.js';
 import {

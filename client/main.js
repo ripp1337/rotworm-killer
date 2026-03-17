@@ -1,6 +1,6 @@
 // ── Client entry point ────────────────────────────────────────────
 
-import * as S from './systems/state.js';
+import { S } from './systems/state.js';
 import { loadState }             from './persistence/load.js';
 import { saveProgress, saveOnUnload } from './persistence/save.js';
 import { initCanvas, startLoop, stopLoop } from './renderer/canvas.js';
@@ -53,8 +53,7 @@ async function initAuth() {
         });
         if (res.ok) {
             const data = await res.json();
-            data.token = localStorage.getItem('token');
-            loadState(data);
+            loadState({ ...data.player, token: localStorage.getItem('token') });
             startGame();
             return;
         }
@@ -74,7 +73,7 @@ export async function doLogin(username, password) {
     if (!res.ok) return alert(data.error ?? 'Login failed.');
 
     localStorage.setItem('token', data.token);
-    loadState(data);
+    loadState({ ...data.player, token: data.token });
     startGame();
 }
 
@@ -92,7 +91,7 @@ export async function doRegister(username, password, email) {
     if (!res.ok) return alert(data.error ?? 'Registration failed.');
 
     localStorage.setItem('token', data.token);
-    loadState(data);
+    loadState({ ...data.player, token: data.token });
     startGame();
 }
 

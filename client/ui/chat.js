@@ -1,6 +1,6 @@
 // ── Chat — SSE connection, send, append ───────────────────────────
 
-import * as S from '../systems/state.js';
+import { S } from '../systems/state.js';
 
 const MAX_MESSAGES = 100;
 let   _sse        = null;
