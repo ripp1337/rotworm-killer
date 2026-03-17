@@ -1007,8 +1007,13 @@ class Handler(BaseHTTPRequestHandler):
 
         allowed_gold_increase = max(ANTI_CHEAT_MIN_GOLD_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_GOLD_PER_SEC))
         max_allowed_gold = prev_gold + allowed_gold_increase
-        # Gold can legitimately decrease (player spends it). Only cap upward gains.
-        gold_val = max(0, min(reported_gold, max_allowed_gold))
+        # Gold can legitimately decrease (spending). Only rate-limit and flag increases.
+        if reported_gold <= prev_gold:
+            gold_val = reported_gold
+            gold_suspicious = False
+        else:
+            gold_val = min(reported_gold, max_allowed_gold)
+            gold_suspicious = reported_gold > max_allowed_gold
 
         allowed_exp_increase = max(ANTI_CHEAT_MIN_EXP_BURST, int(elapsed_sec * ANTI_CHEAT_MAX_EXP_PER_SEC))
         max_allowed_exp = prev_exp + allowed_exp_increase
@@ -1019,7 +1024,7 @@ class Handler(BaseHTTPRequestHandler):
 
         suspicious = (
             reported_score > max_allowed_score or reported_level > max_allowed_level
-            or reported_gold > max_allowed_gold or reported_exp > max_allowed_exp
+            or gold_suspicious or reported_exp > max_allowed_exp
         )
         if suspicious:
             cheat_flags += 1
